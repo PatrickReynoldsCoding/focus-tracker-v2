@@ -10,3 +10,4 @@ import './notes/Notes';
 import './log/Log';
 import './settings/Settings';
 import './modes/Modes';
+import './criteria/Criteria';

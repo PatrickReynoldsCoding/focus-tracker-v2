@@ -31,58 +31,6 @@ function href(r: Resource): string | undefined {
   return undefined;
 }
 
-function Criteria({ p, setData }: { p: Full; setData: (fn: (d: Full) => Full) => void }) {
-  const done = p.criteria.filter((c) => c.done).length;
-  return (
-    <section class="card">
-      <div class="card-head">
-        <h2>Done when</h2>
-        <span class="muted">
-          {done}/{p.criteria.length}
-        </span>
-      </div>
-      <ul class="checks">
-        {p.criteria.map((c) => (
-          <li key={c.id} class={c.done ? 'done' : ''}>
-            <label>
-              <input
-                type="checkbox"
-                checked={c.done}
-                onChange={() =>
-                  optimistic(
-                    () => {
-                      setData((d) => ({ ...d, criteria: d.criteria.map((x) => (x.id === c.id ? { ...x, done: !c.done } : x)) }));
-                      return () => setData((d) => ({ ...d, criteria: d.criteria.map((x) => (x.id === c.id ? c : x)) }));
-                    },
-                    () => patch(`/criteria/${c.id}`, { done: !c.done }),
-                  )
-                }
-              />
-              <span>{c.text}</span>
-            </label>
-            <button class="icon small" aria-label="Delete" onClick={() => change(() => del(`/criteria/${c.id}`))}>
-              ✕
-            </button>
-          </li>
-        ))}
-      </ul>
-      <AddInput
-        placeholder="Add a done criterion"
-        onAdd={(text) => {
-          const id = newId();
-          optimistic(
-            () => {
-              setData((d) => ({ ...d, criteria: [...d.criteria, { id, text, done: false }] }));
-              return () => setData((d) => ({ ...d, criteria: d.criteria.filter((x) => x.id !== id) }));
-            },
-            () => post('/criteria', { id, project_id: p.id, text }),
-          );
-        }}
-      />
-    </section>
-  );
-}
-
 function Resources({ p }: { p: Full }) {
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState('');
@@ -190,7 +138,6 @@ registerPanel('project', {
     </section>
   ),
 });
-registerPanel('project', { id: 'criteria', order: 30, render: ({ project, setProject }) => <Criteria p={project} setData={setProject} /> });
 registerPanel('project', { id: 'resources', order: 40, render: ({ project }) => <Resources p={project} /> });
 registerPanel('project', {
   id: 'sessions',
