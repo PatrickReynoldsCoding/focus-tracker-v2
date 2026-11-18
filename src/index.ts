@@ -5,6 +5,7 @@ import { OAuthProvider } from '@cloudflare/workers-oauth-provider';
 import { buildApp } from './api';
 import { tokenOk } from './core/auth';
 import { Ctx, type Env } from './core/ctx';
+import { ensureMigrated } from './core/migrate';
 import { register } from './core/registry';
 import { pruneUndo } from './core/store';
 import { mcpFetch } from './mcp/server';
@@ -43,12 +44,14 @@ function providerFor(origin: string): OAuthProvider<Env> {
 }
 
 export default {
-  fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    await ensureMigrated(env.DB);
     const origin = env.PUBLIC_URL?.replace(/\/$/, '') || new URL(req.url).origin;
     return providerFor(origin).fetch(req, env, ctx);
   },
 
   async scheduled(_event: ScheduledController, env: Env): Promise<void> {
+    await ensureMigrated(env.DB);
     const modes = (await env.DB.prepare('SELECT id FROM modes').all<{ id: string }>()).results;
     for (const m of modes) {
       const ctx = new Ctx(env, m.id);

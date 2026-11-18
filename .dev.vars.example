@@ -1,0 +1,4 @@
+# The owner's password for the web app and for allowing Claude to connect.
+OWNER_PASSWORD=
+# 32+ random characters, used to sign sign-in cookies. For example: openssl rand -base64 32
+SESSION_SECRET=

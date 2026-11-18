@@ -35,6 +35,9 @@ export function buildApp() {
 
   // ---- login for the web app ----
   app.post('/auth/login', async (c) => {
+    if (!c.env.OWNER_PASSWORD || (c.env.SESSION_SECRET ?? '').length < 32) {
+      throw new ApiError(503, 'This tracker is not set up yet: set the OWNER_PASSWORD and SESSION_SECRET secrets (see docs/self-hosting.md).', 'not_set_up');
+    }
     const body = await c.req.json<{ password?: string }>().catch(() => ({}) as { password?: string });
     if (!body.password || !(await passwordOk(c.env, body.password))) {
       await new Promise((r) => setTimeout(r, 400)); // slow down guessing a little

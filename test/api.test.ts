@@ -273,3 +273,13 @@ describe('backlog, resources, settings, tokens', () => {
     await call('POST', '/accounts', { email: 'b@example.com' }, { expect: 400 });
   });
 });
+
+describe('migrations', () => {
+  it('lists every migration file and splits it into statements', async () => {
+    const { MIGRATIONS, statements } = await import('../src/core/migrate');
+    const files = env.TEST_MIGRATIONS.map((m) => m.name);
+    expect(MIGRATIONS.map(([n]) => n)).toEqual(files);
+    const sql = MIGRATIONS[0][1];
+    expect(statements(sql).length).toBe(env.TEST_MIGRATIONS[0].queries.length);
+  });
+});

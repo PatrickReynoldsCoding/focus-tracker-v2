@@ -70,6 +70,24 @@ export const systemModule: Module = {
       await c.get('ctx').db.prepare('DELETE FROM api_tokens WHERE id = ?').bind(c.req.param('id')).run();
       return c.json({ ok: true });
     });
+    // Apps connected through OAuth (Claude). Revoking one ends its access at once.
+    api.get('/connections', async (c) => {
+      const oauth = (c.env as unknown as { OAUTH_PROVIDER?: import('@cloudflare/workers-oauth-provider').OAuthHelpers }).OAUTH_PROVIDER;
+      if (!oauth) return c.json([]);
+      const grants = (await oauth.listUserGrants('owner')).items;
+      const out = [];
+      for (const g of grants) {
+        const client = await oauth.lookupClient(g.clientId).catch(() => null);
+        out.push({ id: g.id, client: client?.clientName ?? g.clientId, created: new Date(g.createdAt > 1e12 ? g.createdAt : g.createdAt * 1000).toISOString(), redirect: g.redirectUri ?? null });
+      }
+      return c.json(out);
+    });
+    api.delete('/connections/:id', async (c) => {
+      const oauth = (c.env as unknown as { OAUTH_PROVIDER?: import('@cloudflare/workers-oauth-provider').OAuthHelpers }).OAUTH_PROVIDER;
+      if (!oauth) throw bad('OAuth is not available');
+      await oauth.revokeGrant(c.req.param('id'), 'owner');
+      return c.json({ ok: true });
+    });
     api.get('/schema', (c) =>
       c.json(
         allEntities().map((e) => ({ name: e.name, singular: e.singular, desc: e.desc, mode_scoped: e.modeScoped, ordered: !!e.orderGroup, internal: !!e.internal, fields: e.fields })),

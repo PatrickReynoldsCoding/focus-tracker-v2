@@ -95,3 +95,26 @@ describe('OAuth for Claude', () => {
     expect(new URL(res.headers.get('Location')!).searchParams.get('error')).toBe('access_denied');
   });
 });
+
+describe('connected apps', () => {
+  it('lists Claude after it connects and can disconnect it', async () => {
+    const { apiToken } = await import('./helpers');
+    const H = { Authorization: `Bearer ${await apiToken()}`, 'Content-Type': 'application/json' };
+    const before = await (await SELF.fetch(`${BASE}/api/connections`, { headers: H })).json<any[]>();
+    // the previous test in this file connected one; connect another to be independent
+    const { handle, cookie } = await startAuthorization();
+    await SELF.fetch(`${BASE}/authorize`, {
+      method: 'POST',
+      headers: { Cookie: cookie, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ handle, decision: 'approve', password: 'test-password', scope: 'tracker' }),
+      redirect: 'manual',
+    });
+    const after = await (await SELF.fetch(`${BASE}/api/connections`, { headers: H })).json<any[]>();
+    expect(after.length).toBe(before.length + 1);
+    expect(after[0].client).toBe('Claude');
+    const res = await SELF.fetch(`${BASE}/api/connections/${after[0].id}`, { method: 'DELETE', headers: H });
+    expect(res.status).toBe(200);
+    const end = await (await SELF.fetch(`${BASE}/api/connections`, { headers: H })).json<any[]>();
+    expect(end.length).toBe(before.length);
+  });
+});

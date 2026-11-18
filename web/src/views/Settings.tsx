@@ -117,6 +117,31 @@ function Tokens() {
   );
 }
 
+function Connections() {
+  const { data } = useData<{ id: string; client: string; created: string; redirect: string | null }[]>('/connections');
+  return (
+    <section class="card">
+      <h2>Claude and other connected apps</h2>
+      <p class="small">
+        In Claude, add a custom connector with this address: <code>{location.origin}/mcp</code>. Claude opens a page here; type your password and press Allow.
+      </p>
+      <ul class="plain">
+        {data?.map((g) => (
+          <li key={g.id} class="row spread">
+            <span>
+              {g.client} <span class="muted small">since {g.created.slice(0, 10)}</span>
+            </span>
+            <button class="ghost small danger" onClick={() => confirm(`Disconnect ${g.client}?`) && change(() => del(`/connections/${g.id}`), 'Disconnected')}>
+              Disconnect
+            </button>
+          </li>
+        ))}
+      </ul>
+      {data && !data.length && <p class="muted small">Nothing connected yet.</p>}
+    </section>
+  );
+}
+
 function General() {
   const { data } = useData<{ global: Record<string, string>; mode: Record<string, string> }>('/settings');
   if (!data) return <Loading />;
@@ -167,12 +192,7 @@ export function Settings() {
         <Rotation />
         <Categories />
         <Tokens />
-        <section class="card">
-          <h2>Connect Claude</h2>
-          <p class="small">
-            In Claude, add a custom connector with this address: <code>{location.origin}/mcp</code>. Claude opens a page here; type your password and press Allow.
-          </p>
-        </section>
+        <Connections />
       </div>
       <div class="row">
         <button class="ghost" onClick={logout}>
