@@ -1,6 +1,6 @@
 import { render } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
-import { checkSignedIn, get, localStorageSet, login, mode, redo, saving, signedIn, toast, undo } from './core/api';
+import { checkSignedIn, get, localStorageSet, login, mode, redo, saving, signedIn, toast, undo, version } from './core/api';
 import { loadFeatures } from './core/features';
 import { useRoutes, useTabs } from './core/registry';
 import { useSignal } from './core/signal';
@@ -26,10 +26,11 @@ function Page() {
 
 function ModeSwitch() {
   const m = useSignal(mode);
+  const v = useSignal(version);
   const [modes, setModes] = useState<{ id: string; label: string }[]>([]);
   useEffect(() => {
     get('/modes').then(setModes).catch(() => {});
-  }, []);
+  }, [v]);
   if (modes.length < 2) return null;
   return (
     <div class="mode-switch" role="tablist" aria-label="Mode">
