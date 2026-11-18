@@ -1,20 +1,19 @@
 import { useState } from 'preact/hooks';
-import { change, del, newId, optimistic, patch, post, put } from '../api';
-import { Board, type Column } from '../Board';
-import { AddInput, daysAgo, fmtDay, fmtMinutes, go, InlineEdit, Loading, MarkdownEditor, todayLocal, useData } from '../ui';
+import { change, del, newId, optimistic, patch, post, put } from '../../core/api';
+import { Panels, registerPanel, registerRoute, type ProjectPanelProps } from '../../core/registry';
+import { AddInput, daysAgo, fmtDay, fmtMinutes, go, InlineEdit, Loading, MarkdownEditor, todayLocal, useData } from '../../core/ui';
+import { Board, type Column } from './Board';
 
 type Criterion = { id: string; text: string; done: boolean };
 type Resource = { id: string; title: string; type: string; value: string; grp: string | null; note: string | null };
-type LogEntry = { id: string; date: string; minutes: number | null; where_stopped: string | null; next_action: string | null };
+type LogEntry = { id: string; date: string; minutes: number | null; where_stopped: string | null };
 type Full = {
   id: string;
   name: string;
   status: string;
   category_id: string | null;
-  next_action: string | null;
   last_touched: string | null;
   locked_until: string | null;
-  show_next_action: string | null;
   columns: Column[];
   criteria: Criterion[];
   resources: Resource[];
@@ -173,60 +172,81 @@ export function ProjectPage({ id }: { id: string }) {
             ◎ Focus today
           </button>
         </div>
-        <p class="next">
-          Next action: <InlineEdit value={p.next_action ?? ''} placeholder="none yet" onSave={(next_action) => save({ next_action: next_action || null })} />
-        </p>
       </div>
-
-      <Board columns={p.columns} owner={{ project_id: p.id }} />
-
-      <div class="grid two">
-        <section class="card">
-          <h2>Notes</h2>
-          <MarkdownEditor value={p.notes} placeholder="Notes for this project (Markdown)…" onSave={(body) => change(() => put(`/notes/of/project/${p.id}`, { body }))} />
-        </section>
-        <Criteria p={p} setData={setData} />
-        <Resources p={p} />
-        <section class="card">
-          <h2>Sessions</h2>
-          {p.recent_log.length ? (
-            <ul class="plain log">
-              {p.recent_log.map((l) => (
-                <li key={l.id}>
-                  <strong>{fmtDay(l.date)}</strong> {l.minutes ? <span class="muted">{fmtMinutes(l.minutes)}</span> : null}
-                  {l.where_stopped && <div class="small">{l.where_stopped}</div>}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p class="muted">No sessions yet.</p>
-          )}
-        </section>
-      </div>
-      {p.lists.length > 0 && (
-        <section class="card">
-          <h2>Lists</h2>
-          <div class="chips">
-            {p.lists.map((l) => (
-              <a key={l.id} class="chip" href={`#/n/${l.id}`}>
-                {l.name}
-              </a>
-            ))}
-          </div>
-        </section>
-      )}
-      <div class="row">
-        <button
-          class="danger ghost"
-          onClick={async () => {
-            if (!confirm(`Delete ${p.name} with its board, notes and criteria? Undo brings it back.`)) return;
-            await change(() => del(`/projects/${p.id}`), 'Project deleted');
-            go('/projects');
-          }}
-        >
-          Delete project
-        </button>
-      </div>
+      <Panels<ProjectPanelProps> place="project" props={{ project: p, setProject: setData }} />
     </div>
   );
 }
+
+registerRoute({ id: 'project', prefix: '/p', tab: 'projects', render: ({ params }) => <ProjectPage id={params[0]} /> });
+
+registerPanel('project', { id: 'board', order: 10, wide: true, render: ({ project }) => <Board columns={project.columns} owner={{ project_id: project.id }} /> });
+registerPanel('project', {
+  id: 'notes',
+  order: 20,
+  render: ({ project }) => (
+    <section class="card">
+      <h2>Notes</h2>
+      <MarkdownEditor value={project.notes} placeholder="Notes for this project (Markdown)…" onSave={(body) => change(() => put(`/notes/of/project/${project.id}`, { body }))} />
+    </section>
+  ),
+});
+registerPanel('project', { id: 'criteria', order: 30, render: ({ project, setProject }) => <Criteria p={project} setData={setProject} /> });
+registerPanel('project', { id: 'resources', order: 40, render: ({ project }) => <Resources p={project} /> });
+registerPanel('project', {
+  id: 'sessions',
+  order: 50,
+  render: ({ project }) => (
+    <section class="card">
+      <h2>Sessions</h2>
+      {project.recent_log.length ? (
+        <ul class="plain log">
+          {project.recent_log.map((l: LogEntry) => (
+            <li key={l.id}>
+              <strong>{fmtDay(l.date)}</strong> {l.minutes ? <span class="muted">{fmtMinutes(l.minutes)}</span> : null}
+              {l.where_stopped && <div class="small">{l.where_stopped}</div>}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="muted">No sessions yet.</p>
+      )}
+    </section>
+  ),
+});
+registerPanel('project', {
+  id: 'lists',
+  order: 60,
+  render: ({ project }) =>
+    project.lists.length ? (
+      <section class="card">
+        <h2>Lists</h2>
+        <div class="chips">
+          {project.lists.map((l: { id: string; name: string }) => (
+            <a key={l.id} class="chip" href={`#/n/${l.id}`}>
+              {l.name}
+            </a>
+          ))}
+        </div>
+      </section>
+    ) : null,
+});
+registerPanel('project', {
+  id: 'delete',
+  order: 1000,
+  wide: true,
+  render: ({ project }) => (
+    <div class="row">
+      <button
+        class="danger ghost"
+        onClick={async () => {
+          if (!confirm(`Delete ${project.name} with its board, notes and criteria? Undo brings it back.`)) return;
+          await change(() => del(`/projects/${project.id}`), 'Project deleted');
+          go('/projects');
+        }}
+      >
+        Delete project
+      </button>
+    </div>
+  ),
+});

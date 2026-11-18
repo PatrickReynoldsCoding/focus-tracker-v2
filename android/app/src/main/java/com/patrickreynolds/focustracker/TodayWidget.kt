@@ -15,7 +15,7 @@ import org.json.JSONObject
 import kotlin.concurrent.thread
 
 /**
- * The Today widget: focus project, next action, session timer, and the to-dos
+ * The Today widget: focus project, session timer, and the to-dos
  * and habits left today. Tap a to-do to tick it, a habit to count a session.
  */
 class TodayWidget : AppWidgetProvider() {
@@ -99,8 +99,7 @@ class TodayWidget : AppWidgetProvider() {
             }
             v.setTextViewText(R.id.focus, s.focusName ?: "No focus yet")
             v.setOnClickPendingIntent(R.id.header, openApp(context, if (s.focusId != null) "/p/${s.focusId}" else "/today", 1))
-            v.setTextViewText(R.id.next, s.nextAction?.let { "Next: $it" } ?: "")
-            v.setViewVisibility(R.id.next, if (s.nextAction != null) View.VISIBLE else View.GONE)
+            v.setViewVisibility(R.id.next, View.GONE)
             val session = s.session
             if (session != null) {
                 v.setViewVisibility(R.id.session_row, View.VISIBLE)

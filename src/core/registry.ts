@@ -13,6 +13,8 @@ export interface Tool<S extends z.ZodType = z.ZodType> {
   input: S;
   /** Read-only tools are marked as such for Claude. */
   readOnly?: boolean;
+  /** Only offered to Claude while this feature flag is on. */
+  feature?: string;
   run(ctx: Ctx, args: z.infer<S>): Promise<unknown>;
 }
 
@@ -24,6 +26,8 @@ export interface Module {
   /** Extra REST routes, mounted under /api. */
   routes?(api: Hono<AppEnv>): void;
   tools?: Tool<any>[];
+  /** Feature flags this module reads (src/core/features.ts). */
+  features?: import('./features').Feature[];
 }
 
 export type AppEnv = { Bindings: import('./ctx').Env; Variables: { ctx: Ctx } };
@@ -35,6 +39,9 @@ export function register(mods: Module[]): void {
   if (modules.length) return;
   for (const m of mods) {
     modules.push(m);
+    for (const f of m.features ?? []) {
+      if (modules.some((o) => o !== m && o.features?.some((x) => x.id === f.id))) throw new Error(`Feature ${f.id} declared twice`);
+    }
     for (const e of m.entities ?? []) {
       if (entities.has(e.name)) throw new Error(`Entity ${e.name} registered twice`);
       entities.set(e.name, e);

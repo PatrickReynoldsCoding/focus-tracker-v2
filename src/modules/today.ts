@@ -17,7 +17,7 @@ export const logEntity: Entity = {
   name: 'log',
   table: 'log',
   singular: 'session',
-  desc: 'Finished work sessions: when, on which project, where the owner stopped and the next action.',
+  desc: 'Finished work sessions: when, on which project and where the owner stopped.',
   modeScoped: true,
   filters: ['project_id', 'date'],
   sort: 'date DESC, created DESC',
@@ -28,7 +28,6 @@ export const logEntity: Entity = {
     ended: { type: 'time' },
     minutes: { type: 'int' },
     where_stopped: { type: 'text' },
-    next_action: { type: 'text' },
   },
 };
 
@@ -204,8 +203,8 @@ export async function startSession(ctx: Ctx, input: { project_id?: string; pomod
   return currentSession(ctx);
 }
 
-/** Stop the running session with a shutdown note; logs it and updates the project's next action. */
-export async function stopSession(ctx: Ctx, input: { where_stopped?: string; next_action?: string; discard?: boolean }) {
+/** Stop the running session with a shutdown note (where you stopped); logs it. */
+export async function stopSession(ctx: Ctx, input: { where_stopped?: string; discard?: boolean }) {
   const s = await ctx.jsonSetting<RunningSession | null>('session.current', null);
   if (!s) throw bad('No session is running');
   await ctx.setSetting('session.current', null);
@@ -219,38 +218,28 @@ export async function stopSession(ctx: Ctx, input: { where_stopped?: string; nex
     ended: ctx.now(),
     minutes,
     where_stopped: input.where_stopped ?? null,
-    next_action: input.next_action ?? null,
   });
   if (s.project_id && (await find(ctx, projectsEntity, s.project_id))) {
     const patch: Record<string, unknown> = { last_touched: day };
-    if (input.next_action) patch.next_action = input.next_action;
     await update(ctx, projectsEntity, s.project_id, patch);
   }
   return entry;
 }
 
 /** Log a session after the fact (for example one Claude helped with). */
-export async function logSession(ctx: Ctx, input: { project_id?: string; date?: string; minutes?: number; where_stopped?: string; next_action?: string }) {
+export async function logSession(ctx: Ctx, input: { project_id?: string; date?: string; minutes?: number; where_stopped?: string }) {
   const day = input.date ?? (await ctx.today());
   const entry = await create(ctx, logEntity, { ...input, date: day });
   if (input.project_id) {
     const p = await get(ctx, projectsEntity, input.project_id);
     const patch: Record<string, unknown> = {};
     if (!p.last_touched || String(p.last_touched) < day) patch.last_touched = day;
-    if (input.next_action) patch.next_action = input.next_action;
     if (Object.keys(patch).length) await update(ctx, projectsEntity, p.id, patch);
   }
   return entry;
 }
 
 // ---------- today and status ----------
-
-/** A project's next action is hidden unless the project, or the mode's default, turns it on (as in v1). */
-async function nextActionShown(ctx: Ctx, p: Row): Promise<boolean> {
-  if (p.show_next_action === 'on') return true;
-  if (p.show_next_action === 'off') return false;
-  return (await ctx.setting('next_action.default')) === 'on';
-}
 
 export async function today(ctx: Ctx) {
   const day = await ctx.today();
@@ -266,7 +255,7 @@ export async function today(ctx: Ctx) {
   return {
     mode: ctx.mode,
     day,
-    focus: focus && { ...focus, show_next: await nextActionShown(ctx, focus) },
+    focus,
     // Session controls are hidden in the app when no focus is chosen (owner's rule from v1).
     show_session_controls: !!focus || !!session,
     rotation: rot.today,
@@ -289,12 +278,11 @@ export async function status(ctx: Ctx) {
     habitProgress(ctx, day),
     pendingNotifications(ctx),
   ]);
-  const showNext = focus && (await nextActionShown(ctx, focus));
   return {
     mode: ctx.mode,
     day,
     now: ctx.now(),
-    focus: focus ? { id: focus.id, name: focus.name, next_action: focus.next_action ?? null, show_next_action: !!showNext } : null,
+    focus: focus ? { id: focus.id, name: focus.name } : null,
     session: session && {
       project_id: session.project_id,
       project_name: session.project_name,
@@ -358,19 +346,18 @@ export const todayModule: Module = {
     },
     {
       name: 'stop_session',
-      description: 'Finish the running session with a shutdown note (where you stopped, next action). It is logged and the project’s next action is updated.',
-      input: z.object({ where_stopped: z.string().optional(), next_action: z.string().optional(), discard: z.boolean().optional() }),
+      description: 'Finish the running session with a shutdown note (where you stopped). It is logged.',
+      input: z.object({ where_stopped: z.string().optional(), discard: z.boolean().optional() }),
       run: (ctx, a) => stopSession(ctx, a),
     },
     {
       name: 'log_session',
-      description: 'Log a session after the fact. Updates the project’s last touched day and, if given, its next action.',
+      description: 'Log a session after the fact. Updates the project’s last touched day.',
       input: z.object({
         project_id: z.string().optional(),
         date: z.string().optional(),
         minutes: z.number().int().optional(),
         where_stopped: z.string().optional(),
-        next_action: z.string().optional(),
       }),
       run: (ctx, a) => logSession(ctx, a),
     },

@@ -92,6 +92,11 @@ export class Ctx {
     }
   }
 
+  /** Whether a feature flag is on (src/core/features.ts). */
+  async feature(id: string): Promise<boolean> {
+    return (await import('./features')).isOn(this, id);
+  }
+
   /** Write the changes of this request to the undo history. */
   async flushUndo(): Promise<void> {
     if (!this.changes.length) return;

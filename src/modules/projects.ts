@@ -23,10 +23,8 @@ export const projectsEntity: Entity = {
     name: { type: 'text', required: true },
     category_id: { type: 'text', ref: 'categories' },
     status: { type: 'text', enum: PROJECT_STATUS, default: 'active' },
-    next_action: { type: 'text', desc: 'The very next physical step' },
     locked_until: { type: 'day', desc: 'Not offered as focus before this day' },
     last_touched: { type: 'day' },
-    show_next_action: { type: 'text', enum: ['on', 'off'], desc: 'Empty follows the mode default' },
   },
   beforeCreate(ctx, row) {
     row.last_touched ??= ctx.nowDate.toISOString().slice(0, 10);
@@ -149,7 +147,7 @@ export async function searchAll(ctx: Ctx, q: string, limit = 30) {
       })
     ).map((r) => ({ kind, id: r.id, title: String(r[label] ?? ''), project_id: r.project_id ?? null, list_id: r.list_id ?? null }));
   const groups = await Promise.all([
-    one('projects', ['name', 'next_action'], 'name'),
+    one('projects', ['name'], 'name'),
     one('tasks', ['title', 'note'], 'title'),
     one('lists', ['name'], 'name'),
     one('todos', ['title', 'note'], 'title'),
@@ -212,7 +210,6 @@ export const projectsModule: Module = {
         name: z.string().min(1),
         category_id: z.string().optional(),
         status: z.enum(PROJECT_STATUS).optional(),
-        next_action: z.string().optional(),
         notes: z.string().optional().describe('Markdown notes for the project'),
       }),
       run: async (ctx, { notes, ...a }) => {
@@ -223,15 +220,13 @@ export const projectsModule: Module = {
     },
     {
       name: 'update_project',
-      description: 'Change a project’s name, status, category, next action, locked_until or show_next_action.',
+      description: 'Change a project’s name, status, category or locked_until.',
       input: z.object({
         id: z.string(),
         name: z.string().optional(),
         status: z.enum(PROJECT_STATUS).optional(),
         category_id: z.string().nullable().optional(),
-        next_action: z.string().nullable().optional(),
         locked_until: z.string().nullable().optional(),
-        show_next_action: z.enum(['on', 'off']).nullable().optional(),
       }),
       run: (ctx, { id, ...patch }) => update(ctx, projectsEntity, id, patch),
     },

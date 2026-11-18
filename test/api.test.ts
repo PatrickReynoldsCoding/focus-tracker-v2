@@ -173,9 +173,8 @@ describe('today, sessions and status', () => {
     await call('POST', '/session/start', {}, { mode: 'work', expect: 400 });
     const status = await call('GET', '/status', undefined, { mode: 'work' });
     expect(status.session.project_name).toBe('Focus me');
-    const log = await call('POST', '/session/stop', { where_stopped: 'half way', next_action: 'finish it' }, { mode: 'work' });
+    const log = await call('POST', '/session/stop', { where_stopped: 'half way' }, { mode: 'work' });
     expect(log).toMatchObject({ project_id: p.id, where_stopped: 'half way', minutes: 1 });
-    expect((await call('GET', `/projects/${p.id}`, undefined, { mode: 'work' })).next_action).toBe('finish it');
     expect((await call('GET', '/session', undefined, { mode: 'work' }))).toBeNull();
   });
 
@@ -296,5 +295,13 @@ describe('import', () => {
     expect(p.created).toBe('2025-01-02T03:04:05.000Z');
     expect(p.columns).toEqual([]);
     await call('POST', '/import/accounts', { rows: [] }, { ...m, expect: 400 });
+  });
+});
+
+describe('feature flags', () => {
+  it('lists flags and refuses unknown ones', async () => {
+    const list = await call('GET', '/features');
+    expect(Array.isArray(list)).toBe(true);
+    await call('PUT', '/features/no-such-flag', { enabled: true }, { expect: 400 });
   });
 });

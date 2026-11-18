@@ -71,10 +71,8 @@ export function mapV1(tabs, docs = {}) {
     name: str(r.name) || 'Unnamed project',
     category_id: opt(r.category),
     status: enumOr(r.status, ['active', 'paused', 'done', 'dropped'], str(r.status) === 'finished' ? 'done' : 'active'),
-    next_action: opt(r.next_action),
     locked_until: day(r.locked_until),
     last_touched: day(r.last_touched),
-    show_next_action: ['on', 'off'].includes(str(r.show_next_action)) ? str(r.show_next_action) : undefined,
     created: time(r.created),
     updated_at: time(r.updated_at),
   }));
@@ -163,7 +161,7 @@ export function mapV1(tabs, docs = {}) {
     value: opt(r.value),
     updated_at: time(r.updated_at),
   }));
-  out.log = t('Log').map((r) => ({ id: str(r.id), project_id: opt(r.project_id), date: day(r.date), minutes: int(r.minutes), where_stopped: opt(r.where_stopped), next_action: opt(r.next_action), created: time(r.date) }));
+  out.log = t('Log').map((r) => ({ id: str(r.id), project_id: opt(r.project_id), date: day(r.date), minutes: int(r.minutes), where_stopped: opt(r.where_stopped), created: time(r.date) }));
   out.skips = t('Skips').map((r) => ({ id: str(r.id), project_id: str(r.project_id), to_project_id: opt(r.to_project_id), date: day(r.date) }));
   out.reminders = t('Reminders').map((r) => ({ id: str(r.id), project_id: opt(r.project_id), due: time(r.due), done: time(r.done), created: time(r.created) }));
   out.stickies = t('Stickies').map((r) => ({

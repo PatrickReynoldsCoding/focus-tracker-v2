@@ -1,6 +1,6 @@
-import { Loading, fmtDay, fmtMinutes, useData } from '../ui';
+import { Loading, fmtDay, fmtMinutes, useData } from '../../core/ui';
 
-type Entry = { id: string; date: string; project_id: string | null; minutes: number | null; where_stopped: string | null; next_action: string | null };
+type Entry = { id: string; date: string; project_id: string | null; minutes: number | null; where_stopped: string | null };
 
 export function Log() {
   const { data, error } = useData<Entry[]>('/log?limit=200');
@@ -26,7 +26,6 @@ export function Log() {
                   <a href={e.project_id ? `#/p/${e.project_id}` : undefined}>{name(e.project_id) || 'No project'}</a>
                   {e.minutes ? <span class="muted"> · {fmtMinutes(e.minutes)}</span> : null}
                   {e.where_stopped && <div class="small">Stopped: {e.where_stopped}</div>}
-                  {e.next_action && <div class="small muted">Next: {e.next_action}</div>}
                 </li>
               ))}
           </ul>
@@ -36,3 +35,6 @@ export function Log() {
     </div>
   );
 }
+
+import { registerTab } from '../../core/registry';
+registerTab({ id: 'log', path: '/log', label: 'Log', icon: '⏱', order: 50, render: () => <Log /> });

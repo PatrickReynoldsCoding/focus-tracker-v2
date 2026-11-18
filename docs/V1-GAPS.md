@@ -1,6 +1,12 @@
 # v1 features missing from v2
 
-Compared on 2026-11-18 from v1's `docs/ROADMAP.md` and modules. Size: S under an hour, M a few hours, L a day or more. For the owner's audit: mark each keep, later or cut.
+Compared on 2026-11-18 from v1's `docs/ROADMAP.md` and modules. Size: S under an hour, M a few hours, L a day or more.
+
+**Owner's audit (2026-11-18):** build everything except 7, 14 and 15; next action is removed altogether (DECISIONS D12). Changes:
+- 11: any note (not only a Today note) can be added to Today as a panel.
+- 16: issue relationships like Jira (typed links between items), not just project links.
+- 20: yes, from scratch (v1's code was buggy), with fold-out menus and a nicer feel.
+- 23: icons for each kind of Google Drive item (Docs, Sheets, Slides ...) and a nicer way to bring Drive items in, ideally a pop-up Drive picker.
 
 ## Today and sessions
 

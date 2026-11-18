@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
-import { change, del, newId, optimistic, patch, post, put } from '../api';
-import { Board, type Column } from '../Board';
-import { AddInput, ColorPicker, Dialog, fmtDay, go, InlineEdit, Loading, Markdown, MarkdownEditor, todayLocal, useData } from '../ui';
+import { change, del, newId, optimistic, patch, post, put } from '../../core/api';
+import { Board, type Column } from '../projects/Board';
+import { AddInput, ColorPicker, Dialog, fmtDay, go, InlineEdit, Loading, Markdown, MarkdownEditor, todayLocal, useData } from '../../core/ui';
 
 type Overview = { id: string; name: string; kind: 'list' | 'todo' | 'note'; color: string | null; show_today: boolean; preview?: string; items?: { title: string }[]; open?: number; count?: number };
 type Todo = { id: string; title: string; day: string | null; done: string | null; group_id: string };
@@ -195,3 +195,7 @@ export function ListPage({ id }: { id: string }) {
     </div>
   );
 }
+
+import { registerRoute, registerTab } from '../../core/registry';
+registerTab({ id: 'notes', path: '/notes', label: 'Notes', icon: '✎', order: 30, phone: true, render: () => <Notes /> });
+registerRoute({ id: 'list', prefix: '/n', tab: 'notes', render: ({ params }) => <ListPage id={params[0]} /> });

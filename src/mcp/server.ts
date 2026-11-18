@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { errorResponse, resolveMode } from '../api';
 import { Ctx, type Env } from '../core/ctx';
 import { ApiError } from '../core/errors';
+import { featureStates } from '../core/features';
 import { allTools, type Tool } from '../core/registry';
 
 const SUPPORTED = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
@@ -21,8 +22,14 @@ type Rpc = { jsonrpc: '2.0'; id?: string | number | null; method: string; params
 
 const modeArg = z.string().optional().describe('Mode such as "personal" or "work". Default: the default mode.');
 
-function toolList() {
-  return allTools().map((t) => {
+async function enabledTools(env: Env): Promise<Tool[]> {
+  const ctx = new Ctx(env, await resolveMode(env, undefined));
+  const states = await featureStates(ctx);
+  return (allTools() as Tool[]).filter((t) => !t.feature || states[t.feature]);
+}
+
+async function toolList(env: Env) {
+  return (await enabledTools(env)).map((t) => {
     const schema = z.toJSONSchema(t.input instanceof z.ZodObject ? t.input.extend({ mode: modeArg }) : t.input, { io: 'input' }) as Record<string, unknown>;
     delete schema.$schema;
     return {
@@ -35,7 +42,7 @@ function toolList() {
 }
 
 async function callTool(env: Env, name: string, args: Record<string, unknown>) {
-  const tool = allTools().find((t) => t.name === name) as Tool | undefined;
+  const tool = (await enabledTools(env)).find((t) => t.name === name);
   if (!tool) return { content: [{ type: 'text', text: `Unknown tool ${name}` }], isError: true };
   try {
     const { mode, ...rest } = args ?? {};
@@ -71,7 +78,7 @@ async function handle(env: Env, msg: Rpc): Promise<Record<string, unknown> | nul
     case 'ping':
       return reply({});
     case 'tools/list':
-      return reply({ tools: toolList() });
+      return reply({ tools: await toolList(env) });
     case 'tools/call':
       return reply(await callTool(env, String(msg.params?.name), (msg.params?.arguments ?? {}) as Record<string, unknown>));
     case 'resources/list':

@@ -39,8 +39,7 @@ ask() {
 case "$1" in
   stop)
     where=$(ask "Where did you stop?" "") || exit 0
-    next=$(ask "Next action?" "")
-    action stop "" --data-urlencode "where_stopped=$where" --data-urlencode "next_action=$next"
+    action stop "" --data-urlencode "where_stopped=$where"
     exit 0 ;;
   start|tick|habit|dismiss)
     action "$1" "$2"

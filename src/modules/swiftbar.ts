@@ -35,7 +35,6 @@ export async function swiftbarText(ctx: Ctx, origin: string): Promise<string> {
 
   if (s.focus) {
     lines.push(`Focus: ${clean(s.focus.name)} | href=${origin}/#/p/${s.focus.id}`);
-    if (s.focus.next_action && s.focus.show_next_action) lines.push(`Next: ${clean(s.focus.next_action, 80)} | size=12`);
   } else lines.push(`No focus chosen | href=${origin}/#/today`);
   if (s.session) lines.push(`Stop session… | ${act('stop')}`);
   else if (s.focus) lines.push(`Start session | ${act('start')}`);
@@ -67,7 +66,7 @@ export async function swiftbarAction(ctx: Ctx, form: Record<string, string>) {
     case 'start':
       return startSession(ctx, {});
     case 'stop':
-      return stopSession(ctx, { where_stopped: form.where_stopped || undefined, next_action: form.next_action || undefined });
+      return stopSession(ctx, { where_stopped: form.where_stopped || undefined });
     case 'tick': {
       const { todosEntity } = await import('./lists');
       return update(ctx, todosEntity, id, { done: await ctx.today() });

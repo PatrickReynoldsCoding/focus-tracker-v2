@@ -1,8 +1,8 @@
 import { useState } from 'preact/hooks';
-import { change, del, localStorageSet, post } from '../api';
-import { AddInput, daysAgo, go, Loading, todayLocal, useData } from '../ui';
+import { change, del, localStorageSet, post } from '../../core/api';
+import { AddInput, daysAgo, go, Loading, todayLocal, useData } from '../../core/ui';
 
-type Project = { id: string; name: string; category_id: string | null; status: string; next_action: string | null; last_touched: string | null; locked_until: string | null };
+type Project = { id: string; name: string; category_id: string | null; status: string; last_touched: string | null; locked_until: string | null };
 type Category = { id: string; label: string; color: string | null };
 type Backlog = { id: string; title: string; category_id: string | null; note: string | null };
 
@@ -34,7 +34,7 @@ export function Projects() {
   const rows = projects
     .filter((p) => prefs.status.includes(p.status))
     .filter((p) => !cat || p.category_id === cat)
-    .filter((p) => !q || `${p.name} ${p.next_action ?? ''}`.toLowerCase().includes(q.toLowerCase()))
+    .filter((p) => !q || p.name.toLowerCase().includes(q.toLowerCase()))
     .sort((a, b) => {
       const v = (p: Project) => (prefs.sort === 'category' ? catName(p.category_id) : String((p as any)[prefs.sort] ?? ''));
       return v(a).localeCompare(v(b)) * prefs.dir;
@@ -99,7 +99,6 @@ export function Projects() {
             <tr key={p.id} onClick={() => go(`/p/${p.id}`)} class="click">
               <td>
                 <a href={`#/p/${p.id}`}>{p.name}</a>
-                {p.next_action && <div class="muted small">{p.next_action}</div>}
               </td>
               <td class="hide-phone">{catName(p.category_id)}</td>
               <td class="hide-phone">{p.status}</td>
@@ -135,3 +134,6 @@ export function Projects() {
     </div>
   );
 }
+
+import { registerTab } from '../../core/registry';
+registerTab({ id: 'projects', path: '/projects', label: 'Projects', icon: '▤', order: 20, phone: true, render: () => <Projects /> });

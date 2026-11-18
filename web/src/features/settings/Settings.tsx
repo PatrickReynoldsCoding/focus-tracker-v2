@@ -1,7 +1,9 @@
 import { useState } from 'preact/hooks';
-import { change, del, logout, mode, patch, post, put } from '../api';
-import { useSignal } from '../signal';
-import { AddInput, ColorPicker, InlineEdit, Loading, useData } from '../ui';
+import { change, del, logout, mode, patch, post, put, say } from '../../core/api';
+import { featureList, setFeature } from '../../core/features';
+import { Panels, registerPanel, registerTab } from '../../core/registry';
+import { useSignal } from '../../core/signal';
+import { AddInput, ColorPicker, InlineEdit, Loading, useData } from '../../core/ui';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
@@ -167,14 +169,38 @@ function General() {
         <label class="inline">
           <input type="checkbox" defaultChecked={data.mode['pomodoro.default'] !== 'off'} onChange={(e) => set('pomodoro.default', (e.target as HTMLInputElement).checked ? 'on' : 'off')} /> Pomodoro timer in sessions
         </label>
-        <label class="inline">
-          <input type="checkbox" defaultChecked={data.mode['next_action.default'] === 'on'} onChange={(e) => set('next_action.default', (e.target as HTMLInputElement).checked ? 'on' : 'off')} /> Show next action on Today
-        </label>
         <label>
           Nudge about projects untouched for (days)
           <input type="number" min={1} defaultValue={data.mode['nudge.days'] ?? '14'} onBlur={(e) => set('nudge.days', (e.target as HTMLInputElement).value)} />
         </label>
       </div>
+    </section>
+  );
+}
+
+function Features() {
+  const list = useSignal(featureList);
+  return (
+    <section class="card">
+      <h2>Features</h2>
+      <p class="muted small">Turn parts of the tracker on or off. Applies to every device and to Claude.</p>
+      {list.length ? (
+        <ul class="plain">
+          {list.map((f) => (
+            <li key={f.id}>
+              <label class="inline feature-row">
+                <input type="checkbox" checked={f.enabled} onChange={(e) => setFeature(f.id, (e.target as HTMLInputElement).checked).catch((err) => say(err.message, 'error'))} />
+                <span>
+                  <strong>{f.label}</strong> {f.experimental && <span class="tag">Experimental</span>}
+                  <span class="muted small" style="display:block">{f.description}</span>
+                </span>
+              </label>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="muted small">No switchable features yet.</p>
+      )}
     </section>
   );
 }
@@ -188,11 +214,7 @@ export function Settings() {
         <span class="tag">{m}</span>
       </div>
       <div class="grid two">
-        <General />
-        <Rotation />
-        <Categories />
-        <Tokens />
-        <Connections />
+        <Panels place="settings" props={{}} />
       </div>
       <div class="row">
         <button class="ghost" onClick={logout}>
@@ -202,3 +224,11 @@ export function Settings() {
     </div>
   );
 }
+
+registerTab({ id: 'settings', path: '/settings', label: 'Settings', icon: '⚙', order: 90, phone: true, render: () => <Settings /> });
+registerPanel('settings', { id: 'general', order: 10, render: () => <General /> });
+registerPanel('settings', { id: 'rotation', order: 20, render: () => <Rotation /> });
+registerPanel('settings', { id: 'categories', order: 30, render: () => <Categories /> });
+registerPanel('settings', { id: 'features', order: 40, render: () => <Features /> });
+registerPanel('settings', { id: 'tokens', order: 50, render: () => <Tokens /> });
+registerPanel('settings', { id: 'connections', order: 60, render: () => <Connections /> });

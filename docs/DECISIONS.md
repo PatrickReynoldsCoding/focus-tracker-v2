@@ -69,3 +69,11 @@ Created **private** (`PatrickReynoldsCoding/focus-tracker-v2`). The spec wants a
 Notes, lists and everything else live only in the tracker's D1 database. Phase 4 (Drive sync, multi-account Google OAuth) is dropped. Google Docs are linked from a project's or category's **resources** instead (a `docs.google.com` or `drive.google.com` address is stored with type `drive`); the link opens the Doc, the tracker never reads it, so no Google sign-in is needed.
 
 The `accounts` and `drive_links` tables from the first migration are unused; they can be dropped in a later migration. An **export everything** button (all data in a clean format) is wanted later; it is parked in Phase 9.
+
+## D12. No next action (owner, 2026-11-18)
+
+Projects have no next action and the shutdown note asks only where you stopped. The fields are gone from the API, the app, the widget, the menu bar and Claude's tools. The old columns (`projects.next_action`, `projects.show_next_action`, `log.next_action`) stay in the database unused, so nothing imported is lost; a later migration can drop them.
+
+## D13. Feature flags and plug-in points (owner, 2026-11-18)
+
+Everything should be as modular as possible, with flags for big decisions. The server has feature flags (`src/core/features.ts`, switched in Settings → Features, one set per deployment, also hiding Claude tools), and the web app has a registry of plug-in points (`web/src/core/registry.tsx`: tabs, routes, Today panels, project panels, card-dialog sections, settings sections). See AGENTS.md "How the code is organised".

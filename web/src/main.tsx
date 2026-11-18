@@ -1,45 +1,27 @@
 import { render } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
-import { checkSignedIn, get, localStorageSet, login, mode, signedIn, toast, undo } from './api';
-import { useSignal } from './signal';
+import { checkSignedIn, get, localStorageSet, login, mode, signedIn, toast, undo } from './core/api';
+import { loadFeatures } from './core/features';
+import { useRoutes, useTabs } from './core/registry';
+import { useSignal } from './core/signal';
+import { go, route } from './core/ui';
+import './features';
 import './styles.css';
-import { go, route } from './ui';
-import { Habits } from './views/Habits';
-import { Log } from './views/Log';
-import { ListPage, Notes } from './views/Notes';
-import { ProjectPage } from './views/Project';
-import { Projects } from './views/Projects';
-import { Settings } from './views/Settings';
-import { Today } from './views/Today';
 
-const TABS = [
-  { path: '/today', label: 'Today', icon: '◎' },
-  { path: '/projects', label: 'Projects', icon: '▤' },
-  { path: '/notes', label: 'Notes', icon: '✎' },
-  { path: '/habits', label: 'Habits', icon: '✓' },
-  { path: '/log', label: 'Log', icon: '⏱' },
-  { path: '/settings', label: 'Settings', icon: '⚙' },
-];
+/** Which tab or route a hash like '/p/abc' belongs to, and its parameters. */
+function useCurrent() {
+  const r = useSignal(route);
+  const tabs = useTabs();
+  const routes = useRoutes();
+  const [, head, ...params] = r.split('/');
+  const extra = routes.find((x) => x.prefix === `/${head}`);
+  if (extra) return { r, params, tabId: extra.tab, render: () => extra.render({ route: r, params }) };
+  const tab = tabs.find((t) => t.path === `/${head}`) ?? tabs[0];
+  return { r, params, tabId: tab?.id, render: () => (tab ? tab.render({ route: r, params }) : null) };
+}
 
 function Page() {
-  const r = useSignal(route);
-  const [, kind, id] = r.split('/');
-  if (kind === 'p' && id) return <ProjectPage id={id} />;
-  if (kind === 'n' && id) return <ListPage id={id} />;
-  switch (kind) {
-    case 'projects':
-      return <Projects />;
-    case 'notes':
-      return <Notes />;
-    case 'habits':
-      return <Habits />;
-    case 'log':
-      return <Log />;
-    case 'settings':
-      return <Settings />;
-    default:
-      return <Today />;
-  }
+  return useCurrent().render();
 }
 
 function ModeSwitch() {
@@ -120,7 +102,8 @@ function Login() {
 
 function App() {
   const ok = useSignal(signedIn);
-  const r = useSignal(route);
+  const tabs = useTabs();
+  const { tabId } = useCurrent();
   const [wide, setWide] = useState(() => {
     try {
       return localStorage.getItem('ft.wide') === '1';
@@ -128,6 +111,9 @@ function App() {
       return false;
     }
   });
+  useEffect(() => {
+    if (ok) loadFeatures();
+  }, [ok]);
   useEffect(() => {
     checkSignedIn();
     const key = (e: KeyboardEvent) => {
@@ -142,13 +128,12 @@ function App() {
   }, []);
   if (ok === null) return <p class="empty">Loading…</p>;
   if (!ok) return <Login />;
-  const active = '/' + (r.split('/')[1] === 'p' ? 'projects' : r.split('/')[1] === 'n' ? 'notes' : r.split('/')[1]);
   return (
     <div class={`shell ${wide ? 'wide' : ''}`}>
       <nav class="side" aria-label="Main">
         <div class="brand">Focus</div>
-        {TABS.map((t) => (
-          <a key={t.path} href={`#${t.path}`} class={active === t.path ? 'on' : ''} aria-current={active === t.path ? 'page' : undefined}>
+        {tabs.map((t) => (
+          <a key={t.id} href={`#${t.path}`} class={tabId === t.id ? 'on' : ''} aria-current={tabId === t.id ? 'page' : undefined}>
             <span class="ico" aria-hidden="true">
               {t.icon}
             </span>
@@ -179,8 +164,8 @@ function App() {
         </main>
       </div>
       <nav class="tabs" aria-label="Main">
-        {TABS.filter((t) => t.path !== '/log').map((t) => (
-          <a key={t.path} href={`#${t.path}`} class={active === t.path ? 'on' : ''} aria-current={active === t.path ? 'page' : undefined}>
+        {tabs.filter((t) => t.phone).slice(0, 5).map((t) => (
+          <a key={t.id} href={`#${t.path}`} class={tabId === t.id ? 'on' : ''} aria-current={tabId === t.id ? 'page' : undefined}>
             <span class="ico" aria-hidden="true">
               {t.icon}
             </span>

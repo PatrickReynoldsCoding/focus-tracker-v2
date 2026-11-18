@@ -3,55 +3,75 @@
 
 import Sortable from 'sortablejs';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { change, del, localStorageSet, newId, optimistic, patch, post } from './api';
-import { AddInput, ColorPicker, Dialog, InlineEdit, MarkdownEditor } from './ui';
+import { change, del, localStorageSet, newId, optimistic, patch, post } from '../../core/api';
+import { Panels, registerPanel, type CardSectionProps } from '../../core/registry';
+import { AddInput, ColorPicker, Dialog, InlineEdit, MarkdownEditor } from '../../core/ui';
 
 export type Card = { id: string; title: string; note: string | null; color: string | null; column_id: string; ord: number };
 export type Column = { id: string; name: string; cards: Card[] };
 
 function CardDialog({ card, columns, onClose, onChange }: { card: Card; columns: Column[]; onClose: () => void; onChange: (c: Partial<Card> | null) => void }) {
-  const save = (p: Partial<Card>) => {
-    onChange(p);
+  const save = (p: Record<string, unknown>) => {
+    onChange(p as Partial<Card>);
     change(() => patch(`/tasks/${card.id}`, p));
   };
   return (
     <Dialog title={<InlineEdit value={card.title} onSave={(title) => title && save({ title })} />} onClose={onClose} wide>
       <div class="stack">
-        <MarkdownEditor value={card.note ?? ''} placeholder="Add a note (Markdown)…" onSave={(note) => save({ note })} />
-        <ColorPicker value={card.color} onPick={(color) => save({ color })} />
-        <label class="inline">
-          Column
-          <select
-            value={card.column_id}
-            onChange={(e) => {
-              const column_id = (e.target as HTMLSelectElement).value;
-              onChange({ column_id });
-              change(() => post(`/tasks/${card.id}/move`, { column_id }));
-            }}
-          >
-            {columns.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div class="row">
-          <button
-            class="danger ghost"
-            onClick={() => {
-              onClose();
-              onChange(null);
-              change(() => del(`/tasks/${card.id}`), 'Card deleted');
-            }}
-          >
-            Delete card
-          </button>
-        </div>
+        <Panels<CardSectionProps> place="card" props={{ card, columns, save, update: (f) => onChange(f as Partial<Card> | null), close: onClose }} />
       </div>
     </Dialog>
   );
 }
+
+// The card dialog's sections. Other features add theirs with registerPanel('card', ...).
+registerPanel('card', {
+  id: 'note',
+  order: 10,
+  render: ({ card, save }) => <MarkdownEditor value={card.note ?? ''} placeholder="Add a note (Markdown)…" onSave={(note) => save({ note })} />,
+});
+registerPanel('card', { id: 'color', order: 20, render: ({ card, save }) => <ColorPicker value={card.color} onPick={(color) => save({ color })} /> });
+registerPanel('card', {
+  id: 'column',
+  order: 30,
+  render: ({ card, columns, update }) => (
+    <label class="inline">
+      Column
+      <select
+        value={card.column_id}
+        onChange={(e) => {
+          const column_id = (e.target as HTMLSelectElement).value;
+          update({ column_id });
+          change(() => post(`/tasks/${card.id}/move`, { column_id }));
+        }}
+      >
+        {columns.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  ),
+});
+registerPanel('card', {
+  id: 'delete',
+  order: 1000,
+  render: ({ card, update, close }) => (
+    <div class="row">
+      <button
+        class="danger ghost"
+        onClick={() => {
+          close();
+          update(null);
+          change(() => del(`/tasks/${card.id}`), 'Card deleted');
+        }}
+      >
+        Delete card
+      </button>
+    </div>
+  ),
+});
 
 function ColumnView({
   col,

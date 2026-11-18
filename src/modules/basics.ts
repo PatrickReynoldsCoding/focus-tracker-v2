@@ -176,7 +176,6 @@ async function startBacklogItem(ctx: import('../core/ctx').Ctx, id: string) {
     name: item.title,
     category_id: item.category_id,
     status: 'active',
-    next_action: null,
   });
   await remove(ctx, backlogEntity, id);
   if (item.note) {

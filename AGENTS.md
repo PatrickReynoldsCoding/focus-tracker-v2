@@ -10,23 +10,37 @@ Read this file, then `docs/STATUS.md` (where the work is) and `docs/DECISIONS.md
 
 ## How the code is organised
 
+Modular first: a feature lives in its own files on the server and in the browser, plugs in through a registry, and can sit behind a feature flag. Adding, removing or switching off a feature should not mean editing other features' files.
+
+**Server** (`src/`)
 - `src/index.ts`: the Worker. `OAuthProvider` in front; `/mcp` goes to `src/mcp/server.ts`, everything else to the Hono app in `src/api.ts`. Static files (the built web app in `public/`) are served by Workers Assets.
 - `src/core/`: the small shared core.
   - `entity.ts`: how a table is described (fields, types, refs, ordering, hooks).
   - `store.ts`: generic create / get / list / update / remove / move for any entity, recording every change for undo; cascades deletes along `ref` fields marked `cascade`, clears the others.
-  - `ctx.ts`: one request's context: mode, time, settings, undo batch.
-  - `auth.ts`, `migrate.ts`, `registry.ts`, `ids.ts`, `errors.ts`.
-- `src/modules/<feature>.ts`: one feature each. A module declares `entities` (tables), `routes` (extra REST routes under `/api`) and `tools` (Claude tools, zod input). List it in `src/modules/index.ts`.
-- `web/`: the web app (Preact + Vite). `npm run build` writes it to `public/` (git-ignored).
-- `clients/swiftbar/`: the Mac menu bar plugin. Its menu is written by the server (`src/modules/swiftbar.ts`).
-- `migrations/`: D1 schema. A new migration file also needs a line in `MIGRATIONS` in `src/core/migrate.ts` (a test checks).
+  - `features.ts`: **feature flags**. A module lists the flags it reads in `Module.features` (`{ id, label, description, default, experimental? }`); the owner switches them in Settings → Features (one setting for the deployment). Server code asks `await ctx.feature('id')`; a route that belongs to a flag calls `requireFeature(ctx, 'id')`; a Claude tool sets `feature: 'id'` and is hidden while it is off.
+  - `ctx.ts`, `auth.ts`, `migrate.ts`, `registry.ts`, `ids.ts`, `errors.ts`.
+- `src/modules/<feature>.ts`: one feature each. A module declares `entities` (tables), `routes` (REST routes under `/api`), `tools` (Claude tools, zod input) and `features` (flags). List it in `src/modules/index.ts`.
+- `migrations/`: D1 schema. A new migration also needs a line in `MIGRATIONS` in `src/core/migrate.ts` (a test checks). Never edit a migration that has shipped; add a new one.
+
+**Browser** (`web/src/`)
+- `core/`: `api.ts` (fetch, `optimistic`, `change`, undo, toast), `signal.ts`, `ui.tsx` (shared components), `features.ts` (flags in the browser: `useFlag(id)`), `registry.tsx` (the plug-in points).
+- `features/<name>/`: one feature each, registering what it adds; `features/index.ts` imports each one once. Plug-in points (all take an optional `feature` flag id and an `order`):
+  - `registerTab` (side bar, and the phone's bottom bar when `phone: true`, at most 5), `registerRoute` (a page that is not a tab, such as `/p/<id>`),
+  - `registerPanel('today', …)` gets `{ today, setToday }` (GET /api/today),
+  - `registerPanel('project', …)` gets `{ project, setProject }` (GET /api/projects/:id/full),
+  - `registerPanel('card', …)` is a section of the card dialog, gets `{ card, columns, save, update, close }`,
+  - `registerPanel('settings', …)` is a section of Settings.
+  A feature that needs a new plug-in point adds it to `core/registry.tsx` in a small, separate commit.
+- `styles.css` holds shared tokens and base styles; a feature's own styles go in `features/<name>/<name>.css`, imported by the feature.
+- `clients/swiftbar/`, `android/`: the Mac menu bar plugin and the Android app (see their READMEs).
 
 ## Adding things
 
 - **A field**: a migration (`ALTER TABLE`), plus the field in the entity's `fields`. REST, validation, undo and Claude's generic tools pick it up.
 - **A table**: a migration, an `Entity` in a module, and (if Claude should use it in a specific way) a tool.
-- **A Claude tool**: add it to a module's `tools`. Describe it in one or two plain sentences; say what it changes. Every tool gets an optional `mode` argument automatically. Keep tool count reasonable: prefer the generic `*_item` tools for rare operations.
-- **A web view**: `web/src/views/`, routed in `web/src/main.tsx`. Show a change on screen first and send it with `optimistic()` (rolled back with a message if refused), or `change()` when there is nothing to show first.
+- **A Claude tool**: add it to a module's `tools`. Describe it in one or two plain sentences; say what it changes. Every tool gets an optional `mode` argument automatically. Prefer the generic `*_item` tools for rare operations.
+- **A big or debatable behaviour**: put it behind a flag, defaulting to what the owner asked for, so it can be switched back without a deploy.
+- **A web view**: a folder in `web/src/features/`. Show a change on screen first and send it with `optimistic()` (rolled back with a message if refused), or `change()` when there is nothing to show first.
 
 ## Rules for the code
 
@@ -45,6 +59,9 @@ npm run typecheck # server and web
 
 For a change to the web app, also run it (`npm run build && npx wrangler dev`) and click through on a phone-sized window.
 
-## Deploying
+## Branches, releases and deploying
 
-`npm run deploy` (build, migrations, deploy). The owner's deployment is `focus-tracker` on their Cloudflare account. Deploy after the tests pass and the change is committed, and tell the owner what was deployed.
+- Work on a branch per feature (`feat/<name>`), merge to `main` when its tests pass. Parallel agents each get their own git worktree and branch.
+- After a merge to `main`: `npm test`, `npm run typecheck`, `npm run test:ui` against a local server, then `npm run deploy` (build, migrations, deploy to the owner's Cloudflare account) and push.
+- Release often so the owner can test: bump `version` in `package.json`, tag `vX.Y.Z`, and `gh release create vX.Y.Z` with short notes of what to try. When the Android app changed, bump `versionCode`/`versionName` in `android/app/build.gradle.kts` and attach the signed APK (`cd android && ./gradlew assembleRelease`).
+- Tell the owner what was deployed and what to try.

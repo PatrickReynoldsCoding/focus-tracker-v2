@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
-import { change, del, patch, post } from '../api';
-import { Dialog, Loading, useData } from '../ui';
+import { change, del, patch, post } from '../../core/api';
+import { Dialog, Loading, useData } from '../../core/ui';
 
 type Habit = {
   id: string;
@@ -137,3 +137,6 @@ export function Habits() {
     </div>
   );
 }
+
+import { registerTab } from '../../core/registry';
+registerTab({ id: 'habits', path: '/habits', label: 'Habits', icon: '✓', order: 40, phone: true, render: () => <Habits /> });

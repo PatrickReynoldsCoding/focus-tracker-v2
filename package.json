@@ -1,6 +1,6 @@
 {
   "name": "focus-tracker",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Focus Tracker v2: a personal focus, projects and habits tracker on Cloudflare Workers + D1, editable by Claude through its own MCP connector.",
   "scripts": {
     "dev": "wrangler dev",
@@ -11,7 +11,8 @@
     "build": "vite build --config web/vite.config.ts",
     "dev:web": "vite --config web/vite.config.ts",
     "pretest": "npm run build",
-    "import:v1": "node scripts/import-v1.mjs"
+    "import:v1": "node scripts/import-v1.mjs",
+    "test:ui": "node scripts/ui-smoke.mjs"
   },
   "license": "MIT",
   "dependencies": {
@@ -31,6 +32,7 @@
     "@vitest/runner": "^4.1.12",
     "@vitest/snapshot": "^4.1.12",
     "exceljs": "^4.4.0",
+    "playwright-core": "^1.65.1",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
     "vitest": "^4.1.12",

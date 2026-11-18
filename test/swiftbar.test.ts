@@ -65,9 +65,9 @@ describe('SwiftBar menu bar', () => {
     out = await text();
     expect(out.split('\n')[0]).toMatch(/^☕ Pomo 4:\d\d/);
     expect(out).toMatch(/#notify\t\w+\tBreak time/);
-    await action({ action: 'stop', where_stopped: 'page 3', next_action: 'page 4' });
+    await action({ action: 'stop', where_stopped: 'page 3' });
     const log = await call('GET', `/log?project_id=${p.id}`, undefined, m);
-    expect(log[0]).toMatchObject({ where_stopped: 'page 3', next_action: 'page 4', minutes: 26 });
+    expect(log[0]).toMatchObject({ where_stopped: 'page 3', minutes: 26 });
     out = await text();
     expect(out).not.toContain('Break time'); // cleared when the session ended
   });

@@ -6,6 +6,7 @@ import { bad } from '../core/errors';
 import { newId, randomToken, sha256Hex } from '../core/ids';
 import { allEntities, entity, type Module } from '../core/registry';
 import { create, get, list, move, remove, undoLast, update } from '../core/store';
+import { allFeatures, featureStates, setFeature } from '../core/features';
 
 /** Settings a client may not write directly (they have their own calls). */
 const PROTECTED = /^(session\.current|focus\.)/;
@@ -115,8 +116,19 @@ export const systemModule: Module = {
     api.put('/import/settings', async (c) => {
       const ctx = c.get('ctx');
       const { values } = await c.req.json<{ values: Record<string, string> }>();
-      for (const [k, v] of Object.entries(values ?? {})) if (/^(rotation|week|nudge|pomodoro|next_action)\./.test(k)) await ctx.setSetting(k, v || null);
+      for (const [k, v] of Object.entries(values ?? {})) if (/^(rotation|week|nudge|pomodoro)\./.test(k)) await ctx.setSetting(k, v || null);
       return c.json({ ok: true });
+    });
+    api.get('/features', async (c) => {
+      const states = await featureStates(c.get('ctx'));
+      return c.json(allFeatures().map((f) => ({ ...f, enabled: states[f.id] })));
+    });
+    api.put('/features/:id', async (c) => {
+      const { enabled } = await c.req.json<{ enabled: boolean }>();
+      if (typeof enabled !== 'boolean') throw bad('enabled must be true or false');
+      await setFeature(c.get('ctx'), c.req.param('id'), enabled);
+      const states = await featureStates(c.get('ctx'));
+      return c.json(allFeatures().map((f) => ({ ...f, enabled: states[f.id] })));
     });
     api.get('/schema', (c) =>
       c.json(

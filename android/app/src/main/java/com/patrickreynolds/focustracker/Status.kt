@@ -8,7 +8,6 @@ data class Status(
     val day: String,
     val focusId: String?,
     val focusName: String?,
-    val nextAction: String?,
     val session: Session?,
     val todos: List<Item>,
     val habits: List<Item>,
@@ -30,7 +29,6 @@ data class Status(
                 day = o.getString("day"),
                 focusId = focus?.str("id"),
                 focusName = focus?.str("name"),
-                nextAction = if (focus?.optBoolean("show_next_action") == true) focus.str("next_action") else null,
                 session = s?.let { Session(it.str("project_name"), it.optLong("elapsed_seconds"), pomo?.str("phase"), pomo?.optLong("seconds_left")) },
                 todos = o.optJSONArray("todos_due").objects().map { Item(it.getString("id"), it.getString("title"), it.str("day")) },
                 habits = o.optJSONArray("habits_left").objects().map {

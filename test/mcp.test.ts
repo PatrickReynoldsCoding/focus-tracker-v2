@@ -39,12 +39,12 @@ describe('MCP connector', () => {
     await tool('tick_todo', { id: todo.id });
     await tool('set_focus', { project_id: p.id });
     await tool('start_session', {});
-    const log = await tool('stop_session', { where_stopped: 'end of scene 2', next_action: 'scene 3' });
+    const log = await tool('stop_session', { where_stopped: 'end of scene 2' });
     expect(log.project_id).toBe(p.id);
     const full = await tool('get_project', { id: p.id });
     expect(full.columns[1].cards[0].title).toBe('Chapter 1');
     expect(full.notes).toBe('# Plot\n\nChapter 1 started');
-    expect(full.next_action).toBe('scene 3');
+    expect(full.last_touched).toMatch(/^\d{4}-/);
     expect(full.recent_log).toHaveLength(1);
     const found = await tool('search', { query: 'Chapter' });
     expect(found.some((r: any) => r.kind === 'tasks')).toBe(true);
