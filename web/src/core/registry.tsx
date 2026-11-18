@@ -64,9 +64,18 @@ export interface CardSectionProps {
 }
 export interface SettingsSectionProps {}
 
+/** Something drawn over every page once signed in (a corner timer, a background job with no UI). */
+export interface OverlayDef {
+  id: string;
+  order: number;
+  feature?: string;
+  render: Render<{ route: string }>;
+}
+
 const tabs: TabDef[] = [];
 const routes: RouteDef[] = [];
 const panels: Record<string, PanelDef<any>[]> = {};
+const overlays: OverlayDef[] = [];
 
 const add = <T extends { id: string }>(list: T[], item: T) => {
   const i = list.findIndex((x) => x.id === item.id);
@@ -76,6 +85,7 @@ const add = <T extends { id: string }>(list: T[], item: T) => {
 
 export const registerTab = (t: TabDef) => add(tabs, t);
 export const registerRoute = (r: RouteDef) => add(routes, r);
+export const registerOverlay = (o: OverlayDef) => add(overlays, o);
 
 /** Panels by place: 'today', 'project', 'card' (sections of the card dialog), 'settings'. */
 export function registerPanel(place: 'today', p: PanelDef<TodayPanelProps>): void;
@@ -99,6 +109,15 @@ export function useRoutes(): RouteDef[] {
 export function usePanels<P>(place: string): PanelDef<P>[] {
   const flags = useFlags();
   return visible(panels[place] ?? [], flags).sort((a, b) => a.order - b.order) as PanelDef<P>[];
+}
+
+/** Draw every overlay (main.tsx puts this in the signed-in shell). */
+export function Overlays({ route }: { route: string }) {
+  const list = visible(overlays, useFlags()).sort((a, b) => a.order - b.order);
+  return <>{list.map((o) => <OverlaySlot key={o.id} render={() => o.render({ route })} />)}</>;
+}
+function OverlaySlot({ render }: { render: () => VNode | null }) {
+  return render();
 }
 
 /** Draw every panel registered for a place, in order. */

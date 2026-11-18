@@ -2,7 +2,7 @@ import { render } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { checkSignedIn, get, localStorageSet, login, mode, signedIn, toast, undo } from './core/api';
 import { loadFeatures } from './core/features';
-import { useRoutes, useTabs } from './core/registry';
+import { Overlays, useRoutes, useTabs } from './core/registry';
 import { useSignal } from './core/signal';
 import { go, route } from './core/ui';
 import './features';
@@ -103,7 +103,7 @@ function Login() {
 function App() {
   const ok = useSignal(signedIn);
   const tabs = useTabs();
-  const { tabId } = useCurrent();
+  const { tabId, r } = useCurrent();
   const [wide, setWide] = useState(() => {
     try {
       return localStorage.getItem('ft.wide') === '1';
@@ -174,6 +174,7 @@ function App() {
         ))}
       </nav>
       <Toast />
+      <Overlays route={r} />
     </div>
   );
 }
