@@ -1,6 +1,6 @@
 import { render } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
-import { checkSignedIn, get, localStorageSet, login, mode, signedIn, toast, undo } from './core/api';
+import { checkSignedIn, get, localStorageSet, login, mode, redo, saving, signedIn, toast, undo } from './core/api';
 import { loadFeatures } from './core/features';
 import { useRoutes, useTabs } from './core/registry';
 import { useSignal } from './core/signal';
@@ -48,6 +48,18 @@ function ModeSwitch() {
         </button>
       ))}
     </div>
+  );
+}
+
+function SavingDot() {
+  const s = useSignal(saving);
+  const text = s.pending > 0 ? 'Saving…' : s.last === 'error' ? 'Not saved' : s.last === 'saved' ? 'Saved' : '';
+  const state = s.pending > 0 ? 'busy' : s.last;
+  return (
+    <span class={`saving ${state}`} role="status" aria-live="polite">
+      {text && <i aria-hidden="true" />}
+      {text}
+    </span>
   );
 }
 
@@ -118,9 +130,15 @@ function App() {
     checkSignedIn();
     const key = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !/INPUT|TEXTAREA/.test(t.tagName)) {
+      if (/INPUT|TEXTAREA/.test(t.tagName) || t.isContentEditable) return;
+      const k = e.key.toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && k === 'z') {
         e.preventDefault();
-        undo();
+        if (e.shiftKey) redo();
+        else undo();
+      } else if (e.ctrlKey && k === 'y') {
+        e.preventDefault();
+        redo();
       }
     };
     window.addEventListener('keydown', key);
@@ -155,8 +173,12 @@ function App() {
       <div class="main">
         <header class="top">
           <ModeSwitch />
+          <SavingDot />
           <button class="ghost undo" onClick={undo} title="Undo (Ctrl+Z)">
             ↶ Undo
+          </button>
+          <button class="ghost redo" onClick={redo} title="Redo (Ctrl+Shift+Z)">
+            ↷ Redo
           </button>
         </header>
         <main class="content">
