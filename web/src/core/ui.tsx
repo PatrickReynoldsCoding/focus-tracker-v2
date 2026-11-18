@@ -40,17 +40,24 @@ export function Loading({ error }: { error?: string | null }) {
 
 // ---------- dialog (a sheet from the bottom on a phone) ----------
 
+/** How many dialogs are open, so the back button closes only the top one when they are nested. */
+let openDialogs = 0;
+
 export function Dialog({ title, onClose, children, wide }: { title: ComponentChildren; onClose: () => void; children: ComponentChildren; wide?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     ref.current?.showModal();
-    // The phone's back button closes the dialog.
-    history.pushState({ dialog: true }, '');
-    const pop = () => onClose();
+    // The phone's back button closes the dialog (the top one, when one opened from another).
+    const depth = ++openDialogs;
+    history.pushState({ dialog: depth }, '');
+    const pop = () => {
+      if (!(Number(history.state?.dialog) >= depth)) onClose();
+    };
     window.addEventListener('popstate', pop);
     return () => {
+      openDialogs--;
       window.removeEventListener('popstate', pop);
-      if (history.state?.dialog) history.back();
+      if (history.state?.dialog === depth) history.back();
     };
   }, []);
   return (
