@@ -69,13 +69,20 @@ describe('notification settings', () => {
     const p = await call('POST', '/projects', { name: 'Pomo' }, m);
     const started = new Date(Date.now() - 26 * 60000).toISOString();
     await env.DB.prepare("INSERT INTO settings (mode, key, value, updated_at) VALUES ('work', 'session.current', ?, ?)")
-      .bind(JSON.stringify({ project_id: p.id, started, pomodoro: { work: 25, break: 5 } }), started)
+      .bind(JSON.stringify({ project_id: p.id, started, pomodoro: { work: 25, break: 5 }, planned_sec: 25 * 60 }), started)
       .run();
     await call('PUT', '/notification-settings', { session: false }, m);
     expect(await swiftbar()).not.toContain('#notify');
     expect(await call('GET', '/notifications/pending', undefined, m)).toEqual([]);
     await call('PUT', '/notification-settings', { session: true }, m);
-    expect(await swiftbar()).toMatch(/#notify\t\w+\tBreak time/);
+    // The pomodoro waits for a click (sessions.ts): the notice says the work period ended; the planned time is up too.
+    const out = await swiftbar();
+    expect(out).toMatch(/#notify\t\w+\tTime for a break/);
+    expect(out).toMatch(/#notify\t\w+\tTime is up\t25 min on Pomo/);
+    // Switching off again clears both.
+    await call('PUT', '/notification-settings', { session: false }, m);
+    expect(await call('GET', '/notifications/pending', undefined, m)).toEqual([]);
+    await call('PUT', '/notification-settings', { session: true }, m);
   });
 
   it('the daily nudge can be switched off, and moved with its hour', async () => {

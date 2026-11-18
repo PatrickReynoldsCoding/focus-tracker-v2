@@ -41,7 +41,7 @@ case "$1" in
     where=$(ask "Where did you stop?" "") || exit 0
     action stop "" --data-urlencode "where_stopped=$where"
     exit 0 ;;
-  start|tick|habit|dismiss)
+  start|tick|habit|dismiss|pause|resume|next|extend)
     action "$1" "$2"
     exit 0 ;;
 esac

@@ -2,7 +2,7 @@ import { render } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { checkSignedIn, get, localStorageSet, login, mode, redo, saving, signedIn, toast, undo, version } from './core/api';
 import { loadFeatures } from './core/features';
-import { tabBadges, useRoutes, useTabs } from './core/registry';
+import { Overlays, tabBadges, useRoutes, useTabs } from './core/registry';
 import { useSignal } from './core/signal';
 import { go, route } from './core/ui';
 import './features';
@@ -200,6 +200,7 @@ function App() {
         ))}
       </nav>
       <Toast />
+      <Overlays route={current} />
     </div>
   );
 }

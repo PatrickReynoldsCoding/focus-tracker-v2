@@ -75,36 +75,40 @@ export async function generate(ctx: Ctx): Promise<void> {
   }
 }
 
-/** Session alerts switched off: make no pomodoro notices, and clear any left from before. */
+/** Session alerts switched off: make no pomodoro or "Time is up" notices, and clear any left from before. */
 async function clearPomodoro(ctx: Ctx): Promise<void> {
-  await ctx.db.prepare("UPDATE notifications SET dismissed_at = ? WHERE mode = ? AND kind = 'pomodoro' AND dismissed_at IS NULL").bind(ctx.now(), ctx.mode).run();
+  await ctx.db
+    .prepare("UPDATE notifications SET dismissed_at = ? WHERE mode = ? AND dismissed_at IS NULL AND (kind = 'pomodoro' OR (kind = 'session' AND dedupe_key LIKE 'timeup:%'))")
+    .bind(ctx.now(), ctx.mode)
+    .run();
 }
 
-/** "Break time" / "Back to work" when a running session's pomodoro changes phase. Older ones are cleared. */
+/**
+ * Notices for the running session (sessions.ts sessionNotices): a pomodoro
+ * period ending ("Time for a break" / "Break over" while it waits for a click,
+ * or "Break time" / "Back to work" when periods follow by themselves) and
+ * "Time is up" for the planned length (kind 'session'). Both are switched by the
+ * "session" group in notification settings. Older ones are cleared.
+ */
 async function pomodoroNotice(ctx: Ctx): Promise<void> {
-  const s = await ctx.jsonSetting<{ started: string; pomodoro: { work: number; break: number } | null } | null>('session.current', null);
-  let key: string | null = null;
-  if (s?.pomodoro) {
-    const elapsed = Math.floor((ctx.nowDate.getTime() - Date.parse(s.started)) / 1000);
-    const work = s.pomodoro.work * 60;
-    const cycle = work + s.pomodoro.break * 60;
-    const round = Math.floor(elapsed / cycle) + 1;
-    const inBreak = elapsed % cycle >= work;
-    if (round > 1 || inBreak) {
-      key = `pomodoro:${s.started}:${round}:${inBreak ? 'break' : 'work'}`;
-      const phaseStart = Date.parse(s.started) + ((round - 1) * cycle + (inBreak ? work : 0)) * 1000;
-      await insertOnce(ctx, {
-        kind: 'pomodoro',
-        title: inBreak ? 'Break time' : 'Back to work',
-        body: inBreak ? `${s.pomodoro.break} minutes. Stand up and stretch.` : `Round ${round} of the session.`,
-        due: new Date(phaseStart).toISOString(),
-        dedupe_key: key,
-      });
-    }
+  const { storedSession, sessionNotices, waitsForClick } = await import('./sessions');
+  const s = await storedSession(ctx);
+  const waits = s ? await waitsForClick(ctx) : true;
+  let notices = s ? sessionNotices(s, ctx.nowDate.getTime(), waits) : [];
+  if (s?.project_id && notices.some((n) => n.kind === 'session')) {
+    // Only look the project up when "Time is up" needs its name.
+    const p = await ctx.db.prepare('SELECT name FROM projects WHERE id = ? AND mode = ?').bind(s.project_id, ctx.mode).first<{ name: string }>();
+    notices = sessionNotices(s, ctx.nowDate.getTime(), waits, p?.name);
   }
+  for (const n of notices) await insertOnce(ctx, n);
+  const keys = notices.map((n) => n.dedupe_key);
+  const keep = keys.length ? `AND dedupe_key NOT IN (${keys.map(() => '?').join(', ')})` : '';
   await ctx.db
-    .prepare("UPDATE notifications SET dismissed_at = ? WHERE mode = ? AND kind = 'pomodoro' AND dismissed_at IS NULL AND dedupe_key IS NOT ?")
-    .bind(ctx.now(), ctx.mode, key)
+    .prepare(
+      `UPDATE notifications SET dismissed_at = ? WHERE mode = ? AND dismissed_at IS NULL
+       AND (kind = 'pomodoro' OR (kind = 'session' AND dedupe_key LIKE 'timeup:%')) ${keep}`,
+    )
+    .bind(ctx.now(), ctx.mode, ...keys)
     .run();
 }
 

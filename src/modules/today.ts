@@ -1,6 +1,6 @@
 // Today: the day's focus project, the weekly rotation, swapping focus (with a
-// reminder about the skipped project), work sessions with a pomodoro timer,
-// the session log, and the compact status for widgets and the menu bar.
+// reminder about the skipped project), the session log, and the compact status
+// for widgets and the menu bar. Running sessions are in sessions.ts.
 
 import { z } from 'zod';
 import { addDays, checkDay, weekdayIn, type Ctx } from '../core/ctx';
@@ -12,6 +12,7 @@ import { habitProgress } from './habits';
 import { listsEntity, todosForDay } from './lists';
 import { pendingNotifications } from './notifications';
 import { projectsEntity } from './projects';
+import { currentSession } from './sessions';
 import { notBlockedSql } from './relations';
 
 export const logEntity: Entity = {
@@ -138,95 +139,55 @@ export async function focusOf(ctx: Ctx, day: string): Promise<Row | null> {
 
 /**
  * Choose the day's focus project. When it replaces another project, the
- * skipped one is remembered and a reminder about it is set for the next day.
+ * skipped one is remembered and, unless remind_in_days is null, a reminder
+ * about it is set that many days later (default 1: tomorrow).
  */
-export async function setFocus(ctx: Ctx, projectId: string | null, opts: { day?: string; remind_in_days?: number } = {}) {
+export async function setFocus(ctx: Ctx, projectId: string | null, opts: { day?: string; remind_in_days?: number | null } = {}) {
   const day = opts.day ? checkDay(opts.day) : await ctx.today();
+  const remindIn = opts.remind_in_days === undefined ? 1 : opts.remind_in_days;
+  if (remindIn !== null && (!Number.isInteger(remindIn) || remindIn < 1 || remindIn > 365)) throw bad('remind_in_days must be whole days from 1 to 365, or null for no reminder');
   const before = await focusOf(ctx, day);
   if (projectId) {
     const p = await get(ctx, projectsEntity, projectId);
     if (before && before.id !== p.id) {
       await create(ctx, skipsEntity, { project_id: before.id, to_project_id: p.id, date: day });
-      const dueDay = addDays(day, opts.remind_in_days ?? 1);
-      await create(ctx, remindersEntity, {
-        project_id: before.id,
-        text: `You swapped away from ${before.name} on ${day}. Pick it up again?`,
-        due: `${dueDay}T08:00:00.000Z`,
-      });
+      if (remindIn !== null) {
+        await create(ctx, remindersEntity, {
+          project_id: before.id,
+          text: `You swapped away from ${before.name} on ${day}. Pick it up again?`,
+          due: `${addDays(day, remindIn)}T08:00:00.000Z`,
+        });
+      }
     }
   }
   await ctx.setSetting(`focus.${day}`, projectId);
   return today(ctx);
 }
 
-// ---------- sessions ----------
-
-interface RunningSession {
-  project_id: string | null;
-  started: string;
-  pomodoro: { work: number; break: number } | null;
-}
-
-export async function currentSession(ctx: Ctx) {
-  const s = await ctx.jsonSetting<RunningSession | null>('session.current', null);
-  if (!s) return null;
-  const now = ctx.nowDate.getTime();
-  const elapsed = Math.max(0, Math.floor((now - Date.parse(s.started)) / 1000));
-  let pomodoro = null;
-  if (s.pomodoro) {
-    const work = s.pomodoro.work * 60;
-    const cycle = work + s.pomodoro.break * 60;
-    const inCycle = elapsed % cycle;
-    const round = Math.floor(elapsed / cycle) + 1;
-    const phase = inCycle < work ? 'work' : 'break';
-    const left = phase === 'work' ? work - inCycle : cycle - inCycle;
-    pomodoro = { ...s.pomodoro, round, phase, seconds_left: left, phase_ends_at: new Date(now + left * 1000).toISOString() };
-  }
-  const project = s.project_id ? await find(ctx, projectsEntity, s.project_id) : null;
-  return { ...s, project_name: project?.name ?? null, elapsed_seconds: elapsed, pomodoro };
-}
-
-export async function startSession(ctx: Ctx, input: { project_id?: string; pomodoro?: boolean; work?: number; break?: number }) {
-  if (await ctx.setting('session.current')) throw bad('A session is already running. Stop it first.');
+/**
+ * Every project that could be today's focus, ranked as Today ranks its
+ * suggestions: today's rotation category first, then least recently touched.
+ * Locked and blocked projects are left out.
+ */
+export async function focusCandidates(ctx: Ctx) {
   const day = await ctx.today();
-  const projectId = input.project_id ?? (await ctx.setting(`focus.${day}`));
-  if (!projectId) throw bad('No project given and no focus project chosen for today');
-  await get(ctx, projectsEntity, projectId);
-  const pomodoroDefault = (await ctx.setting('pomodoro.default')) !== 'off';
-  const usePomodoro = input.pomodoro ?? pomodoroDefault;
-  const s: RunningSession = {
-    project_id: projectId,
-    started: ctx.now(),
-    pomodoro: usePomodoro
-      ? { work: input.work ?? Number((await ctx.setting('pomodoro.work')) ?? 25), break: input.break ?? Number((await ctx.setting('pomodoro.break')) ?? 5) }
-      : null,
-  };
-  await ctx.setSetting('session.current', JSON.stringify(s));
-  return currentSession(ctx);
-}
-
-/** Stop the running session with a shutdown note (where you stopped); logs it. */
-export async function stopSession(ctx: Ctx, input: { where_stopped?: string; discard?: boolean }) {
-  const s = await ctx.jsonSetting<RunningSession | null>('session.current', null);
-  if (!s) throw bad('No session is running');
-  await ctx.setSetting('session.current', null);
-  if (input.discard) return { discarded: true };
-  const minutes = Math.max(1, Math.round((ctx.nowDate.getTime() - Date.parse(s.started)) / 60000));
-  const day = await ctx.today();
-  const entry = await create(ctx, logEntity, {
-    project_id: s.project_id,
-    date: day,
-    started: s.started,
-    ended: ctx.now(),
-    minutes,
-    where_stopped: input.where_stopped ?? null,
+  const category = (await rotation(ctx, day)).today.category;
+  const free = await notBlockedSql(ctx); // like the suggestions: blocked projects are left out
+  const rows = await list(ctx, projectsEntity, {
+    where: { status: 'active' },
+    sql: `(locked_until IS NULL OR locked_until <= ?) AND ${free.sql}`,
+    params: [day, ...free.params],
+    order: 'last_touched IS NOT NULL, last_touched, name',
   });
-  if (s.project_id && (await find(ctx, projectsEntity, s.project_id))) {
-    const patch: Record<string, unknown> = { last_touched: day };
-    await update(ctx, projectsEntity, s.project_id, patch);
-  }
-  return entry;
+  const fits = (p: Row) => !!category && category !== 'any' && category !== 'away' && p.category_id === category;
+  return {
+    day,
+    category,
+    projects: [...rows.filter(fits), ...rows.filter((p) => !fits(p))].map((p) => ({ ...p, in_rotation: fits(p) })),
+  };
 }
+
+// ---------- sessions (src/modules/sessions.ts) ----------
 
 /** Log a session after the fact (for example one Claude helped with). */
 export async function logSession(ctx: Ctx, input: { project_id?: string; date?: string; minutes?: number; where_stopped?: string }) {
@@ -290,7 +251,10 @@ export async function status(ctx: Ctx) {
       project_name: session.project_name,
       started: session.started,
       elapsed_seconds: session.elapsed_seconds,
+      worked_seconds: session.worked_seconds,
+      paused: session.paused,
       pomodoro: session.pomodoro,
+      planned: session.planned,
     },
     todos_due: todos.filter((t) => !t.done).map((t) => ({ id: t.id, title: t.title, day: t.day })),
     habits_left: habits.filter((h) => h.left > 0).map((h) => ({ id: h.id, name: h.name, left: h.left, per: h.per })),
@@ -308,21 +272,12 @@ export const todayModule: Module = {
     api.put('/focus', async (c) => {
       const ctx = c.get('ctx');
       ctx.label = 'choose focus';
-      const b = await c.req.json<{ project_id: string | null; day?: string }>();
-      return c.json(await setFocus(ctx, b.project_id ?? null, { day: b.day }));
+      const b = await c.req.json<{ project_id: string | null; day?: string; remind_in_days?: number | null }>();
+      return c.json(await setFocus(ctx, b.project_id ?? null, { day: b.day, remind_in_days: b.remind_in_days }));
     });
+    api.get('/focus/candidates', async (c) => c.json(await focusCandidates(c.get('ctx'))));
     api.get('/rotation', async (c) => c.json(await rotation(c.get('ctx'))));
     api.put('/rotation', async (c) => c.json(await setRotation(c.get('ctx'), await c.req.json())));
-    api.get('/session', async (c) => c.json(await currentSession(c.get('ctx'))));
-    api.post('/session/start', async (c) => {
-      const ctx = c.get('ctx');
-      return c.json(await startSession(ctx, await c.req.json().catch(() => ({}))));
-    });
-    api.post('/session/stop', async (c) => {
-      const ctx = c.get('ctx');
-      ctx.label = 'finish session';
-      return c.json(await stopSession(ctx, await c.req.json().catch(() => ({}))));
-    });
   },
   tools: [
     {
@@ -336,21 +291,9 @@ export const todayModule: Module = {
     {
       name: 'set_focus',
       description:
-        'Choose today’s focus project (or null to clear). Swapping away from another project remembers the skip and sets a reminder about it for the next day. Only do this when the owner asks.',
-      input: z.object({ project_id: z.string().nullable(), day: z.string().optional() }),
-      run: (ctx, a) => setFocus(ctx, a.project_id, { day: a.day }),
-    },
-    {
-      name: 'start_session',
-      description: 'Start a work session on a project (default: today’s focus), with a pomodoro timer unless turned off.',
-      input: z.object({ project_id: z.string().optional(), pomodoro: z.boolean().optional() }),
-      run: (ctx, a) => startSession(ctx, a),
-    },
-    {
-      name: 'stop_session',
-      description: 'Finish the running session with a shutdown note (where you stopped). It is logged.',
-      input: z.object({ where_stopped: z.string().optional(), discard: z.boolean().optional() }),
-      run: (ctx, a) => stopSession(ctx, a),
+        'Choose today’s focus project (or null to clear). Swapping away from another project remembers the skip and sets a reminder about it after remind_in_days (default 1, tomorrow; null for none). Only do this when the owner asks.',
+      input: z.object({ project_id: z.string().nullable(), day: z.string().optional(), remind_in_days: z.number().int().min(1).max(365).nullable().optional() }),
+      run: (ctx, a) => setFocus(ctx, a.project_id, { day: a.day, remind_in_days: a.remind_in_days }),
     },
     {
       name: 'log_session',
