@@ -8,6 +8,7 @@
 
 import type { ComponentChildren, VNode } from 'preact';
 import { useFlags } from './features';
+import { signal } from './signal';
 
 type Render<P> = (props: P) => VNode | null;
 
@@ -63,6 +64,9 @@ export interface CardSectionProps {
   close: () => void;
 }
 export interface SettingsSectionProps {}
+
+/** A small count shown beside a tab's name (side bar and phone bar): set `tabBadges.value = { ...tabBadges.value, today: 2 }`. 0 or missing = none. */
+export const tabBadges = signal<Record<string, number>>({});
 
 const tabs: TabDef[] = [];
 const routes: RouteDef[] = [];

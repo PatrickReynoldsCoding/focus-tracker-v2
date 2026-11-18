@@ -19,9 +19,14 @@ export const notesEntity: Entity = {
     list_id: { type: 'text', ref: 'lists', cascade: true },
     body: { type: 'markdown', default: '' },
     show_today: { type: 'bool', default: false },
+    today_at: { type: 'time', readonly: true, desc: 'When it was put on Today (Today panels keep that order)' },
   },
-  beforeCreate(_ctx, row) {
+  beforeCreate(ctx, row) {
     if (!row.project_id === !row.list_id) throw bad('A note belongs to exactly one of project_id or list_id');
+    if (row.show_today) row.today_at = ctx.now();
+  },
+  beforeUpdate(ctx, before, patch) {
+    if (patch.show_today && !before.show_today) patch.today_at = ctx.now();
   },
 };
 

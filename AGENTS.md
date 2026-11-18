@@ -29,7 +29,9 @@ Modular first: a feature lives in its own files on the server and in the browser
   - `registerPanel('today', …)` gets `{ today, setToday }` (GET /api/today),
   - `registerPanel('project', …)` gets `{ project, setProject }` (GET /api/projects/:id/full),
   - `registerPanel('card', …)` is a section of the card dialog, gets `{ card, columns, save, update, close }`,
-  - `registerPanel('settings', …)` is a section of Settings.
+  - `registerPanel('settings', …)` is a section of Settings,
+  - `registerPanel('list', …)` is a section of a list's page (under its heading), gets `{ list, setList }` (GET /api/lists/:id/full),
+  - `tabBadges` (a signal) sets a small count beside a tab's name in the side bar and phone bar.
   A feature that needs a new plug-in point adds it to `core/registry.tsx` in a small, separate commit.
 - `styles.css` holds shared tokens and base styles; a feature's own styles go in `features/<name>/<name>.css`, imported by the feature.
 - `clients/swiftbar/`, `android/`: the Mac menu bar plugin and the Android app (see their READMEs).

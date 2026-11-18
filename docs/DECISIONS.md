@@ -77,3 +77,11 @@ Projects have no next action and the shutdown note asks only where you stopped. 
 ## D13. Feature flags and plug-in points (owner, 2026-11-18)
 
 Everything should be as modular as possible, with flags for big decisions. The server has feature flags (`src/core/features.ts`, switched in Settings → Features, one set per deployment, also hiding Claude tools), and the web app has a registry of plug-in points (`web/src/core/registry.tsx`: tabs, routes, Today panels, project panels, card-dialog sections, settings sections). See AGENTS.md "How the code is organised".
+
+## D14. Notes and lists on Today (owner, 2026-11-18)
+
+Any note (a list of kind note, or a project's notes) and any list can be a full panel on Today. Which ones are there is stored on the row (`lists.show_today` / `notes.show_today`) with the time they were added (`today_at`), so every device shows the same and the panels keep the order they were added. `GET /api/today-panels` returns them with their contents; `PUT /api/today-panels/show` adds or removes one; `GET /api/today-panels/available` feeds the "+ Add to Today" picker. A to-do list panel shows its open to-dos (and those done today) with tick and add; a plain list shows its items with add.
+
+A list also stores `display` (`full` or `one`) and `seconds` (5 to 3600, default 30). "One at a time" shows a random item as a quote card in the list's colour with its note under it, shuffled with no repeats until all were shown; the browser does the timing. It sits behind the flag `list-one-at-a-time` (default on): while off, every list shows in full. The settings live on the list's page (with the linked project, `lists.project_id`); a linked list shows in full on its project's page.
+
+Due reminders and other notifications show as banners above Today (`GET /api/today-panels/banners`, which adds the project a reminder is about). "Make it today's focus" sets the focus and dismisses; Dismiss finishes the reminder. The Today tab carries a count of them.
