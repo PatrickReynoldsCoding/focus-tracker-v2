@@ -40,6 +40,7 @@ async function insertOnce(ctx: Ctx, n: { kind: string; title: string; body?: str
 /** Turn whatever is due into notifications. Cheap enough to run on every status read. */
 export async function generate(ctx: Ctx): Promise<void> {
   const now = ctx.now();
+  await pomodoroNotice(ctx);
   const reminders = await ctx.db
     .prepare(
       `SELECT r.id, r.text, r.due, p.name AS project FROM reminders r LEFT JOIN projects p ON p.id = r.project_id
@@ -63,6 +64,34 @@ export async function generate(ctx: Ctx): Promise<void> {
       dedupe_key: `habit:${h.id}:${h.next_prompt}`,
     });
   }
+}
+
+/** "Break time" / "Back to work" when a running session's pomodoro changes phase. Older ones are cleared. */
+async function pomodoroNotice(ctx: Ctx): Promise<void> {
+  const s = await ctx.jsonSetting<{ started: string; pomodoro: { work: number; break: number } | null } | null>('session.current', null);
+  let key: string | null = null;
+  if (s?.pomodoro) {
+    const elapsed = Math.floor((ctx.nowDate.getTime() - Date.parse(s.started)) / 1000);
+    const work = s.pomodoro.work * 60;
+    const cycle = work + s.pomodoro.break * 60;
+    const round = Math.floor(elapsed / cycle) + 1;
+    const inBreak = elapsed % cycle >= work;
+    if (round > 1 || inBreak) {
+      key = `pomodoro:${s.started}:${round}:${inBreak ? 'break' : 'work'}`;
+      const phaseStart = Date.parse(s.started) + ((round - 1) * cycle + (inBreak ? work : 0)) * 1000;
+      await insertOnce(ctx, {
+        kind: 'pomodoro',
+        title: inBreak ? 'Break time' : 'Back to work',
+        body: inBreak ? `${s.pomodoro.break} minutes. Stand up and stretch.` : `Round ${round} of the session.`,
+        due: new Date(phaseStart).toISOString(),
+        dedupe_key: key,
+      });
+    }
+  }
+  await ctx.db
+    .prepare("UPDATE notifications SET dismissed_at = ? WHERE mode = ? AND kind = 'pomodoro' AND dismissed_at IS NULL AND dedupe_key IS NOT ?")
+    .bind(ctx.now(), ctx.mode, key)
+    .run();
 }
 
 /** Morning nudge about neglected projects, once a day, after the configured hour (default 9). */
