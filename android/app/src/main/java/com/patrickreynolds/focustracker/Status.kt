@@ -13,7 +13,15 @@ data class Status(
     val habits: List<Item>,
     val notifications: List<Notice>,
 ) {
-    data class Session(val projectName: String?, val elapsedSeconds: Long, val pomodoroPhase: String?, val pomodoroSecondsLeft: Long?)
+    data class Session(
+        val projectName: String?,
+        val elapsedSeconds: Long,
+        val pomodoroPhase: String?,
+        val pomodoroSecondsLeft: Long?,
+        val paused: Boolean = false,
+        /** The pomodoro period ended and waits for "Start break" / "Start work" (next_phase). */
+        val waitingFor: String? = null,
+    )
     data class Item(val id: String, val title: String, val detail: String?)
     data class Notice(val id: String, val title: String, val body: String?, val seen: Boolean)
 
@@ -29,7 +37,13 @@ data class Status(
                 day = o.getString("day"),
                 focusId = focus?.str("id"),
                 focusName = focus?.str("name"),
-                session = s?.let { Session(it.str("project_name"), it.optLong("elapsed_seconds"), pomo?.str("phase"), pomo?.optLong("seconds_left")) },
+                session = s?.let {
+                    Session(
+                        it.str("project_name"), it.optLong("elapsed_seconds"), pomo?.str("phase"), pomo?.optLong("seconds_left"),
+                        paused = it.optBoolean("paused"),
+                        waitingFor = if (pomo?.optBoolean("waiting") == true) (pomo.str("next_phase") ?: "next") else null,
+                    )
+                },
                 todos = o.optJSONArray("todos_due").objects().map { Item(it.getString("id"), it.getString("title"), it.str("day")) },
                 habits = o.optJSONArray("habits_left").objects().map {
                     val per = if (it.str("per") == "week") "this week" else "today"

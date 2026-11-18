@@ -103,10 +103,20 @@ class TodayWidget : AppWidgetProvider() {
             val session = s.session
             if (session != null) {
                 v.setViewVisibility(R.id.session_row, View.VISIBLE)
-                v.setChronometer(R.id.timer, SystemClock.elapsedRealtime() - session.elapsedSeconds * 1000, null, true)
+                // A paused session's clock stands still.
+                v.setChronometer(R.id.timer, SystemClock.elapsedRealtime() - session.elapsedSeconds * 1000, null, !session.paused)
                 val p = session.pomodoroPhase
                 val left = session.pomodoroSecondsLeft
-                v.setTextViewText(R.id.pomodoro, if (p != null && left != null) "${if (p == "break") "Break" else "Work"} · ${left / 60} min left" else "")
+                v.setTextViewText(
+                    R.id.pomodoro,
+                    when {
+                        session.paused -> "Paused"
+                        session.waitingFor == "break" -> "Time for a break · open to start it"
+                        session.waitingFor != null -> "Break over · open to start work"
+                        p != null && left != null -> "${if (p == "break") "Break" else "Work"} · ${left / 60} min left"
+                        else -> ""
+                    },
+                )
                 v.setTextViewText(R.id.action, "Stop…")
                 v.setOnClickPendingIntent(R.id.action, openApp(context, "/today", 4))
             } else {
