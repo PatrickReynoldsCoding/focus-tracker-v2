@@ -3,6 +3,13 @@
 // and written back unchanged, so nothing is lost.
 import { Schema, type MarkSpec, type NodeSpec } from 'prosemirror-model';
 
+// The few DOM methods the paste rules use (typed here so the server's type check, which has no DOM, passes).
+interface El {
+  getAttribute(name: string): string | null;
+  querySelector(sel: string): unknown;
+  style: { fontWeight: string };
+}
+
 const safeSrc = (s: string) => (/^(https?:|data:image\/)/i.test(s) ? s : '');
 
 const nodes: Record<string, NodeSpec> = {
@@ -51,7 +58,7 @@ const nodes: Record<string, NodeSpec> = {
     attrs: { tight: { default: true }, start: { default: 1 }, delim: { default: '.' } },
     content: 'list_item+',
     group: 'block',
-    parseDOM: [{ tag: 'ol', getAttrs: (d) => ({ start: Number((d as HTMLElement).getAttribute('start') ?? 1) || 1 }) }],
+    parseDOM: [{ tag: 'ol', getAttrs: (d) => ({ start: Number((d as El).getAttribute('start') ?? 1) || 1 }) }],
     toDOM: (n) => ['ol', n.attrs.start === 1 ? {} : { start: n.attrs.start }, 0],
   },
   list_item: {
@@ -62,7 +69,7 @@ const nodes: Record<string, NodeSpec> = {
       {
         tag: 'li',
         getAttrs: (d) => {
-          const box = (d as HTMLElement).querySelector(':scope > input[type=checkbox], :scope > p > input[type=checkbox]') as HTMLInputElement | null;
+          const box = (d as El).querySelector(':scope > input[type=checkbox], :scope > p > input[type=checkbox]') as { checked: boolean } | null;
           return { checked: box ? box.checked : null };
         },
       },
@@ -87,7 +94,7 @@ const nodes: Record<string, NodeSpec> = {
     parseDOM: [
       {
         tag: 'img[src]',
-        getAttrs: (d) => ({ src: (d as HTMLElement).getAttribute('src'), alt: (d as HTMLElement).getAttribute('alt') ?? '', title: (d as HTMLElement).getAttribute('title') }),
+        getAttrs: (d) => ({ src: (d as El).getAttribute('src'), alt: (d as El).getAttribute('alt') ?? '', title: (d as El).getAttribute('title') }),
       },
     ],
     toDOM: (n) => ['img', { src: safeSrc(n.attrs.src), alt: n.attrs.alt, title: n.attrs.title }],
@@ -100,7 +107,7 @@ const marks: Record<string, MarkSpec> = {
   link: {
     attrs: { href: {}, title: { default: null }, auto: { default: '' } },
     inclusive: false,
-    parseDOM: [{ tag: 'a[href]', getAttrs: (d) => ({ href: (d as HTMLElement).getAttribute('href'), title: (d as HTMLElement).getAttribute('title') }) }],
+    parseDOM: [{ tag: 'a[href]', getAttrs: (d) => ({ href: (d as El).getAttribute('href'), title: (d as El).getAttribute('title') }) }],
     toDOM: (m) => ['a', { href: m.attrs.href, title: m.attrs.title, rel: 'noopener noreferrer nofollow' }, 0],
   },
   em: {
@@ -110,7 +117,7 @@ const marks: Record<string, MarkSpec> = {
   },
   strong: {
     attrs: { markup: { default: '**' } },
-    parseDOM: [{ tag: 'strong' }, { tag: 'b', getAttrs: (d) => (d as HTMLElement).style.fontWeight !== 'normal' && null }, { style: 'font-weight=bold' }, { style: 'font-weight=700' }],
+    parseDOM: [{ tag: 'strong' }, { tag: 'b', getAttrs: (d) => (d as El).style.fontWeight !== 'normal' && null }, { style: 'font-weight=bold' }, { style: 'font-weight=700' }],
     toDOM: () => ['strong', 0],
   },
   strike: { attrs: { markup: { default: '~~' } }, parseDOM: [{ tag: 's' }, { tag: 'del' }, { tag: 'strike' }, { style: 'text-decoration=line-through' }], toDOM: () => ['s', 0] },
