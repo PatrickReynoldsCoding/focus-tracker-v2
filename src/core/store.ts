@@ -5,7 +5,7 @@ import type { Ctx } from './ctx';
 import { columnsOf, type Entity, type Field, type Row } from './entity';
 import { ApiError, bad, notFound } from './errors';
 import { CLIENT_ID, newId } from './ids';
-import { allEntities, entity as getEntity } from './registry';
+import { allEntities, allModules, entity as getEntity } from './registry';
 
 type Input = Record<string, unknown>;
 
@@ -244,6 +244,7 @@ export async function remove(ctx: Ctx, e: Entity, id: string): Promise<Row> {
   if (!raw || (e.modeScoped && raw.mode !== ctx.mode)) throw notFound(e.singular, id);
   const row = fromDb(e, raw);
   if (e.onDelete) await e.onDelete(ctx, row);
+  for (const m of allModules()) if (m.beforeDelete) await m.beforeDelete(ctx, e, row);
   // Rows of other kinds that point at this one: delete them or clear the pointer.
   for (const other of allEntities()) {
     for (const [k, f] of Object.entries(other.fields)) {

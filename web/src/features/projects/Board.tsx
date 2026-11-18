@@ -4,13 +4,14 @@
 import Sortable from 'sortablejs';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { change, del, localStorageSet, newId, optimistic, patch, post } from '../../core/api';
-import { Panels, registerPanel, type CardSectionProps } from '../../core/registry';
+import { Panels, registerPanel, type CardSectionProps, type CardTileProps } from '../../core/registry';
 import { AddInput, ColorPicker, Dialog, InlineEdit, Linkify, MarkdownEditor, plainPreview } from '../../core/ui';
 
 export type Card = { id: string; title: string; note: string | null; color: string | null; column_id: string; ord: number };
 export type Column = { id: string; name: string; cards: Card[] };
 
-function CardDialog({ card, columns, onClose, onChange }: { card: Card; columns: Column[]; onClose: () => void; onChange: (c: Partial<Card> | null) => void }) {
+/** The card dialog; other features open it too (a linked card). */
+export function CardDialog({ card, columns, onClose, onChange }: { card: Card; columns: Column[]; onClose: () => void; onChange: (c: Partial<Card> | null) => void }) {
   const save = (p: Record<string, unknown>) => {
     onChange(p as Partial<Card>);
     change(() => patch(`/tasks/${card.id}`, p));
@@ -168,6 +169,7 @@ function ColumnView({
                 ¶
               </span>
             )}
+            <Panels<CardTileProps> place="card-tile" props={{ card: c }} />
           </li>
         ))}
       </ul>

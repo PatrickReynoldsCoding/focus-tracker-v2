@@ -1,4 +1,4 @@
-// Small modules: modes, categories, backlog, criteria, resources, links, stickies.
+// Small modules: modes, categories, backlog, criteria, resources, stickies. (Links: relations.ts.)
 
 import { z } from 'zod';
 import type { Entity } from '../core/entity';
@@ -129,24 +129,6 @@ export const resourcesEntity: Entity = {
   },
 };
 
-export const linksEntity: Entity = {
-  name: 'links',
-  table: 'links',
-  singular: 'link',
-  desc: 'A typed link between two projects. "blocks": from must be done before to starts.',
-  modeScoped: true,
-  filters: ['from_id', 'to_id', 'type'],
-  fields: {
-    from_id: { type: 'text', required: true, ref: 'projects', cascade: true },
-    to_id: { type: 'text', required: true, ref: 'projects', cascade: true },
-    type: { type: 'text', enum: ['blocks', 'relates'], default: 'relates' },
-    note: { type: 'text' },
-  },
-  beforeCreate(_ctx, row) {
-    if (row.from_id === row.to_id) throw bad('A project cannot link to itself');
-  },
-};
-
 export const stickiesEntity: Entity = {
   name: 'stickies',
   table: 'stickies',
@@ -168,8 +150,8 @@ export const stickiesEntity: Entity = {
 
 export const basicsModule: Module = {
   id: 'basics',
-  description: 'Modes, categories, backlog, done criteria, resources, project links and stickies.',
-  entities: [modesEntity, categoriesEntity, backlogEntity, criteriaEntity, resourcesEntity, linksEntity, stickiesEntity],
+  description: 'Modes, categories, backlog, done criteria, resources and stickies.',
+  entities: [modesEntity, categoriesEntity, backlogEntity, criteriaEntity, resourcesEntity, stickiesEntity],
   routes(api) {
     // Start a backlog item: it becomes an active project.
     api.post('/backlog/:id/start', async (c) => {
@@ -208,6 +190,7 @@ async function startBacklogItem(ctx: import('../core/ctx').Ctx, id: string) {
     category_id: item.category_id,
     status: 'active',
   });
+  await (await import('./relations')).moveLinks(ctx, { kind: 'backlog', id }, { kind: 'projects', id: project.id });
   await remove(ctx, backlogEntity, id);
   if (item.note) {
     const { setNote } = await import('./notes');

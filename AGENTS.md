@@ -30,6 +30,7 @@ Modular first: a feature lives in its own files on the server and in the browser
   - `registerPanel('project', …)` gets `{ project, setProject }` (GET /api/projects/:id/full),
   - `registerPanel('card', …)` is a section of the card dialog, gets `{ card, columns, save, update, close }`,
   - `registerPanel('settings', …)` is a section of Settings,
+  - `registerPanel('card-tile', …)` is a small mark on a board card, gets `{ card }` (render a component, keep it tiny),
   - `registerPanel('list', …)` is a section of a list's page (under its heading), gets `{ list, setList }` (GET /api/lists/:id/full),
   - `tabBadges` (a signal) sets a small count beside a tab's name in the side bar and phone bar.
   A feature that needs a new plug-in point adds it to `core/registry.tsx` in a small, separate commit.
