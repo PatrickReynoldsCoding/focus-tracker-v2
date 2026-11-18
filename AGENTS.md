@@ -29,6 +29,7 @@ Modular first: a feature lives in its own files on the server and in the browser
   - `registerPanel('today', …)` gets `{ today, setToday }` (GET /api/today),
   - `registerPanel('project', …)` gets `{ project, setProject }` (GET /api/projects/:id/full),
   - `registerPanel('card', …)` is a section of the card dialog, gets `{ card, columns, save, update, close }`,
+  - `registerPanel('card-tile', …)` is a small mark on a board card, gets `{ card }` (render a component, keep it tiny),
   - `registerPanel('settings', …)` is a section of Settings.
   A feature that needs a new plug-in point adds it to `core/registry.tsx` in a small, separate commit.
 - `styles.css` holds shared tokens and base styles; a feature's own styles go in `features/<name>/<name>.css`, imported by the feature.

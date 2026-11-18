@@ -62,6 +62,10 @@ export interface CardSectionProps {
   update: (fields: Record<string, unknown> | null) => void;
   close: () => void;
 }
+/** A small mark on a card of a board (keep it to an icon or a short tag). */
+export interface CardTileProps {
+  card: any;
+}
 export interface SettingsSectionProps {}
 
 const tabs: TabDef[] = [];
@@ -77,10 +81,11 @@ const add = <T extends { id: string }>(list: T[], item: T) => {
 export const registerTab = (t: TabDef) => add(tabs, t);
 export const registerRoute = (r: RouteDef) => add(routes, r);
 
-/** Panels by place: 'today', 'project', 'card' (sections of the card dialog), 'settings'. */
+/** Panels by place: 'today', 'project', 'card' (sections of the card dialog), 'card-tile' (marks on a board card), 'settings'. */
 export function registerPanel(place: 'today', p: PanelDef<TodayPanelProps>): void;
 export function registerPanel(place: 'project', p: PanelDef<ProjectPanelProps>): void;
 export function registerPanel(place: 'card', p: PanelDef<CardSectionProps>): void;
+export function registerPanel(place: 'card-tile', p: PanelDef<CardTileProps>): void;
 export function registerPanel(place: 'settings', p: PanelDef<SettingsSectionProps>): void;
 export function registerPanel(place: string, p: PanelDef<any>): void;
 export function registerPanel(place: string, p: PanelDef<any>) {
