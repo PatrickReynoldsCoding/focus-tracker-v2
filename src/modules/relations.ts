@@ -480,6 +480,18 @@ export const relationsModule: Module = {
       return c.json(await searchLinkable(ctx, c.req.query('q') ?? '', { kind: c.req.query('kind') || undefined, exclude: k && i ? { kind: kindOf(k), id: i } : undefined }));
     });
     api.get('/links/blocked', async (c) => c.json(await blockedMap(c.get('ctx'))));
+    // The generic routes, with readable undo labels.
+    api.post('/links', async (c) => {
+      const ctx = c.get('ctx');
+      ctx.label = 'link items';
+      return c.json(await create(ctx, linksEntity, await c.req.json()), 201);
+    });
+    api.delete('/links/:id', async (c) => {
+      const ctx = c.get('ctx');
+      ctx.label = 'remove link';
+      await remove(ctx, linksEntity, c.req.param('id'));
+      return c.json({ deleted: c.req.param('id') });
+    });
   },
   tools: [
     {
