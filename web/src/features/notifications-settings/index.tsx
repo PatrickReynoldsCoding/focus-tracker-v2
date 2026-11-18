@@ -25,7 +25,7 @@ const KINDS: [keyof Pick<Prefs, 'reminders' | 'habits' | 'nudge' | 'session'>, s
   ['reminders', 'Reminders', 'When a reminder you set is due.'],
   ['habits', 'Habit prompts', 'A nudge to do a habit.'],
   ['nudge', 'Daily nudge', 'Once a day, about projects you have not touched for a while.'],
-  ['session', 'Pomodoro and session alerts', '“Break time” and “Back to work” in a session.'],
+  ['session', 'Pomodoro and session alerts', 'When a pomodoro period or the planned session time ends.'],
 ];
 
 function Notifications() {

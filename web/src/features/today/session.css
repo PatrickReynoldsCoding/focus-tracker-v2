@@ -53,7 +53,7 @@ ul.pick button .tag { margin-right: 4px; }
 .corner-timer.alert { border-color: var(--warm); box-shadow: 0 0 0 2px var(--warm), 0 4px 18px rgb(0 0 0 / 0.14); }
 .corner-timer.alert .ct-main { color: var(--warm); }
 @media (min-width: 900px) {
-  .corner-timer.at-tl, .corner-timer.at-tr { top: 16px; }
+  .corner-timer.at-tl, .corner-timer.at-tr { top: 66px; }
   .corner-timer.at-bl, .corner-timer.at-br { bottom: 16px; }
   .corner-timer.at-tl { left: 216px; }
 }

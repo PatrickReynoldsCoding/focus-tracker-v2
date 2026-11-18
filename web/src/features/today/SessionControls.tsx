@@ -151,7 +151,7 @@ export function SessionBox({ l, onFinish }: { l: Live; onFinish: () => void }) {
           </div>
         </div>
       ) : null}
-      {p?.waiting && (
+      {p?.waiting && !l.planned?.timeUp && (
         <div class={`callout ${p.phase === 'work' ? 'brk' : 'wrk'}`} role="alert">
           <strong>{p.phase === 'work' ? 'Time for a break.' : 'Break over.'}</strong>{' '}
           <span class="muted">{p.phase === 'work' ? `${p.break} minutes. Stand up and stretch.` : `Round ${p.round + 1} next.`}</span>

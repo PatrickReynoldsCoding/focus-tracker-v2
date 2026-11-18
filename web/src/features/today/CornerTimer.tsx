@@ -51,6 +51,12 @@ export function CornerTimer({ route }: { route: string }) {
   }, [!!drag]);
 
   if (!l || hidden || route === '/today' || route.startsWith('/today/') || route === '') return null;
+  // On the focus project's page the session panel shows the same; stay out of the way while it is on screen
+  // (this re-renders every second, so it follows scrolling closely enough).
+  if (!drag && route === `/p/${l.session.project_id}`) {
+    const panel = document.querySelector('.session-panel')?.getBoundingClientRect();
+    if (!panel || (panel.bottom > 0 && panel.top < window.innerHeight)) return null;
+  }
 
   let main: string;
   let sub: string[] = [];
