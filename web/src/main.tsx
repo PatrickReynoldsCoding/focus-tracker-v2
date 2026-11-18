@@ -2,7 +2,7 @@ import { render } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { checkSignedIn, get, localStorageSet, login, mode, signedIn, toast, undo } from './core/api';
 import { loadFeatures } from './core/features';
-import { useRoutes, useTabs } from './core/registry';
+import { tabBadges, useRoutes, useTabs } from './core/registry';
 import { useSignal } from './core/signal';
 import { go, route } from './core/ui';
 import './features';
@@ -103,6 +103,7 @@ function Login() {
 function App() {
   const ok = useSignal(signedIn);
   const tabs = useTabs();
+  const badges = useSignal(tabBadges);
   const { tabId } = useCurrent();
   const [wide, setWide] = useState(() => {
     try {
@@ -138,6 +139,7 @@ function App() {
               {t.icon}
             </span>
             {t.label}
+            {badges[t.id] > 0 && <span class="badge" aria-label={`${badges[t.id]} waiting`}>{badges[t.id]}</span>}
           </a>
         ))}
         <div class="side-foot">
@@ -168,6 +170,7 @@ function App() {
           <a key={t.id} href={`#${t.path}`} class={tabId === t.id ? 'on' : ''} aria-current={tabId === t.id ? 'page' : undefined}>
             <span class="ico" aria-hidden="true">
               {t.icon}
+              {badges[t.id] > 0 && <span class="badge" aria-label={`${badges[t.id]} waiting`}>{badges[t.id]}</span>}
             </span>
             <span>{t.label}</span>
           </a>
