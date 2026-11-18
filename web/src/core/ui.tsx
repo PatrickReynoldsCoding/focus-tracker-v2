@@ -168,7 +168,12 @@ export function InlineEdit({ value, onSave, class: cls, placeholder }: { value: 
     <input
       class={`inline-input ${cls ?? ''}`}
       defaultValue={value}
-      autoFocus
+      ref={(el) => {
+        if (el && document.activeElement !== el) {
+          el.focus();
+          el.select();
+        }
+      }}
       onBlur={(e) => {
         setEditing(false);
         const v = (e.target as HTMLInputElement).value.trim();
