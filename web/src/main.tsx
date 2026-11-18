@@ -115,7 +115,7 @@ function Login() {
 function App() {
   const ok = useSignal(signedIn);
   const tabs = useTabs();
-  const { tabId } = useCurrent();
+  const { tabId, r: current } = useCurrent();
   const [wide, setWide] = useState(() => {
     try {
       return localStorage.getItem('ft.wide') === '1';
@@ -151,7 +151,7 @@ function App() {
       <nav class="side" aria-label="Main">
         <div class="brand">Focus</div>
         {tabs.map((t) => (
-          <a key={t.id} href={`#${t.path}`} class={tabId === t.id ? 'on' : ''} aria-current={tabId === t.id ? 'page' : undefined}>
+          <a key={t.id} href={`#${t.href?.(current) ?? t.path}`} class={tabId === t.id ? 'on' : ''} aria-current={tabId === t.id ? 'page' : undefined}>
             <span class="ico" aria-hidden="true">
               {t.icon}
             </span>
@@ -187,7 +187,7 @@ function App() {
       </div>
       <nav class="tabs" aria-label="Main">
         {tabs.filter((t) => t.phone).slice(0, 5).map((t) => (
-          <a key={t.id} href={`#${t.path}`} class={tabId === t.id ? 'on' : ''} aria-current={tabId === t.id ? 'page' : undefined}>
+          <a key={t.id} href={`#${t.href?.(current) ?? t.path}`} class={tabId === t.id ? 'on' : ''} aria-current={tabId === t.id ? 'page' : undefined}>
             <span class="ico" aria-hidden="true">
               {t.icon}
             </span>

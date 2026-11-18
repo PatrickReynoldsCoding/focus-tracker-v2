@@ -1,8 +1,9 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { change, del, newId, optimistic, patch, post, put } from '../../core/api';
 import { Panels, registerPanel, registerRoute, type ProjectPanelProps } from '../../core/registry';
 import { AddInput, daysAgo, fmtDay, fmtMinutes, go, InlineEdit, Linkify, Loading, MarkdownEditor, todayLocal, useData } from '../../core/ui';
 import { Board, type Column } from './Board';
+import { lastProject } from './last-project';
 
 type Criterion = { id: string; text: string; done: boolean };
 type Resource = { id: string; title: string; type: string; value: string; grp: string | null; note: string | null };
@@ -138,6 +139,10 @@ function Resources({ p }: { p: Full }) {
 export function ProjectPage({ id }: { id: string }) {
   const { data: p, error, setData } = useData<Full>(`/projects/${id}/full`);
   const { data: cats } = useData<{ id: string; label: string }[]>('/categories');
+  useEffect(() => {
+    if (p) lastProject.set(id);
+    else if (error) lastProject.clear(id);
+  }, [id, !!p, error]);
   if (!p) return <Loading error={error} />;
   const save = (fields: Partial<Full>) => {
     setData((d) => ({ ...d, ...fields }));
@@ -147,7 +152,7 @@ export function ProjectPage({ id }: { id: string }) {
   return (
     <div class="stack project">
       <div class="page-head">
-        <a href="#/projects" class="muted back">
+        <a href="#/projects" class="muted back" onClick={() => lastProject.clear()}>
           ← Projects
         </a>
         <h1>
@@ -246,6 +251,7 @@ registerPanel('project', {
         onClick={async () => {
           if (!confirm(`Delete ${project.name} with its board, notes and criteria? Undo brings it back.`)) return;
           await change(() => del(`/projects/${project.id}`), 'Project deleted');
+          lastProject.clear(project.id);
           go('/projects');
         }}
       >

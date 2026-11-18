@@ -136,4 +136,18 @@ export function Projects() {
 }
 
 import { registerTab } from '../../core/registry';
-registerTab({ id: 'projects', path: '/projects', label: 'Projects', icon: '▤', order: 20, phone: true, render: () => <Projects /> });
+import { lastProject } from './last-project';
+registerTab({
+  id: 'projects',
+  path: '/projects',
+  label: 'Projects',
+  icon: '▤',
+  order: 20,
+  phone: true,
+  // The tab reopens the project last open (per device and mode); "← Projects" on a project page goes to the list.
+  href: (current) => {
+    const id = lastProject.get();
+    return id && !current.startsWith('/p/') ? `/p/${id}` : '/projects';
+  },
+  render: () => <Projects />,
+});
