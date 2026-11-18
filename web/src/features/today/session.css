@@ -1,0 +1,62 @@
+/* Sessions: start controls, timer, alerts, corner timer, swap dialog, away day. */
+
+.start-controls { display: flex; flex-direction: column; gap: 8px; }
+.length-pick { display: inline-flex; gap: 6px; align-items: center; }
+.length-pick select { width: auto; }
+.length-pick input { width: 84px; }
+
+.session-box { display: flex; flex-direction: column; gap: 10px; }
+.timer.paused .big { color: var(--muted); }
+.timer.paused { opacity: 0.85; }
+.pomo-switch { margin-left: auto; }
+
+.callout { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); }
+.callout.up { border-color: var(--warm); background: color-mix(in srgb, var(--warm) 14%, var(--surface)); }
+.callout.brk { border-color: var(--warm); }
+.callout.wrk { border-color: var(--accent); background: var(--accent-soft); }
+
+.session-panel .card-head h2 { color: var(--accent); }
+
+.focus.away .away-title { font-size: 1.25rem; font-weight: 600; margin: 4px 0 0; }
+.focus.away p { margin: 0; }
+
+fieldset.remind { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+fieldset.remind legend { padding: 0; margin-bottom: 6px; }
+ul.pick button .tag { margin-right: 4px; }
+
+/* ---------- corner timer ---------- */
+.corner-timer {
+  position: fixed;
+  z-index: 40;
+  width: 176px;
+  padding: 8px 10px 9px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: 0 4px 18px rgb(0 0 0 / 0.14);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: left 0.15s, top 0.15s;
+}
+.corner-timer.dragging { cursor: grabbing; transition: none; opacity: 0.92; }
+.corner-timer.at-tl { top: calc(64px + env(safe-area-inset-top)); left: 12px; }
+.corner-timer.at-tr { top: calc(64px + env(safe-area-inset-top)); right: 12px; }
+.corner-timer.at-bl { bottom: calc(76px + env(safe-area-inset-bottom)); left: 12px; }
+.corner-timer.at-br { bottom: calc(76px + env(safe-area-inset-bottom)); right: 12px; }
+.corner-timer .ct-head { display: flex; align-items: center; justify-content: space-between; gap: 4px; margin: -4px -6px 0 0; }
+.corner-timer .ct-name { font-size: 0.8rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.corner-timer .ct-main { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.corner-timer .ct-sub { font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.corner-timer.paused .ct-main { color: var(--muted); }
+.corner-timer.alert { border-color: var(--warm); box-shadow: 0 0 0 2px var(--warm), 0 4px 18px rgb(0 0 0 / 0.14); }
+.corner-timer.alert .ct-main { color: var(--warm); }
+@media (min-width: 900px) {
+  .corner-timer.at-tl, .corner-timer.at-tr { top: 16px; }
+  .corner-timer.at-bl, .corner-timer.at-br { bottom: 16px; }
+  .corner-timer.at-tl { left: 216px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .corner-timer { transition: none; }
+}

@@ -1,10 +1,11 @@
 // Choose or swap today's focus: projects ranked like Today's suggestions
 // (today's rotation category first, least recently touched first, locked ones
-// left out), and when swapping, an optional reminder about the skipped project.
+// or blocked ones left out), and when swapping, an optional reminder about the skipped project.
 
 import { useState } from 'preact/hooks';
 import { change, put } from '../../core/api';
 import { daysAgo, Dialog, Loading, useData } from '../../core/ui';
+import { useBlocked } from '../links/shared';
 
 type Candidate = { id: string; name: string; last_touched: string | null; in_rotation: boolean };
 
@@ -18,7 +19,8 @@ const REMIND: [number | null, string][] = [
 export function SwapDialog({ current, day, onClose }: { current: { id: string; name: string } | null; day: string; onClose: () => void }) {
   const { data, error } = useData<{ projects: Candidate[] }>('/focus/candidates');
   const [remind, setRemind] = useState<number | null>(1);
-  const list = data?.projects.filter((p) => p.id !== current?.id);
+  const blocked = useBlocked(); // issue links: a blocked project is not offered (the server leaves them out too)
+  const list = blocked ? data?.projects.filter((p) => p.id !== current?.id && !blocked.projects?.[p.id]) : undefined;
   return (
     <Dialog title={current ? 'Swap focus' : 'Choose today’s focus'} onClose={onClose}>
       {current && (

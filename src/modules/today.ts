@@ -13,6 +13,7 @@ import { listsEntity, todosForDay } from './lists';
 import { pendingNotifications } from './notifications';
 import { projectsEntity } from './projects';
 import { currentSession } from './sessions';
+import { notBlockedSql } from './relations';
 
 export const logEntity: Entity = {
   name: 'log',
@@ -119,10 +120,11 @@ async function suggestions(ctx: Ctx, today: string, category: string | undefined
   if (category === 'away') return [];
   const where: Record<string, unknown> = { status: 'active' };
   if (category && category !== 'any') where.category_id = category;
+  const free = await notBlockedSql(ctx); // issue links: leave out projects blocked by an unfinished item
   return list(ctx, projectsEntity, {
     where,
-    sql: 'locked_until IS NULL OR locked_until <= ?',
-    params: [today],
+    sql: `(locked_until IS NULL OR locked_until <= ?) AND ${free.sql}`,
+    params: [today, ...free.params],
     order: 'last_touched IS NOT NULL, last_touched',
     limit: 5,
   });
@@ -165,15 +167,16 @@ export async function setFocus(ctx: Ctx, projectId: string | null, opts: { day?:
 /**
  * Every project that could be today's focus, ranked as Today ranks its
  * suggestions: today's rotation category first, then least recently touched.
- * Locked projects are left out.
+ * Locked and blocked projects are left out.
  */
 export async function focusCandidates(ctx: Ctx) {
   const day = await ctx.today();
   const category = (await rotation(ctx, day)).today.category;
+  const free = await notBlockedSql(ctx); // like the suggestions: blocked projects are left out
   const rows = await list(ctx, projectsEntity, {
     where: { status: 'active' },
-    sql: 'locked_until IS NULL OR locked_until <= ?',
-    params: [day],
+    sql: `(locked_until IS NULL OR locked_until <= ?) AND ${free.sql}`,
+    params: [day, ...free.params],
     order: 'last_touched IS NOT NULL, last_touched, name',
   });
   const fits = (p: Row) => !!category && category !== 'any' && category !== 'away' && p.category_id === category;

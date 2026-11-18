@@ -1,0 +1,33 @@
+/* Today panels: reminder banners, note and list panels, one-at-a-time quote card. */
+.grid.today .tp-banners { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px; }
+.tp-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 10px 14px; background: var(--c-yellow); border: 1px solid var(--warm); border-radius: var(--radius); }
+.tp-banner-text { display: flex; flex-direction: column; min-width: 0; flex: 1 1 200px; overflow-wrap: anywhere; }
+.tp-banner-text a { color: var(--fg); text-decoration: underline; }
+
+.tp-note, .tp-list, .tp-quote { min-width: 0; }
+.tp-note .card-head h2, .tp-list .card-head h2, .tp-quote .card-head h2 { min-width: 0; overflow-wrap: anywhere; }
+.tp-note .card-head a, .tp-list .card-head a, .tp-quote .card-head a { color: var(--fg); }
+.tp-items li { padding: 4px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.tp-items li:last-child { border-bottom: 0; }
+.tp-add { display: flex; align-items: start; }
+
+.tp-quote { background: var(--surface); }
+.tp-quote.c-none { background: var(--surface); }
+.tp-quote-body { min-height: 5.5em; display: flex; flex-direction: column; gap: 8px; justify-content: center; }
+.tp-quote blockquote { margin: 0; font-size: 1.3rem; line-height: 1.35; font-weight: 600; overflow-wrap: anywhere; }
+.tp-quote blockquote::before { content: '“'; }
+.tp-quote blockquote::after { content: '”'; }
+.tp-quote-note { font-size: 0.92rem; color: var(--fg); opacity: 0.8; }
+.tp-quote-nav { display: flex; justify-content: space-between; }
+.tp-quote-nav button { font-size: 1.6rem; min-height: 44px; min-width: 44px; color: var(--fg); }
+
+.tp-settings summary { cursor: pointer; font-weight: 600; min-height: 32px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tp-settings[open] summary { margin-bottom: 10px; }
+.tp-note-toggle { margin-top: -6px; font-size: 0.9rem; }
+
+@media (min-width: 700px) {
+  .grid.today .tp-note { grid-column: 1 / -1; }
+}
+@media (min-width: 900px) {
+  .grid.today .tp-note { grid-column: span 2; }
+}

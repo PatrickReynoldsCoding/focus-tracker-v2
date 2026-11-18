@@ -1,6 +1,6 @@
 {
   "name": "focus-tracker",
-  "version": "0.2.0",
+  "version": "0.6.0",
   "description": "Focus Tracker v2: a personal focus, projects and habits tracker on Cloudflare Workers + D1, editable by Claude through its own MCP connector.",
   "scripts": {
     "dev": "wrangler dev",
@@ -32,6 +32,7 @@
     "@vitest/runner": "^4.1.12",
     "@vitest/snapshot": "^4.1.12",
     "exceljs": "^4.4.0",
+    "mammoth": "^1.13.0",
     "playwright-core": "^1.65.1",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",

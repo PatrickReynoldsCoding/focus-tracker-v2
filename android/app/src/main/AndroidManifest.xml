@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Updates from inside the app (Updater.kt): downloads the release APK from GitHub and hands it to Android's installer. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
         android:label="@string/app_name"
@@ -20,6 +22,13 @@
         <activity android:name=".SetupActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".QuickAddActivity" android:exported="false" android:theme="@style/Theme.FocusTracker.Dialog"
             android:excludeFromRecents="true" android:taskAffinity="" android:windowSoftInputMode="stateVisible" />
+        <!-- What Android's installer says about an update, and the note shown after one. -->
+        <receiver android:name=".UpdateReceiver" android:exported="false" />
+        <receiver android:name=".UpdatedReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
         <receiver android:name=".TodayWidget" android:exported="false" android:label="@string/widget_name">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />

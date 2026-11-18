@@ -25,9 +25,18 @@ export const listsEntity: Entity = {
     project_id: { type: 'text', ref: 'projects', desc: 'Shows the list on that project’s page too' },
     show_today: { type: 'bool', default: false },
     color: { type: 'text' },
+    display: { type: 'text', enum: ['full', 'one'], default: 'full', desc: 'On Today: the whole list ("full") or one random item at a time ("one")' },
+    seconds: { type: 'int', default: 30, desc: 'With display "one": seconds before the next item (5 to 3600)' },
+    today_at: { type: 'time', readonly: true, desc: 'When it was put on Today (Today panels keep that order)' },
   },
-  beforeUpdate(_ctx, before, patch) {
+  beforeCreate(ctx, row) {
+    checkSeconds(row.seconds);
+    if (row.show_today) row.today_at = ctx.now();
+  },
+  beforeUpdate(ctx, before, patch) {
     if (patch.kind && patch.kind !== before.kind) throw bad('A list cannot change kind');
+    checkSeconds(patch.seconds);
+    if (patch.show_today && !before.show_today) patch.today_at = ctx.now();
   },
   async afterCreate(ctx, row) {
     if (row.kind === 'todo') await create(ctx, columnsEntity, { list_id: row.id, name: 'General' });
@@ -35,6 +44,10 @@ export const listsEntity: Entity = {
     if (row.kind === 'note') await setNote(ctx, { list_id: row.id }, '');
   },
 };
+
+function checkSeconds(v: unknown) {
+  if (v != null && (!Number.isInteger(Number(v)) || Number(v) < 5 || Number(v) > 3600)) throw bad('seconds must be a whole number from 5 to 3600');
+}
 
 export const todosEntity: Entity = {
   name: 'todos',

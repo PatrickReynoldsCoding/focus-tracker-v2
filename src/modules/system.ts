@@ -5,7 +5,7 @@ import type { Ctx } from '../core/ctx';
 import { bad } from '../core/errors';
 import { newId, randomToken, sha256Hex } from '../core/ids';
 import { allEntities, entity, type Module } from '../core/registry';
-import { create, get, list, move, remove, undoLast, update } from '../core/store';
+import { create, get, list, move, redoLast, remove, undoLast, update } from '../core/store';
 import { allFeatures, featureStates, setFeature } from '../core/features';
 
 /** Settings a client may not write directly (they have their own calls). */
@@ -61,6 +61,7 @@ export const systemModule: Module = {
       return c.json(await putSetting(c.get('ctx'), c.req.param('key'), b.value ?? null, !!b.global));
     });
     api.post('/undo', async (c) => c.json((await undoLast(c.get('ctx'))) ?? { label: null, changes: 0 }));
+    api.post('/redo', async (c) => c.json((await redoLast(c.get('ctx'))) ?? { label: null, changes: 0 }));
     api.get('/tokens', async (c) => c.json((await c.get('ctx').db.prepare('SELECT id, name, created, last_used FROM api_tokens ORDER BY created').all()).results));
     api.post('/tokens', async (c) => {
       const { name } = await c.req.json<{ name: string }>();
@@ -212,6 +213,12 @@ export const systemModule: Module = {
       description: 'Undo the most recent change in this mode (one tool call or one action in the app counts as one change).',
       input: z.object({}),
       run: async (ctx) => (await undoLast(ctx)) ?? { label: null, changes: 0 },
+    },
+    {
+      name: 'redo',
+      description: 'Redo the change that was just undone in this mode. Does nothing if something changed after the undo.',
+      input: z.object({}),
+      run: async (ctx) => (await redoLast(ctx)) ?? { label: null, changes: 0 },
     },
     {
       name: 'get_settings',

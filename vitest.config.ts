@@ -16,6 +16,6 @@ export default defineConfig(async () => {
         },
       }),
     ],
-    test: { setupFiles: ['./test/apply-migrations.ts'] },
+    test: { setupFiles: ['./test/apply-migrations.ts'], include: ['test/**/*.test.ts'], exclude: ['**/node_modules/**', '.claude/**'] },
   };
 });

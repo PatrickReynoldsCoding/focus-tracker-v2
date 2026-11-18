@@ -1,0 +1,2 @@
+.log-line { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.log-text { min-width: 0; overflow-wrap: anywhere; }

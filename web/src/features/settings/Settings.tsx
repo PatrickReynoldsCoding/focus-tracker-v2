@@ -169,10 +169,7 @@ function General() {
         <label class="inline">
           <input type="checkbox" defaultChecked={data.mode['pomodoro.default'] !== 'off'} onChange={(e) => set('pomodoro.default', (e.target as HTMLInputElement).checked ? 'on' : 'off')} /> Pomodoro timer in sessions
         </label>
-        <label>
-          Nudge about projects untouched for (days)
-          <input type="number" min={1} defaultValue={data.mode['nudge.days'] ?? '14'} onBlur={(e) => set('nudge.days', (e.target as HTMLInputElement).value)} />
-        </label>
+        {/* The nudge's controls (hour, days untouched) moved to the Notifications section. */}
       </div>
     </section>
   );

@@ -27,7 +27,7 @@ class Api(private val prefs: Prefs) {
     fun get(path: String): String = call("GET", path, null)
     fun post(path: String, body: JSONObject = JSONObject()): String = call("POST", path, body.toString())
 
-    fun status(): Status = Status.parse(JSONObject(get("/api/status")))
+    fun status(): Status = Status.parse(JSONObject(get("/api/status?client=android")))
 
     private fun call(method: String, path: String, body: String?): String {
         val c = URL(prefs.url + path).openConnection() as HttpURLConnection

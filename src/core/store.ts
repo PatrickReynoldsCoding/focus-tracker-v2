@@ -5,7 +5,7 @@ import type { Ctx } from './ctx';
 import { columnsOf, type Entity, type Field, type Row } from './entity';
 import { ApiError, bad, notFound } from './errors';
 import { CLIENT_ID, newId } from './ids';
-import { allEntities, entity as getEntity } from './registry';
+import { allEntities, allModules, entity as getEntity } from './registry';
 
 type Input = Record<string, unknown>;
 
@@ -244,6 +244,7 @@ export async function remove(ctx: Ctx, e: Entity, id: string): Promise<Row> {
   if (!raw || (e.modeScoped && raw.mode !== ctx.mode)) throw notFound(e.singular, id);
   const row = fromDb(e, raw);
   if (e.onDelete) await e.onDelete(ctx, row);
+  for (const m of allModules()) if (m.beforeDelete) await m.beforeDelete(ctx, e, row);
   // Rows of other kinds that point at this one: delete them or clear the pointer.
   for (const other of allEntities()) {
     for (const [k, f] of Object.entries(other.fields)) {
@@ -367,6 +368,39 @@ export async function undoLast(ctx: Ctx): Promise<{ label: string; changes: numb
   stmts.push(ctx.db.prepare('UPDATE undo SET undone = 1 WHERE batch = ?').bind(last.batch));
   await ctx.db.batch(stmts);
   return { label: last.label, changes: rows.length };
+}
+
+/** Redo the oldest undone change batch in this mode, by writing its `after` rows again. */
+export async function redoLast(ctx: Ctx): Promise<{ label: string; changes: number } | null> {
+  const next = await ctx.db
+    .prepare('SELECT batch, label FROM undo WHERE mode = ? AND undone = 1 ORDER BY id ASC LIMIT 1')
+    .bind(ctx.mode)
+    .first<{ batch: string; label: string }>();
+  if (!next) return null;
+  const rows = (
+    await ctx.db
+      .prepare('SELECT * FROM undo WHERE batch = ? ORDER BY id ASC')
+      .bind(next.batch)
+      .all<{ entity: string; row_id: string; before: string | null; after: string | null }>()
+  ).results;
+  const stmts: D1PreparedStatement[] = [];
+  for (const r of rows) {
+    const e = getEntity(r.entity);
+    if (r.after == null) {
+      stmts.push(ctx.db.prepare(`DELETE FROM ${e.table} WHERE id = ?`).bind(r.row_id));
+    } else {
+      const after = JSON.parse(r.after) as Record<string, unknown>;
+      const cols = Object.keys(after).filter((c) => columnsOf(e).includes(c));
+      stmts.push(
+        ctx.db
+          .prepare(`INSERT OR REPLACE INTO ${e.table} (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`)
+          .bind(...cols.map((c) => after[c] ?? null)),
+      );
+    }
+  }
+  stmts.push(ctx.db.prepare('UPDATE undo SET undone = 0 WHERE batch = ?').bind(next.batch));
+  await ctx.db.batch(stmts);
+  return { label: next.label, changes: rows.length };
 }
 
 /** Keep the undo history small: drop entries older than `days`. */

@@ -8,6 +8,7 @@
 
 import type { ComponentChildren, VNode } from 'preact';
 import { useFlags } from './features';
+import { signal } from './signal';
 
 type Render<P> = (props: P) => VNode | null;
 
@@ -21,6 +22,8 @@ export interface TabDef {
   feature?: string;
   /** Shown in the phone's bottom bar (max 5); the rest only in the side bar. */
   phone?: boolean;
+  /** Where the tab's link goes, given the current route (default: `path`). */
+  href?: (currentRoute: string) => string;
   render: Render<{ route: string; params: string[] }>;
 }
 
@@ -62,6 +65,10 @@ export interface CardSectionProps {
   update: (fields: Record<string, unknown> | null) => void;
   close: () => void;
 }
+/** A small mark on a card of a board (keep it to an icon or a short tag). */
+export interface CardTileProps {
+  card: any;
+}
 export interface SettingsSectionProps {}
 
 /** Something drawn over every page once signed in (a corner timer, a background job with no UI). */
@@ -71,6 +78,8 @@ export interface OverlayDef {
   feature?: string;
   render: Render<{ route: string }>;
 }
+/** A small count shown beside a tab's name (side bar and phone bar): set `tabBadges.value = { ...tabBadges.value, today: 2 }`. 0 or missing = none. */
+export const tabBadges = signal<Record<string, number>>({});
 
 const tabs: TabDef[] = [];
 const routes: RouteDef[] = [];
@@ -87,10 +96,11 @@ export const registerTab = (t: TabDef) => add(tabs, t);
 export const registerRoute = (r: RouteDef) => add(routes, r);
 export const registerOverlay = (o: OverlayDef) => add(overlays, o);
 
-/** Panels by place: 'today', 'project', 'card' (sections of the card dialog), 'settings'. */
+/** Panels by place: 'today', 'project', 'card' (sections of the card dialog), 'card-tile' (marks on a board card), 'settings'. */
 export function registerPanel(place: 'today', p: PanelDef<TodayPanelProps>): void;
 export function registerPanel(place: 'project', p: PanelDef<ProjectPanelProps>): void;
 export function registerPanel(place: 'card', p: PanelDef<CardSectionProps>): void;
+export function registerPanel(place: 'card-tile', p: PanelDef<CardTileProps>): void;
 export function registerPanel(place: 'settings', p: PanelDef<SettingsSectionProps>): void;
 export function registerPanel(place: string, p: PanelDef<any>): void;
 export function registerPanel(place: string, p: PanelDef<any>) {
