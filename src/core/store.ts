@@ -369,6 +369,39 @@ export async function undoLast(ctx: Ctx): Promise<{ label: string; changes: numb
   return { label: last.label, changes: rows.length };
 }
 
+/** Redo the oldest undone change batch in this mode, by writing its `after` rows again. */
+export async function redoLast(ctx: Ctx): Promise<{ label: string; changes: number } | null> {
+  const next = await ctx.db
+    .prepare('SELECT batch, label FROM undo WHERE mode = ? AND undone = 1 ORDER BY id ASC LIMIT 1')
+    .bind(ctx.mode)
+    .first<{ batch: string; label: string }>();
+  if (!next) return null;
+  const rows = (
+    await ctx.db
+      .prepare('SELECT * FROM undo WHERE batch = ? ORDER BY id ASC')
+      .bind(next.batch)
+      .all<{ entity: string; row_id: string; before: string | null; after: string | null }>()
+  ).results;
+  const stmts: D1PreparedStatement[] = [];
+  for (const r of rows) {
+    const e = getEntity(r.entity);
+    if (r.after == null) {
+      stmts.push(ctx.db.prepare(`DELETE FROM ${e.table} WHERE id = ?`).bind(r.row_id));
+    } else {
+      const after = JSON.parse(r.after) as Record<string, unknown>;
+      const cols = Object.keys(after).filter((c) => columnsOf(e).includes(c));
+      stmts.push(
+        ctx.db
+          .prepare(`INSERT OR REPLACE INTO ${e.table} (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`)
+          .bind(...cols.map((c) => after[c] ?? null)),
+      );
+    }
+  }
+  stmts.push(ctx.db.prepare('UPDATE undo SET undone = 0 WHERE batch = ?').bind(next.batch));
+  await ctx.db.batch(stmts);
+  return { label: next.label, changes: rows.length };
+}
+
 /** Keep the undo history small: drop entries older than `days`. */
 export async function pruneUndo(db: D1Database, days = 14): Promise<void> {
   const cutoff = new Date(Date.now() - days * 86400_000).toISOString();
