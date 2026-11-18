@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
 import { change, del, newId, optimistic, patch, post, put } from '../../core/api';
 import { Panels, registerPanel, registerRoute, type ProjectPanelProps } from '../../core/registry';
-import { AddInput, daysAgo, fmtDay, fmtMinutes, go, InlineEdit, Loading, MarkdownEditor, todayLocal, useData } from '../../core/ui';
+import { AddInput, daysAgo, fmtDay, fmtMinutes, go, InlineEdit, Linkify, Loading, MarkdownEditor, todayLocal, useData } from '../../core/ui';
 import { Board, type Column } from './Board';
 
 type Criterion = { id: string; text: string; done: boolean };
@@ -204,7 +204,11 @@ registerPanel('project', {
           {project.recent_log.map((l: LogEntry) => (
             <li key={l.id}>
               <strong>{fmtDay(l.date)}</strong> {l.minutes ? <span class="muted">{fmtMinutes(l.minutes)}</span> : null}
-              {l.where_stopped && <div class="small">{l.where_stopped}</div>}
+              {l.where_stopped && (
+                <div class="small">
+                  <Linkify text={l.where_stopped} />
+                </div>
+              )}
             </li>
           ))}
         </ul>

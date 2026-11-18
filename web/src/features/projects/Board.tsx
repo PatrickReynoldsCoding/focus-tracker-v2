@@ -5,7 +5,7 @@ import Sortable from 'sortablejs';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { change, del, localStorageSet, newId, optimistic, patch, post } from '../../core/api';
 import { Panels, registerPanel, type CardSectionProps } from '../../core/registry';
-import { AddInput, ColorPicker, Dialog, InlineEdit, MarkdownEditor, plainPreview } from '../../core/ui';
+import { AddInput, ColorPicker, Dialog, InlineEdit, Linkify, MarkdownEditor, plainPreview } from '../../core/ui';
 
 export type Card = { id: string; title: string; note: string | null; color: string | null; column_id: string; ord: number };
 export type Column = { id: string; name: string; cards: Card[] };
@@ -160,7 +160,7 @@ function ColumnView({
         {col.cards.map((c) => (
           <li key={c.id} data-id={c.id} class={`kcard c-${c.color || 'none'}`} tabIndex={0} onClick={() => onOpen(c)} onKeyDown={(e) => e.key === 'Enter' && onOpen(c)}>
             <span class="kcard-body">
-              <span class="kcard-title">{c.title}</span>
+              <span class="kcard-title"><Linkify text={c.title} /></span>
               {c.note && plainPreview(c.note) && <span class="kcard-note">{plainPreview(c.note)}</span>}
             </span>
             {c.note && !plainPreview(c.note) && (

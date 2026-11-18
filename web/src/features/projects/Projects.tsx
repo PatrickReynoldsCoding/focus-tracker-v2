@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import { change, del, localStorageSet, post } from '../../core/api';
-import { AddInput, daysAgo, go, Loading, todayLocal, useData } from '../../core/ui';
+import { AddInput, daysAgo, go, Linkify, Loading, todayLocal, useData } from '../../core/ui';
 
 type Project = { id: string; name: string; category_id: string | null; status: string; last_touched: string | null; locked_until: string | null };
 type Category = { id: string; label: string; color: string | null };
@@ -117,7 +117,7 @@ export function Projects() {
         <ul class="plain backlog">
           {backlog?.map((b) => (
             <li key={b.id}>
-              <span>{b.title}</span>
+              <span><Linkify text={b.title} /></span>
               <span class="row tight">
                 <button class="ghost small" onClick={() => change(() => post(`/backlog/${b.id}/start`), `Started ${b.title}`)}>
                   Start

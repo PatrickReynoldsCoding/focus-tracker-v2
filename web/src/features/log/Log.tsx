@@ -1,4 +1,4 @@
-import { Loading, fmtDay, fmtMinutes, useData } from '../../core/ui';
+import { Linkify, Loading, fmtDay, fmtMinutes, useData } from '../../core/ui';
 
 type Entry = { id: string; date: string; project_id: string | null; minutes: number | null; where_stopped: string | null };
 
@@ -25,7 +25,11 @@ export function Log() {
                 <li key={e.id}>
                   <a href={e.project_id ? `#/p/${e.project_id}` : undefined}>{name(e.project_id) || 'No project'}</a>
                   {e.minutes ? <span class="muted"> · {fmtMinutes(e.minutes)}</span> : null}
-                  {e.where_stopped && <div class="small">Stopped: {e.where_stopped}</div>}
+                  {e.where_stopped && (
+                    <div class="small">
+                      Stopped: <Linkify text={e.where_stopped} />
+                    </div>
+                  )}
                 </li>
               ))}
           </ul>
