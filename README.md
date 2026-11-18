@@ -9,7 +9,7 @@ Clients, all on one API:
 - **Mac menu bar**: a SwiftBar plugin with the focus, session timer, to-dos, habits and notifications ([clients/swiftbar](clients/swiftbar/README.md)).
 - **Android**: the app plus a Today widget and notifications ([android](android/README.md)).
 - **Moving from v1**: [docs/migrate-from-v1.md](docs/migrate-from-v1.md).
-- Planned: Google Drive sync. See [docs/STATUS.md](docs/STATUS.md).
+- Google Docs are linked from a project's resources; notes themselves live in the tracker. Planned later: an export-everything button. See [docs/STATUS.md](docs/STATUS.md).
 
 ## Run your own
 
