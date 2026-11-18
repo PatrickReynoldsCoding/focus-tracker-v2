@@ -100,11 +100,34 @@ export async function todosForDay(ctx: Ctx, day: string) {
   });
 }
 
+/** Every list with a short preview, for the Notes tab's cards (one request, not one per card). */
+export async function overview(ctx: Ctx) {
+  const lists = await list(ctx, listsEntity);
+  const ids = lists.map((l) => l.id);
+  if (!ids.length) return [];
+  const marks = ids.map(() => '?').join(',');
+  const [cards, todos, notes] = await Promise.all([
+    ctx.db.prepare(`SELECT list_id, title FROM tasks WHERE list_id IN (${marks}) ORDER BY ord`).bind(...ids).all<{ list_id: string; title: string }>(),
+    ctx.db.prepare(`SELECT id, list_id, title, done FROM todos WHERE list_id IN (${marks}) ORDER BY done IS NOT NULL, ord`).bind(...ids).all<{ id: string; list_id: string; title: string; done: string | null }>(),
+    ctx.db.prepare(`SELECT list_id, substr(body, 1, 300) AS preview FROM notes WHERE list_id IN (${marks})`).bind(...ids).all<{ list_id: string; preview: string }>(),
+  ]);
+  return lists.map((l) => {
+    if (l.kind === 'note') return { ...l, preview: notes.results.find((n) => n.list_id === l.id)?.preview ?? '' };
+    if (l.kind === 'todo') {
+      const mine = todos.results.filter((t) => t.list_id === l.id);
+      return { ...l, open: mine.filter((t) => !t.done).length, items: mine.filter((t) => !t.done).slice(0, 6) };
+    }
+    const mine = cards.results.filter((c) => c.list_id === l.id);
+    return { ...l, count: mine.length, items: mine.slice(0, 6).map((c) => ({ title: c.title })) };
+  });
+}
+
 export const listsModule: Module = {
   id: 'lists',
   description: 'Plain lists, to-do lists, notes and to-dos.',
   entities: [listsEntity, todosEntity],
   routes(api) {
+    api.get('/lists/overview', async (c) => c.json(await overview(c.get('ctx'))));
     api.get('/lists/:id/full', async (c) => c.json(await fullList(c.get('ctx'), c.req.param('id'))));
     api.post('/todos/:id/tick', async (c) => {
       const ctx = c.get('ctx');

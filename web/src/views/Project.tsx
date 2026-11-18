@@ -1,0 +1,232 @@
+import { useState } from 'preact/hooks';
+import { change, del, newId, optimistic, patch, post, put } from '../api';
+import { Board, type Column } from '../Board';
+import { AddInput, daysAgo, fmtDay, fmtMinutes, go, InlineEdit, Loading, MarkdownEditor, todayLocal, useData } from '../ui';
+
+type Criterion = { id: string; text: string; done: boolean };
+type Resource = { id: string; title: string; type: string; value: string; grp: string | null; note: string | null };
+type LogEntry = { id: string; date: string; minutes: number | null; where_stopped: string | null; next_action: string | null };
+type Full = {
+  id: string;
+  name: string;
+  status: string;
+  category_id: string | null;
+  next_action: string | null;
+  last_touched: string | null;
+  locked_until: string | null;
+  show_next_action: string | null;
+  columns: Column[];
+  criteria: Criterion[];
+  resources: Resource[];
+  notes: string;
+  lists: { id: string; name: string; kind: string }[];
+  recent_log: LogEntry[];
+};
+
+function href(r: Resource): string | undefined {
+  if (r.type === 'link' || r.type === 'drive') return /^https?:\/\//.test(r.value) ? r.value : undefined;
+  if (r.type === 'email') return `mailto:${r.value}`;
+  if (r.type === 'phone') return `tel:${r.value}`;
+  return undefined;
+}
+
+function Criteria({ p, setData }: { p: Full; setData: (fn: (d: Full) => Full) => void }) {
+  const done = p.criteria.filter((c) => c.done).length;
+  return (
+    <section class="card">
+      <div class="card-head">
+        <h2>Done when</h2>
+        <span class="muted">
+          {done}/{p.criteria.length}
+        </span>
+      </div>
+      <ul class="checks">
+        {p.criteria.map((c) => (
+          <li key={c.id} class={c.done ? 'done' : ''}>
+            <label>
+              <input
+                type="checkbox"
+                checked={c.done}
+                onChange={() =>
+                  optimistic(
+                    () => {
+                      setData((d) => ({ ...d, criteria: d.criteria.map((x) => (x.id === c.id ? { ...x, done: !c.done } : x)) }));
+                      return () => setData((d) => ({ ...d, criteria: d.criteria.map((x) => (x.id === c.id ? c : x)) }));
+                    },
+                    () => patch(`/criteria/${c.id}`, { done: !c.done }),
+                  )
+                }
+              />
+              <span>{c.text}</span>
+            </label>
+            <button class="icon small" aria-label="Delete" onClick={() => change(() => del(`/criteria/${c.id}`))}>
+              ✕
+            </button>
+          </li>
+        ))}
+      </ul>
+      <AddInput
+        placeholder="Add a done criterion"
+        onAdd={(text) => {
+          const id = newId();
+          optimistic(
+            () => {
+              setData((d) => ({ ...d, criteria: [...d.criteria, { id, text, done: false }] }));
+              return () => setData((d) => ({ ...d, criteria: d.criteria.filter((x) => x.id !== id) }));
+            },
+            () => post('/criteria', { id, project_id: p.id, text }),
+          );
+        }}
+      />
+    </section>
+  );
+}
+
+function Resources({ p }: { p: Full }) {
+  const [adding, setAdding] = useState(false);
+  const [title, setTitle] = useState('');
+  const [value, setValue] = useState('');
+  return (
+    <section class="card">
+      <div class="card-head">
+        <h2>Resources</h2>
+        <button class="ghost small" onClick={() => setAdding(!adding)}>
+          {adding ? 'Cancel' : '+ Add'}
+        </button>
+      </div>
+      <ul class="plain resources">
+        {p.resources.map((r) => (
+          <li key={r.id}>
+            {href(r) ? (
+              <a href={href(r)} target="_blank" rel="noopener noreferrer">
+                {r.title}
+              </a>
+            ) : (
+              <span>
+                {r.title}: {r.value}
+              </span>
+            )}
+            {r.grp && <span class="tag">{r.grp}</span>}
+            <button class="icon small" aria-label="Delete" onClick={() => change(() => del(`/resources/${r.id}`), 'Removed')}>
+              ✕
+            </button>
+          </li>
+        ))}
+      </ul>
+      {adding && (
+        <form
+          class="stack"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const v = value.trim();
+            const type = /^https?:\/\//.test(v) ? 'link' : /^[^@\s]+@[^@\s]+$/.test(v) ? 'email' : /^[+\d][\d\s-]{5,}$/.test(v) ? 'phone' : 'text';
+            change(() => post('/resources', { project_id: p.id, title: title.trim() || v, value: v, type }));
+            setTitle('');
+            setValue('');
+            setAdding(false);
+          }}
+        >
+          <input placeholder="Title" value={title} onInput={(e) => setTitle((e.target as HTMLInputElement).value)} />
+          <input placeholder="Link, email, phone or text" required value={value} onInput={(e) => setValue((e.target as HTMLInputElement).value)} />
+          <p class="muted small">Never add bank details, passwords or ID numbers.</p>
+          <button class="primary">Add</button>
+        </form>
+      )}
+    </section>
+  );
+}
+
+export function ProjectPage({ id }: { id: string }) {
+  const { data: p, error, setData } = useData<Full>(`/projects/${id}/full`);
+  const { data: cats } = useData<{ id: string; label: string }[]>('/categories');
+  if (!p) return <Loading error={error} />;
+  const save = (fields: Partial<Full>) => {
+    setData((d) => ({ ...d, ...fields }));
+    change(() => patch(`/projects/${p.id}`, fields));
+  };
+  const today = todayLocal();
+  return (
+    <div class="stack project">
+      <div class="page-head">
+        <a href="#/projects" class="muted back">
+          ← Projects
+        </a>
+        <h1>
+          <InlineEdit value={p.name} onSave={(name) => name && save({ name })} />
+        </h1>
+        <div class="meta">
+          <select value={p.status} onChange={(e) => save({ status: (e.target as HTMLSelectElement).value })} aria-label="Status">
+            {['active', 'paused', 'done', 'dropped'].map((s) => (
+              <option key={s}>{s}</option>
+            ))}
+          </select>
+          <select value={p.category_id ?? ''} onChange={(e) => save({ category_id: (e.target as HTMLSelectElement).value || null })} aria-label="Category">
+            <option value="">No category</option>
+            {cats?.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+          <span class="muted small">touched {daysAgo(p.last_touched, today)}</span>
+          <button class="ghost small" onClick={() => change(() => put('/focus', { project_id: p.id }), `Focus: ${p.name}`)}>
+            ◎ Focus today
+          </button>
+        </div>
+        <p class="next">
+          Next action: <InlineEdit value={p.next_action ?? ''} placeholder="none yet" onSave={(next_action) => save({ next_action: next_action || null })} />
+        </p>
+      </div>
+
+      <Board columns={p.columns} owner={{ project_id: p.id }} />
+
+      <div class="grid two">
+        <section class="card">
+          <h2>Notes</h2>
+          <MarkdownEditor value={p.notes} placeholder="Notes for this project (Markdown)…" onSave={(body) => change(() => put(`/notes/of/project/${p.id}`, { body }))} />
+        </section>
+        <Criteria p={p} setData={setData} />
+        <Resources p={p} />
+        <section class="card">
+          <h2>Sessions</h2>
+          {p.recent_log.length ? (
+            <ul class="plain log">
+              {p.recent_log.map((l) => (
+                <li key={l.id}>
+                  <strong>{fmtDay(l.date)}</strong> {l.minutes ? <span class="muted">{fmtMinutes(l.minutes)}</span> : null}
+                  {l.where_stopped && <div class="small">{l.where_stopped}</div>}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p class="muted">No sessions yet.</p>
+          )}
+        </section>
+      </div>
+      {p.lists.length > 0 && (
+        <section class="card">
+          <h2>Lists</h2>
+          <div class="chips">
+            {p.lists.map((l) => (
+              <a key={l.id} class="chip" href={`#/n/${l.id}`}>
+                {l.name}
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+      <div class="row">
+        <button
+          class="danger ghost"
+          onClick={async () => {
+            if (!confirm(`Delete ${p.name} with its board, notes and criteria? Undo brings it back.`)) return;
+            await change(() => del(`/projects/${p.id}`), 'Project deleted');
+            go('/projects');
+          }}
+        >
+          Delete project
+        </button>
+      </div>
+    </div>
+  );
+}

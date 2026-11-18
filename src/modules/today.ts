@@ -245,6 +245,13 @@ export async function logSession(ctx: Ctx, input: { project_id?: string; date?: 
 
 // ---------- today and status ----------
 
+/** A project's next action is hidden unless the project, or the mode's default, turns it on (as in v1). */
+async function nextActionShown(ctx: Ctx, p: Row): Promise<boolean> {
+  if (p.show_next_action === 'on') return true;
+  if (p.show_next_action === 'off') return false;
+  return (await ctx.setting('next_action.default')) === 'on';
+}
+
 export async function today(ctx: Ctx) {
   const day = await ctx.today();
   const [focus, rot, session, todos, habits, lists, nudge] = await Promise.all([
@@ -259,7 +266,7 @@ export async function today(ctx: Ctx) {
   return {
     mode: ctx.mode,
     day,
-    focus,
+    focus: focus && { ...focus, show_next: await nextActionShown(ctx, focus) },
     // Session controls are hidden in the app when no focus is chosen (owner's rule from v1).
     show_session_controls: !!focus || !!session,
     rotation: rot.today,
@@ -282,7 +289,7 @@ export async function status(ctx: Ctx) {
     habitProgress(ctx, day),
     pendingNotifications(ctx),
   ]);
-  const showNext = focus && (focus.show_next_action === 'on' || (focus.show_next_action == null && (await ctx.setting('next_action.default')) === 'on'));
+  const showNext = focus && (await nextActionShown(ctx, focus));
   return {
     mode: ctx.mode,
     day,

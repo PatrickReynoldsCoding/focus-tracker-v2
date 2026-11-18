@@ -1,0 +1,201 @@
+// Shared bits: data loading, routing, dialogs, Markdown, colours.
+import DOMPurify from 'dompurify';
+import { marked } from 'marked';
+import type { ComponentChildren } from 'preact';
+import { useEffect, useRef, useState } from 'preact/hooks';
+import { get, HttpError, mode, version } from './api';
+import { signal, useSignal } from './signal';
+
+// ---------- routing (hash based: #/today, #/p/<id> ...) ----------
+
+export const route = signal(location.hash.slice(1) || '/today');
+window.addEventListener('hashchange', () => (route.value = location.hash.slice(1) || '/today'));
+export const go = (path: string) => (location.hash = path);
+
+// ---------- loading ----------
+
+/** Load a path, again whenever the mode changes or a change lands. */
+export function useData<T>(path: string | null): { data: T | undefined; error: string | null; reload: () => void; setData: (fn: (d: T) => T) => void } {
+  const v = useSignal(version);
+  const m = useSignal(mode);
+  const [data, setData] = useState<T>();
+  const [error, setError] = useState<string | null>(null);
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    if (!path) return;
+    let live = true;
+    get<T>(path)
+      .then((d) => live && (setData(d), setError(null)))
+      .catch((e: Error) => live && !(e instanceof HttpError && e.status === 401) && setError(e.message));
+    return () => {
+      live = false;
+    };
+  }, [path, v, m, n]);
+  return { data, error, reload: () => setN((x) => x + 1), setData: (fn) => setData((d) => (d === undefined ? d : fn(d))) };
+}
+
+export function Loading({ error }: { error?: string | null }) {
+  return error ? <p class="empty error">{error}</p> : <p class="empty">Loading…</p>;
+}
+
+// ---------- dialog (a sheet from the bottom on a phone) ----------
+
+export function Dialog({ title, onClose, children, wide }: { title: ComponentChildren; onClose: () => void; children: ComponentChildren; wide?: boolean }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    ref.current?.showModal();
+    // The phone's back button closes the dialog.
+    history.pushState({ dialog: true }, '');
+    const pop = () => onClose();
+    window.addEventListener('popstate', pop);
+    return () => {
+      window.removeEventListener('popstate', pop);
+      if (history.state?.dialog) history.back();
+    };
+  }, []);
+  return (
+    <dialog
+      ref={ref}
+      class={wide ? 'sheet wide' : 'sheet'}
+      onCancel={(e) => (e.preventDefault(), onClose())}
+      onClick={(e) => e.target === ref.current && onClose()}
+    >
+      <div class="sheet-inner">
+        <header class="sheet-head">
+          <h2>{title}</h2>
+          <button class="icon" aria-label="Close" onClick={onClose}>
+            ✕
+          </button>
+        </header>
+        {children}
+      </div>
+    </dialog>
+  );
+}
+
+// ---------- Markdown ----------
+
+marked.setOptions({ gfm: true, breaks: true });
+
+export function Markdown({ text, class: cls }: { text: string; class?: string }) {
+  const html = DOMPurify.sanitize(marked.parse(text || '', { async: false }) as string);
+  return <div class={`md ${cls ?? ''}`} dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
+/** A Markdown text: shown formatted, tap to edit; saves when you leave the box. */
+export function MarkdownEditor({ value, onSave, placeholder, rows = 8 }: { value: string; onSave: (v: string) => void; placeholder?: string; rows?: number }) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(value);
+  useEffect(() => {
+    if (!editing) setText(value);
+  }, [value, editing]);
+  if (!editing)
+    return (
+      <div class="md-view" tabIndex={0} onClick={(e) => (e.target as HTMLElement).tagName !== 'A' && setEditing(true)} onKeyDown={(e) => e.key === 'Enter' && setEditing(true)}>
+        {value ? <Markdown text={value} /> : <p class="muted">{placeholder ?? 'Tap to write…'}</p>}
+      </div>
+    );
+  return (
+    <textarea
+      class="md-edit"
+      rows={Math.max(rows, text.split('\n').length + 1)}
+      value={text}
+      autoFocus
+      placeholder={placeholder}
+      onInput={(e) => setText((e.target as HTMLTextAreaElement).value)}
+      onBlur={() => {
+        setEditing(false);
+        if (text !== value) onSave(text);
+      }}
+    />
+  );
+}
+
+// ---------- colours ----------
+
+export const COLORS = ['', 'red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'grey'];
+
+export function ColorPicker({ value, onPick }: { value?: string | null; onPick: (c: string | null) => void }) {
+  return (
+    <div class="swatches" role="radiogroup" aria-label="Colour">
+      {COLORS.map((c) => (
+        <button
+          key={c}
+          role="radio"
+          aria-checked={(value ?? '') === c}
+          aria-label={c || 'No colour'}
+          class={`swatch c-${c || 'none'} ${(value ?? '') === c ? 'on' : ''}`}
+          onClick={() => onPick(c || null)}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ---------- small inputs ----------
+
+/** A one-line input that adds something on Enter and stays open for the next one. */
+export function AddInput({ placeholder, onAdd, autoFocus }: { placeholder: string; onAdd: (text: string) => void; autoFocus?: boolean }) {
+  const [text, setText] = useState('');
+  return (
+    <form
+      class="add-input"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const t = text.trim();
+        if (t) onAdd(t);
+        setText('');
+      }}
+    >
+      <input value={text} placeholder={placeholder} autoFocus={autoFocus} onInput={(e) => setText((e.target as HTMLInputElement).value)} aria-label={placeholder} />
+      <button type="submit" class="icon" aria-label="Add" disabled={!text.trim()}>
+        +
+      </button>
+    </form>
+  );
+}
+
+/** Text that turns into an input when tapped. */
+export function InlineEdit({ value, onSave, class: cls, placeholder }: { value: string; onSave: (v: string) => void; class?: string; placeholder?: string }) {
+  const [editing, setEditing] = useState(false);
+  if (!editing)
+    return (
+      <span class={`inline-edit ${cls ?? ''}`} tabIndex={0} onClick={() => setEditing(true)} onKeyDown={(e) => e.key === 'Enter' && setEditing(true)}>
+        {value || <span class="muted">{placeholder}</span>}
+      </span>
+    );
+  return (
+    <input
+      class={`inline-input ${cls ?? ''}`}
+      defaultValue={value}
+      autoFocus
+      onBlur={(e) => {
+        setEditing(false);
+        const v = (e.target as HTMLInputElement).value.trim();
+        if (v !== value) onSave(v);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+        if (e.key === 'Escape') setEditing(false);
+      }}
+    />
+  );
+}
+
+export function fmtMinutes(m: number): string {
+  return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60 ? `${m % 60} min` : ''}`.trim() : `${m} min`;
+}
+
+export function fmtDay(day: string | null | undefined): string {
+  if (!day) return '';
+  const d = new Date(`${day}T12:00:00`);
+  return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+export function daysAgo(day: string | null | undefined, today: string): string {
+  if (!day) return 'never';
+  const n = Math.round((Date.parse(`${today}T12:00:00Z`) - Date.parse(`${day}T12:00:00Z`)) / 86400000);
+  return n <= 0 ? 'today' : n === 1 ? 'yesterday' : `${n} days ago`;
+}
+
+export const todayLocal = () => new Date().toLocaleDateString('en-CA');
