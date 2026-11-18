@@ -3,6 +3,7 @@ import { change, del, newId, optimistic, patch, post, put } from '../../core/api
 import { Panels, registerPanel, registerRoute, type ProjectPanelProps } from '../../core/registry';
 import { AddInput, daysAgo, fmtDay, fmtMinutes, go, InlineEdit, Linkify, Loading, MarkdownEditor, todayLocal, useData } from '../../core/ui';
 import { Board, type Column } from './Board';
+import { CategorySelect } from './CategorySelect';
 import { lastProject } from './last-project';
 
 type Criterion = { id: string; text: string; done: boolean };
@@ -164,14 +165,7 @@ export function ProjectPage({ id }: { id: string }) {
               <option key={s}>{s}</option>
             ))}
           </select>
-          <select value={p.category_id ?? ''} onChange={(e) => save({ category_id: (e.target as HTMLSelectElement).value || null })} aria-label="Category">
-            <option value="">No category</option>
-            {cats?.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label}
-              </option>
-            ))}
-          </select>
+          <CategorySelect value={p.category_id ?? null} cats={cats} onPick={(category_id) => save({ category_id })} />
           <span class="muted small">touched {daysAgo(p.last_touched, today)}</span>
           <button class="ghost small" onClick={() => change(() => put('/focus', { project_id: p.id }), `Focus: ${p.name}`)}>
             ◎ Focus today
