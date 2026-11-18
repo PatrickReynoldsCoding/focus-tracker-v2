@@ -2,6 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { change, newId, optimistic, post, put } from '../../core/api';
 import { Panels, registerPanel, registerTab, type TodayPanelProps } from '../../core/registry';
 import { AddInput, daysAgo, Dialog, fmtDay, Loading, useData } from '../../core/ui';
+import { useBlocked } from '../links/shared';
 
 type Project = { id: string; name: string; last_touched?: string | null; category_id?: string | null };
 type Todo = { id: string; title: string; day: string | null; done: string | null };
@@ -88,15 +89,16 @@ function ShutdownDialog({ project, onClose }: { project: Project | null; onClose
 
 function FocusPicker({ data, onClose }: { data: TodayData; onClose: () => void }) {
   const { data: projects } = useData<Project[]>('/projects?status=active');
+  const blocked = useBlocked(); // issue links: a blocked project is not offered
   return (
     <Dialog title={data.focus ? 'Swap focus' : 'Choose today’s focus'} onClose={onClose}>
       {data.focus && <p class="muted">{data.focus.name} will be remembered, with a reminder tomorrow.</p>}
-      {!projects ? (
+      {!projects || !blocked ? (
         <Loading />
       ) : (
         <ul class="pick">
           {projects
-            .filter((p) => p.id !== data.focus?.id)
+            .filter((p) => p.id !== data.focus?.id && !blocked.projects?.[p.id])
             .map((p) => (
               <li key={p.id}>
                 <button

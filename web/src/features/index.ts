@@ -9,3 +9,4 @@ import './projects/ProjectPage';
 import './notes/Notes';
 import './log/Log';
 import './settings/Settings';
+import './links';
