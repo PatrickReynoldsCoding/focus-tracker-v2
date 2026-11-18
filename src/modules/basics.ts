@@ -43,6 +43,15 @@ export const categoriesEntity: Entity = {
     account_id: { type: 'text', ref: 'accounts', desc: 'Overrides the mode’s Google account for Drive sync' },
     drive_folder_id: { type: 'text' },
   },
+  async onDelete(ctx, row) {
+    // A category in use cannot be deleted: say what uses it, so the owner can move those first.
+    const parts: string[] = [];
+    for (const [table, noun] of [['projects', 'project'], ['backlog', 'backlog item'], ['habits', 'habit'], ['resources', 'resource']] as const) {
+      const r = await ctx.db.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE mode = ? AND category_id = ?`).bind(ctx.mode, row.id).first<{ n: number }>();
+      if (r?.n) parts.push(`${r.n} ${noun}${r.n === 1 ? '' : 's'}`);
+    }
+    if (parts.length) throw bad(`The category "${row.label}" is still used by ${parts.join(', ')}. Move or delete those first.`);
+  },
 };
 
 export const backlogEntity: Entity = {
