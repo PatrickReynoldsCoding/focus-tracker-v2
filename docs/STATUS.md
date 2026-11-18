@@ -18,7 +18,7 @@ Updated 2026-11-18. Phases from the spec (`SPEC.md` §7).
 ## Waiting for the owner
 
 1. **Try it.** Sign in at the address above (password in `.secrets.local` in the repo folder, git-ignored; change it with `npx wrangler secret put OWNER_PASSWORD`). Connect Claude ([connect-claude.md](connect-claude.md)).
-2. **v1 feature audit** (spec: before Phase 3 is finished). Which v1 features are really used? Candidates to cut or defer: whiteboards, stickies, project links, draggable panels, pop-out windows, insights.
+2. **v1 feature audit**: mark each row of [V1-GAPS.md](V1-GAPS.md) keep, later or cut.
 3. **Overturn any decision** in [DECISIONS.md](DECISIONS.md) you disagree with, especially D3 (one database, mode column) and D5 (Markdown notes).
 4. **v1 data**: an `.xlsx` export of each v1 spreadsheet (and notes Docs as Markdown) to run the importer, or say the word and Claude does it through the Drive connector.
 5. **Repository visibility**: public is needed for the deploy button.
