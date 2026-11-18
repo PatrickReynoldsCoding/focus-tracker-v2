@@ -235,3 +235,11 @@ dialog.sheet::backdrop { background: rgb(0 0 0 / 0.4); }
   .grid.today { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .grid.today .focus { grid-column: span 2; }
 }
+
+@media (max-width: 600px) {
+  .top { gap: 6px; }
+  .top .undo, .top .redo { padding-inline: 10px; }
+  .mode-switch button { padding-inline: 10px; white-space: nowrap; }
+  .saving.busy, .saving.saved { font-size: 0; gap: 0; }
+  .top .lbl { display: none; }
+}

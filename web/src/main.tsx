@@ -175,11 +175,11 @@ function App() {
         <header class="top">
           <ModeSwitch />
           <SavingDot />
-          <button class="ghost undo" onClick={undo} title="Undo (Ctrl+Z)">
-            ↶ Undo
+          <button class="ghost undo" aria-label="Undo" onClick={undo} title="Undo (Ctrl+Z)">
+            ↶<span class="lbl"> Undo</span>
           </button>
-          <button class="ghost redo" onClick={redo} title="Redo (Ctrl+Shift+Z)">
-            ↷ Redo
+          <button class="ghost redo" aria-label="Redo" onClick={redo} title="Redo (Ctrl+Shift+Z)">
+            ↷<span class="lbl"> Redo</span>
           </button>
         </header>
         <main class="content">

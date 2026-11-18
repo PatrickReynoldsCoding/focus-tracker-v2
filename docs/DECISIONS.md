@@ -77,3 +77,10 @@ Projects have no next action and the shutdown note asks only where you stopped. 
 ## D13. Feature flags and plug-in points (owner, 2026-11-18)
 
 Everything should be as modular as possible, with flags for big decisions. The server has feature flags (`src/core/features.ts`, switched in Settings → Features, one set per deployment, also hiding Claude tools), and the web app has a registry of plug-in points (`web/src/core/registry.tsx`: tabs, routes, Today panels, project panels, card-dialog sections, settings sections). See AGENTS.md "How the code is organised".
+
+## Small items: redo, modes, saving indicator
+
+- **Redo** uses the undo table. Undo sets `undone = 1` on a batch; redo takes the oldest undone batch of the mode and writes its `after` rows again. Any new change (`Ctx.flushUndo`) deletes the undone rows of that mode, so redo only works straight after undo. `POST /api/redo` and the `redo` tool; Ctrl/Cmd+Shift+Z and Ctrl+Y in the browser.
+- **Modes** have an accent colour (`modes.color`, `#rrggbb`, migration 0006). The browser sets `--accent` while that mode is open. A mode can only be deleted when it has no rows in any mode-scoped table, is not the last one and is not the default. A category in use cannot be deleted; the error says how many projects, habits, backlog items and resources use it.
+- **Saving indicator**: every non-GET call in `web/src/core/api.ts` counts; "Saving…" while any is in flight, then "Saved" for 3 s, or "Not saved".
+- The Projects tab reopens the last project per device and mode (localStorage); "← Projects" forgets it.
