@@ -333,7 +333,13 @@ function inlineMd(b: PMNode, full: boolean, inHeading = false): string {
 
   for (let i = 0; i < runs.length; i++) {
     const { node } = runs[i];
-    let marks = [...runs[i].marks];
+    // Marks already open stay outside (so **a *b* c** keeps its shape); code always innermost.
+    const own = runs[i].marks;
+    let marks = [
+      ...active.filter((a) => a.type !== m.code && a.isInSet(own)),
+      ...own.filter((x) => x.type !== m.code && !x.isInSet(active)),
+      ...own.filter((x) => x.type === m.code),
+    ];
     let text = node.isText ? node.text! : '';
     const isCode = marks.some((x) => x.type === m.code);
     // Whitespace-only text keeps only the marks already open (no "** **").
