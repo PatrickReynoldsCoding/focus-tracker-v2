@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:fitsSystemWindows="true">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="24dp">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Connect to your Focus Tracker"
+            android:textSize="22sp" android:textStyle="bold" android:textColor="@color/fg" android:layout_marginBottom="16dp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Address" android:textColor="@color/muted" />
+        <EditText android:id="@+id/url" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="https://your-tracker.workers.dev"
+            android:inputType="textUri" android:importantForAutofill="no" android:minHeight="48dp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Password" android:textColor="@color/muted" android:layout_marginTop="12dp" />
+        <EditText android:id="@+id/password" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:inputType="textPassword" android:autofillHints="password" android:minHeight="48dp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Widgets show" android:textColor="@color/muted" android:layout_marginTop="12dp" />
+        <RadioGroup android:id="@+id/mode" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <RadioButton android:id="@+id/mode_personal" android:layout_width="wrap_content" android:layout_height="48dp" android:text="Personal" />
+            <RadioButton android:id="@+id/mode_work" android:layout_width="wrap_content" android:layout_height="48dp" android:text="Work" android:layout_marginStart="16dp" />
+        </RadioGroup>
+        <TextView android:id="@+id/error" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#B3322A" android:layout_marginTop="8dp" />
+        <Button android:id="@+id/connect" android:layout_width="match_parent" android:layout_height="52dp" android:text="Connect" android:layout_marginTop="12dp" />
+    </LinearLayout>
+</ScrollView>

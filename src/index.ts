@@ -47,7 +47,19 @@ export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     await ensureMigrated(env.DB);
     const origin = env.PUBLIC_URL?.replace(/\/$/, '') || new URL(req.url).origin;
-    return providerFor(origin).fetch(req, env, ctx);
+    let provider: OAuthProvider<Env>;
+    try {
+      provider = providerFor(origin);
+    } catch (err) {
+      // OAuth needs https (or localhost). On plain http elsewhere (a phone emulator reaching a dev
+      // server, a LAN address) the app still works; only Claude's connector is off.
+      const path = new URL(req.url).pathname;
+      if (path === '/mcp' || path.startsWith('/oauth') || path === '/register' || path.startsWith('/.well-known/oauth')) {
+        return Response.json({ error: `Claude's connector needs https: ${(err as Error).message}` }, { status: 503 });
+      }
+      return app.fetch(req, env, ctx);
+    }
+    return provider.fetch(req, env, ctx);
   },
 
   async scheduled(_event: ScheduledController, env: Env): Promise<void> {

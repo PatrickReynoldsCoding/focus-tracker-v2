@@ -9,8 +9,8 @@ Updated 2026-11-18. Phases from the spec (`SPEC.md` §7).
 | 2 MCP connector | **Done.** 38 tools, OAuth for Claude's custom connectors, API tokens for Claude Code. Tested end to end (register → consent → token → tool call). Not yet tried from the real Claude app. |
 | 3 Web app | **Mostly done.** Today, Projects, project page (Kanban with drag and drop, notes, criteria, resources, sessions), Notes and lists, Habits, Log, Settings; PWA. Missing: whiteboards (Excalidraw), stickies, draggable Grafana-style panels, project links UI, insights. |
 | 4 Google Drive sync | Not started. Tables (`accounts`, `drive_links`) exist. Needs a Google Cloud OAuth app from the owner. |
-| 5 Migration from v1 | Not started. Needs access to the v1 spreadsheets. |
-| 6 Android app and widgets | Not started. |
+| 5 Migration from v1 | **Importer done** ([migrate-from-v1.md](migrate-from-v1.md)), tested on a v1-shaped fixture. Not run on the real data: needs the owner's `.xlsx` exports. |
+| 6 Android app and widgets | **First version done** ([android/README.md](../android/README.md)): web app in a WebView, Today widget (tick, habit, start, quick add), notifications. Tested in the emulator, not yet on a phone. |
 | 7 Mac SwiftBar plugin | **Done, untested on a Mac.** Menu, click actions and notifications (reminders, habit prompts, pomodoro). |
 | 8 Self-hosting | **Mostly done.** Deploy button, auto-provisioned D1/KV, self-migrating database, docs. The button needs the repository to be public. |
 | 9 Stretch | Not started. |
@@ -22,6 +22,6 @@ Updated 2026-11-18. Phases from the spec (`SPEC.md` §7).
 3. **Overturn any decision** in [DECISIONS.md](DECISIONS.md) you disagree with, especially D3 (one database, mode column) and D5 (Markdown notes).
 4. **Work Google account**: can it authorise a third-party OAuth app? Try signing in to any small third-party app that asks for Drive access.
 5. **Google Cloud project** for Drive sync: create one, an OAuth client (Web), and add the tracker's address as a redirect URI. Then Phase 4 can start.
-6. **v1 data** for the importer: the Personal and Work spreadsheet ids, or an `.xlsx` export of each.
+6. **v1 data**: an `.xlsx` export of each v1 spreadsheet (and notes Docs as Markdown) to run the importer, or say the word and Claude does it through the Drive connector.
 7. **Repository visibility**: public is needed for the deploy button.
-8. **Android**: native Kotlin (best widgets, recommended) or cross-platform?
+8. **Android**: I went with native Kotlin for the widgets and the web app for the screens. Install `android/focus-tracker-0.1.0.apk` and say what the widget should show differently.

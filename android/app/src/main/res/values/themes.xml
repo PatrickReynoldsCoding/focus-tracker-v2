@@ -1,0 +1,18 @@
+<resources>
+    <style name="Theme.FocusTracker" parent="android:Theme.DeviceDefault.DayNight">
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:statusBarColor">@color/bg</item>
+        <item name="android:navigationBarColor">@color/bg</item>
+        <item name="android:colorAccent">@color/accent</item>
+        <item name="android:windowLightStatusBar">@bool/light_bars</item>
+        <item name="android:windowLightNavigationBar">@bool/light_bars</item>
+    </style>
+    <style name="Theme.FocusTracker.Dialog" parent="android:Theme.DeviceDefault.Light.Dialog.Alert">
+        <item name="android:colorAccent">@color/accent</item>
+        <item name="android:windowMinWidthMajor">90%</item>
+        <item name="android:windowMinWidthMinor">90%</item>
+    </style>
+    <bool name="light_bars">true</bool>
+</resources>

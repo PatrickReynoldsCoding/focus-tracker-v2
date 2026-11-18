@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Focus</string>
+    <string name="widget_name">Focus today</string>
+    <string name="widget_description">Today\'s focus, session timer, to-dos and habits</string>
+</resources>

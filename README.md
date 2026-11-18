@@ -7,7 +7,9 @@ Clients, all on one API:
 - **Web app** (phone first, installable): Today, Projects, a project's board, notes, criteria and resources, Notes and lists, Habits, Log, Settings.
 - **Claude**: a custom connector at `https://<your-tracker>/mcp` with 38 tools ([docs/connect-claude.md](docs/connect-claude.md)).
 - **Mac menu bar**: a SwiftBar plugin with the focus, session timer, to-dos, habits and notifications ([clients/swiftbar](clients/swiftbar/README.md)).
-- Planned: Android app with home-screen widgets, Google Drive sync. See [docs/STATUS.md](docs/STATUS.md).
+- **Android**: the app plus a Today widget and notifications ([android](android/README.md)).
+- **Moving from v1**: [docs/migrate-from-v1.md](docs/migrate-from-v1.md).
+- Planned: Google Drive sync. See [docs/STATUS.md](docs/STATUS.md).
 
 ## Run your own
 
