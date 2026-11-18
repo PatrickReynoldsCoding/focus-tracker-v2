@@ -1,0 +1,5 @@
+.aa-ok { color: var(--accent); }
+.aa-update { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; margin: 12px 0; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); }
+.aa-update h3 { margin: 0; font-size: 1rem; }
+.aa-notes { max-height: 12em; overflow: auto; width: 100%; font-size: 0.9rem; }
+.aa-update progress { width: 100%; }

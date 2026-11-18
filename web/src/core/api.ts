@@ -9,6 +9,17 @@ export const toast = signal<{ text: string; kind: 'info' | 'error'; action?: { l
 /** Bumped after every change, so open views reload what they show. */
 export const version = signal(0);
 
+/** Saving indicator: how many changes are in flight, and how the last one ended. */
+export const saving = signal<{ pending: number; last: 'none' | 'saved' | 'error' }>({ pending: 0, last: 'none' });
+let savedTimer: number | undefined;
+function savingStep(delta: 1 | 0, failed = false) {
+  const pending = saving.value.pending + (delta === 1 ? 1 : -1);
+  const last = delta === 1 ? saving.value.last : failed ? 'error' : saving.value.last === 'error' && pending > 0 ? 'error' : 'saved';
+  saving.value = { pending, last };
+  clearTimeout(savedTimer);
+  if (pending === 0 && last === 'saved') savedTimer = window.setTimeout(() => (saving.value = { pending: 0, last: 'none' }), 3000);
+}
+
 function localStorageGet(k: string): string | null {
   try {
     return localStorage.getItem(k);
@@ -36,7 +47,16 @@ export class HttpError extends Error {
 export async function api<T = any>(method: string, path: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = { 'X-FT-Client': 'web', 'X-Mode': mode.value };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
-  const res = await fetch(`/api${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), credentials: 'same-origin' });
+  const changing = method !== 'GET';
+  if (changing) savingStep(1);
+  let res: Response;
+  try {
+    res = await fetch(`/api${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), credentials: 'same-origin' });
+  } catch (err) {
+    if (changing) savingStep(0, true);
+    throw err;
+  }
+  if (changing) savingStep(0, !res.ok);
   if (res.status === 401) {
     signedIn.value = false;
     throw new HttpError(401, 'Signed out');
@@ -85,6 +105,16 @@ export async function undo() {
     const r = await post<{ label: string | null; changes: number }>('/undo');
     version.value++;
     say(r.changes ? `Undone: ${r.label}` : 'Nothing to undo');
+  } catch (err) {
+    say((err as Error).message, 'error');
+  }
+}
+
+export async function redo() {
+  try {
+    const r = await post<{ label: string | null; changes: number }>('/redo');
+    version.value++;
+    say(r.changes ? `Redone: ${r.label}` : 'Nothing to redo');
   } catch (err) {
     say((err as Error).message, 'error');
   }

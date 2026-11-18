@@ -23,7 +23,7 @@ export async function call<T = any>(method: string, path: string, body?: unknown
   const res = await SELF.fetch(`${BASE}/api${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
   const text = await res.text();
   const data = text ? JSON.parse(text) : null;
-  const expect = opts.expect ?? (method === 'POST' && /^\/[a-z_]+$/.test(path) && !['/undo', '/tokens'].includes(path) ? 201 : 200);
+  const expect = opts.expect ?? (method === 'POST' && /^\/[a-z_]+$/.test(path) && !['/undo', '/redo', '/tokens'].includes(path) ? 201 : 200);
   if (res.status !== expect) throw new Error(`${method} ${path} -> ${res.status} (expected ${expect}): ${text}`);
   return data as T;
 }
