@@ -12,6 +12,7 @@ import { habitProgress } from './habits';
 import { listsEntity, todosForDay } from './lists';
 import { pendingNotifications } from './notifications';
 import { projectsEntity } from './projects';
+import { notBlockedSql } from './relations';
 
 export const logEntity: Entity = {
   name: 'log',
@@ -118,10 +119,11 @@ async function suggestions(ctx: Ctx, today: string, category: string | undefined
   if (category === 'away') return [];
   const where: Record<string, unknown> = { status: 'active' };
   if (category && category !== 'any') where.category_id = category;
+  const free = await notBlockedSql(ctx); // issue links: leave out projects blocked by an unfinished item
   return list(ctx, projectsEntity, {
     where,
-    sql: 'locked_until IS NULL OR locked_until <= ?',
-    params: [today],
+    sql: `(locked_until IS NULL OR locked_until <= ?) AND ${free.sql}`,
+    params: [today, ...free.params],
     order: 'last_touched IS NOT NULL, last_touched',
     limit: 5,
   });

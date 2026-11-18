@@ -130,10 +130,10 @@ export async function fullProject(ctx: Ctx, id: string) {
     list(ctx, entity('notes'), { where }),
     list(ctx, entity('whiteboards'), { where, order: 'ord' }).then((ws) => ws.map(({ scene, ...w }) => w)),
     list(ctx, entity('lists'), { where }),
-    list(ctx, entity('links'), { sql: 'from_id = ? OR to_id = ?', params: [id, id] }),
+    import('./relations').then((m) => m.projectRelations(ctx, id)),
     list(ctx, entity('log'), { where, order: 'date DESC, created DESC', limit: 10 }),
   ]);
-  return { ...project, columns, criteria, resources, notes: notes[0]?.body ?? '', whiteboards, lists, links, recent_log: log };
+  return { ...project, columns, criteria, resources, notes: notes[0]?.body ?? '', whiteboards, lists, links: links.links, blocked_by: links.blocked_by, recent_log: log };
 }
 
 export async function searchAll(ctx: Ctx, q: string, limit = 30) {
@@ -198,7 +198,7 @@ export const projectsModule: Module = {
     },
     {
       name: 'get_project',
-      description: 'Everything about one project: board with cards, done criteria, notes (Markdown), resources, lists, whiteboards, links and recent sessions.',
+      description: 'Everything about one project: board with cards, done criteria, notes (Markdown), resources, lists, whiteboards, links (each with its phrase, such as "is blocked by"), blocked_by (unfinished items blocking it) and recent sessions.',
       readOnly: true,
       input: z.object({ id: z.string() }),
       run: (ctx, a) => fullProject(ctx, a.id),

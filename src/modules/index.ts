@@ -8,17 +8,21 @@ import { notesModule } from './notes';
 import { notificationsModule } from './notifications';
 import { notifyPrefsModule } from './notify-prefs';
 import { projectsModule } from './projects';
+import { relationsModule } from './relations';
 import { swiftbarModule } from './swiftbar';
 import { systemModule } from './system';
 import { todayModule } from './today';
+import { todayPanelsModule } from './today-panels';
 
 export const MODULES: Module[] = [
   projectsModule,
   basicsModule,
+  relationsModule,
   listsModule,
   notesModule,
   habitsModule,
   todayModule,
+  todayPanelsModule,
   notificationsModule,
   notifyPrefsModule,
   extrasModule,

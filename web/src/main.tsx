@@ -1,8 +1,8 @@
 import { render } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
-import { checkSignedIn, get, localStorageSet, login, mode, signedIn, toast, undo } from './core/api';
+import { checkSignedIn, get, localStorageSet, login, mode, redo, saving, signedIn, toast, undo, version } from './core/api';
 import { loadFeatures } from './core/features';
-import { useRoutes, useTabs } from './core/registry';
+import { tabBadges, useRoutes, useTabs } from './core/registry';
 import { useSignal } from './core/signal';
 import { go, route } from './core/ui';
 import './features';
@@ -26,10 +26,11 @@ function Page() {
 
 function ModeSwitch() {
   const m = useSignal(mode);
+  const v = useSignal(version);
   const [modes, setModes] = useState<{ id: string; label: string }[]>([]);
   useEffect(() => {
     get('/modes').then(setModes).catch(() => {});
-  }, []);
+  }, [v]);
   if (modes.length < 2) return null;
   return (
     <div class="mode-switch" role="tablist" aria-label="Mode">
@@ -48,6 +49,18 @@ function ModeSwitch() {
         </button>
       ))}
     </div>
+  );
+}
+
+function SavingDot() {
+  const s = useSignal(saving);
+  const text = s.pending > 0 ? 'Saving…' : s.last === 'error' ? 'Not saved' : s.last === 'saved' ? 'Saved' : '';
+  const state = s.pending > 0 ? 'busy' : s.last;
+  return (
+    <span class={`saving ${state}`} role="status" aria-live="polite">
+      {text && <i aria-hidden="true" />}
+      {text}
+    </span>
   );
 }
 
@@ -103,7 +116,8 @@ function Login() {
 function App() {
   const ok = useSignal(signedIn);
   const tabs = useTabs();
-  const { tabId } = useCurrent();
+  const badges = useSignal(tabBadges);
+  const { tabId, r: current } = useCurrent();
   const [wide, setWide] = useState(() => {
     try {
       return localStorage.getItem('ft.wide') === '1';
@@ -118,9 +132,15 @@ function App() {
     checkSignedIn();
     const key = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !/INPUT|TEXTAREA/.test(t.tagName)) {
+      if (/INPUT|TEXTAREA/.test(t.tagName) || t.isContentEditable) return;
+      const k = e.key.toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && k === 'z') {
         e.preventDefault();
-        undo();
+        if (e.shiftKey) redo();
+        else undo();
+      } else if (e.ctrlKey && k === 'y') {
+        e.preventDefault();
+        redo();
       }
     };
     window.addEventListener('keydown', key);
@@ -133,11 +153,12 @@ function App() {
       <nav class="side" aria-label="Main">
         <div class="brand">Focus</div>
         {tabs.map((t) => (
-          <a key={t.id} href={`#${t.path}`} class={tabId === t.id ? 'on' : ''} aria-current={tabId === t.id ? 'page' : undefined}>
+          <a key={t.id} href={`#${t.href?.(current) ?? t.path}`} class={tabId === t.id ? 'on' : ''} aria-current={tabId === t.id ? 'page' : undefined}>
             <span class="ico" aria-hidden="true">
               {t.icon}
             </span>
             {t.label}
+            {badges[t.id] > 0 && <span class="badge" aria-label={`${badges[t.id]} waiting`}>{badges[t.id]}</span>}
           </a>
         ))}
         <div class="side-foot">
@@ -155,8 +176,12 @@ function App() {
       <div class="main">
         <header class="top">
           <ModeSwitch />
-          <button class="ghost undo" onClick={undo} title="Undo (Ctrl+Z)">
-            ↶ Undo
+          <SavingDot />
+          <button class="ghost undo" aria-label="Undo" onClick={undo} title="Undo (Ctrl+Z)">
+            ↶<span class="lbl"> Undo</span>
+          </button>
+          <button class="ghost redo" aria-label="Redo" onClick={redo} title="Redo (Ctrl+Shift+Z)">
+            ↷<span class="lbl"> Redo</span>
           </button>
         </header>
         <main class="content">
@@ -165,9 +190,10 @@ function App() {
       </div>
       <nav class="tabs" aria-label="Main">
         {tabs.filter((t) => t.phone).slice(0, 5).map((t) => (
-          <a key={t.id} href={`#${t.path}`} class={tabId === t.id ? 'on' : ''} aria-current={tabId === t.id ? 'page' : undefined}>
+          <a key={t.id} href={`#${t.href?.(current) ?? t.path}`} class={tabId === t.id ? 'on' : ''} aria-current={tabId === t.id ? 'page' : undefined}>
             <span class="ico" aria-hidden="true">
               {t.icon}
+              {badges[t.id] > 0 && <span class="badge" aria-label={`${badges[t.id]} waiting`}>{badges[t.id]}</span>}
             </span>
             <span>{t.label}</span>
           </a>

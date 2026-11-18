@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import { change, del, newId, optimistic, patch, post, put } from '../../core/api';
+import { Panels } from '../../core/registry';
 import { Board, type Column } from '../projects/Board';
 import { AddInput, ColorPicker, Dialog, fmtDay, go, InlineEdit, Loading, Markdown, MarkdownEditor, todayLocal, useData } from '../../core/ui';
 
@@ -173,6 +174,7 @@ export function ListPage({ id }: { id: string }) {
           <ColorPicker value={l.color} onPick={(color) => save({ color })} />
         </div>
       </div>
+      <Panels place="list" props={{ list: l, setList: setData }} />
       {l.kind === 'note' && (
         <section class="card">
           <MarkdownEditor value={l.body ?? ''} rows={14} placeholder="Write (Markdown)…" onSave={(body) => change(() => put(`/notes/of/list/${l.id}`, { body }))} />

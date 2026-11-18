@@ -9,3 +9,7 @@ import './projects/ProjectPage';
 import './notes/Notes';
 import './log/Log';
 import './settings/Settings';
+import './today-panels/index';
+import './modes/Modes';
+import './criteria/Criteria';
+import './links';
