@@ -22,6 +22,8 @@ export interface TabDef {
   feature?: string;
   /** Shown in the phone's bottom bar (max 5); the rest only in the side bar. */
   phone?: boolean;
+  /** Where the tab's link goes, given the current route (default: `path`). */
+  href?: (currentRoute: string) => string;
   render: Render<{ route: string; params: string[] }>;
 }
 

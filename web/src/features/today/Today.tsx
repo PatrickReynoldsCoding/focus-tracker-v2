@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { change, newId, optimistic, post, put } from '../../core/api';
 import { Panels, registerPanel, registerTab, type TodayPanelProps } from '../../core/registry';
-import { AddInput, daysAgo, Dialog, fmtDay, Loading, useData } from '../../core/ui';
+import { AddInput, daysAgo, Dialog, fmtDay, Linkify, Loading, useData } from '../../core/ui';
 
 type Project = { id: string; name: string; last_touched?: string | null; category_id?: string | null };
 type Todo = { id: string; title: string; day: string | null; done: string | null };
@@ -191,7 +191,7 @@ function TodoPanel({ data, setData }: { data: TodayData; setData: (fn: (d: Today
           <li key={t.id} class={t.done ? 'done' : ''}>
             <label>
               <input type="checkbox" checked={!!t.done} onChange={() => tick(t)} />
-              <span>{t.title}</span>
+              <span><Linkify text={t.title} /></span>
               {t.day && t.day < data.day && !t.done && <span class="tag late">{fmtDay(t.day)}</span>}
             </label>
           </li>

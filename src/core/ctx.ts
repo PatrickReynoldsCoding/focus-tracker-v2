@@ -100,6 +100,8 @@ export class Ctx {
   /** Write the changes of this request to the undo history. */
   async flushUndo(): Promise<void> {
     if (!this.changes.length) return;
+    // A new change ends what could be redone in this mode.
+    await this.db.prepare('DELETE FROM undo WHERE mode = ? AND undone = 1').bind(this.mode).run();
     const stmt = this.db.prepare(
       'INSERT INTO undo (mode, batch, label, entity, row_id, before, after, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
     );

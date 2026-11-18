@@ -168,7 +168,12 @@ export function InlineEdit({ value, onSave, class: cls, placeholder }: { value: 
     <input
       class={`inline-input ${cls ?? ''}`}
       defaultValue={value}
-      autoFocus
+      ref={(el) => {
+        if (el && document.activeElement !== el) {
+          el.focus();
+          el.select();
+        }
+      }}
       onBlur={(e) => {
         setEditing(false);
         const v = (e.target as HTMLInputElement).value.trim();
@@ -199,3 +204,45 @@ export function daysAgo(day: string | null | undefined, today: string): string {
 }
 
 export const todayLocal = () => new Date().toLocaleDateString('en-CA');
+
+// ---------- web addresses in plain text ----------
+
+const URL_RE = /\b((?:https?:\/\/|www\.)[^\s<>"']+[^\s<>"'.,;:!?)\]}])/gi;
+
+/** Plain text with its web addresses turned into links. A click on a link opens the link, never the card around it. */
+export function Linkify({ text }: { text: string | null | undefined }) {
+  const s = text ?? '';
+  const out: ComponentChildren[] = [];
+  let last = 0;
+  for (const m of s.matchAll(URL_RE)) {
+    const at = m.index ?? 0;
+    if (at > last) out.push(s.slice(last, at));
+    const href = /^www\./i.test(m[1]) ? `https://${m[1]}` : m[1];
+    out.push(
+      <a key={at} href={href} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+        {m[1]}
+      </a>,
+    );
+    last = at + m[0].length;
+  }
+  if (last < s.length) out.push(s.slice(last));
+  return <>{out}</>;
+}
+
+/** The first lines of a Markdown text as plain text (marks removed), for a preview. */
+export function plainPreview(md: string | null | undefined, maxLines = 2, maxChars = 140): string {
+  const lines = (md ?? '')
+    .replace(/```[\s\S]*?```/g, ' ')
+    .split('\n')
+    .map((l) =>
+      l
+        .replace(/^\s{0,3}(#{1,6}\s+|>\s?|[-*+]\s+(\[[ xX]\]\s+)?|\d+[.)]\s+)/, '')
+        .replace(/!?\[([^\]]*)\]\(([^)]*)\)/g, (_m, t, u) => t || u)
+        .replace(/[*_~`]+/g, '')
+        .trim(),
+    )
+    .filter(Boolean)
+    .slice(0, maxLines);
+  const text = lines.join(' · ');
+  return text.length > maxChars ? text.slice(0, maxChars - 1).trimEnd() + '…' : text;
+}
