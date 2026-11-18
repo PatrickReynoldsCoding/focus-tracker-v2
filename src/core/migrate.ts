@@ -3,9 +3,13 @@
 // same d1_migrations table as `wrangler d1 migrations apply`, so both agree.
 
 import m0001 from '../../migrations/0001_init.sql';
+import m0008 from '../../migrations/0008_today_panels.sql';
 
 /** Every migration, in order. A new file in migrations/ needs a line here (a test checks). */
-export const MIGRATIONS: [name: string, sql: string][] = [['0001_init.sql', m0001]];
+export const MIGRATIONS: [name: string, sql: string][] = [
+  ['0001_init.sql', m0001],
+  ['0008_today_panels.sql', m0008],
+];
 
 let done = false;
 

@@ -10,6 +10,7 @@ import { projectsModule } from './projects';
 import { swiftbarModule } from './swiftbar';
 import { systemModule } from './system';
 import { todayModule } from './today';
+import { todayPanelsModule } from './today-panels';
 
 export const MODULES: Module[] = [
   projectsModule,
@@ -18,6 +19,7 @@ export const MODULES: Module[] = [
   notesModule,
   habitsModule,
   todayModule,
+  todayPanelsModule,
   notificationsModule,
   extrasModule,
   swiftbarModule,
