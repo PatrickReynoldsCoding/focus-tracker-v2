@@ -5,12 +5,13 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "npm run build && wrangler d1 migrations apply DB --remote && wrangler deploy",
-    "test": "vitest run",
+    "test": "vitest run && node --test scripts/v1-map.test.mjs",
     "typecheck": "tsc --noEmit && tsc --noEmit -p web",
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
     "build": "vite build --config web/vite.config.ts",
     "dev:web": "vite --config web/vite.config.ts",
-    "pretest": "npm run build"
+    "pretest": "npm run build",
+    "import:v1": "node scripts/import-v1.mjs"
   },
   "license": "MIT",
   "dependencies": {
@@ -29,6 +30,7 @@
     "@types/sortablejs": "^1.15.9",
     "@vitest/runner": "^4.1.12",
     "@vitest/snapshot": "^4.1.12",
+    "exceljs": "^4.4.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
     "vitest": "^4.1.12",

@@ -189,7 +189,12 @@ async function insertRaw(ctx: Ctx, e: Entity, row: Record<string, unknown>): Pro
     .run();
 }
 
-export async function create(ctx: Ctx, e: Entity, input: Input): Promise<Row> {
+export interface CreateOptions {
+  /** Importing old data: keep the given created/updated_at and skip afterCreate (no default columns). */
+  raw?: boolean;
+}
+
+export async function create(ctx: Ctx, e: Entity, input: Input, opts: CreateOptions = {}): Promise<Row> {
   const row = clean(e, input, true);
   for (const [k, f] of Object.entries(e.fields)) {
     if (row[k] == null && f.default !== undefined) row[k] = toDb(f, f.default, k);
@@ -199,8 +204,9 @@ export async function create(ctx: Ctx, e: Entity, input: Input): Promise<Row> {
   if (await getRaw(ctx, e, id)) throw bad(`A ${e.singular} with id ${id} already exists`);
   row.id = id;
   if (e.modeScoped) row.mode = ctx.mode;
-  row.created = ctx.now();
-  row.updated_at = ctx.now();
+  const stamp = (v: unknown) => (opts.raw && typeof v === 'string' && !Number.isNaN(Date.parse(v)) ? new Date(v).toISOString() : ctx.now());
+  row.created = stamp(input.created);
+  row.updated_at = stamp(input.updated_at ?? input.created);
   if (e.beforeCreate) await asInputError(e.beforeCreate(ctx, row));
   for (const [k, f] of Object.entries(e.fields)) {
     if (f.required && (row[k] == null || row[k] === '')) throw bad(`${e.singular} needs ${k}`);
@@ -210,7 +216,7 @@ export async function create(ctx: Ctx, e: Entity, input: Input): Promise<Row> {
   await insertRaw(ctx, e, row);
   ctx.changes.push({ entity: e.name, table: e.table, rowId: id, before: null, after: row });
   const out = fromDb(e, row);
-  if (e.afterCreate) await e.afterCreate(ctx, out);
+  if (e.afterCreate && !opts.raw) await e.afterCreate(ctx, out);
   return out;
 }
 

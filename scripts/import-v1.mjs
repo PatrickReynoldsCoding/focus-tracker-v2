@@ -1,0 +1,104 @@
+#!/usr/bin/env node
+// Import a Focus Tracker v1 spreadsheet into v2.
+//
+//   1. In Google Sheets, open the mode's spreadsheet: File → Download → Microsoft Excel (.xlsx).
+//   2. Optional: put each project's notes Doc, exported as Markdown, in a folder as <doc id>.md
+//      (or .txt / .html). Without them a note gets the first lines v1 kept as its preview.
+//   3. node scripts/import-v1.mjs --url https://your-tracker --token ft_... --mode personal --xlsx Personal.xlsx [--docs notes/] [--dry-run]
+//
+// Rows keep their v1 ids, so running it again skips what is already there.
+
+import ExcelJS from 'exceljs';
+import { readdir, readFile } from 'node:fs/promises';
+import { extname, join } from 'node:path';
+import { parseArgs } from 'node:util';
+import { htmlToMarkdown, mapV1, ORDER } from './v1-map.mjs';
+
+const { values: a } = parseArgs({
+  options: {
+    url: { type: 'string' },
+    token: { type: 'string', default: process.env.FT_TOKEN },
+    mode: { type: 'string', default: 'personal' },
+    xlsx: { type: 'string' },
+    docs: { type: 'string' },
+    'dry-run': { type: 'boolean', default: false },
+  },
+});
+if (!a.xlsx || (!a['dry-run'] && (!a.url || !a.token))) {
+  console.error('Usage: import-v1.mjs --url URL --token ft_... --mode personal --xlsx file.xlsx [--docs dir] [--dry-run]');
+  process.exit(2);
+}
+
+function cellValue(v) {
+  if (v === null || v === undefined) return '';
+  if (v instanceof Date) return v.toISOString();
+  if (typeof v === 'object') {
+    if ('result' in v) return cellValue(v.result);
+    if ('text' in v) return String(v.text);
+    if ('richText' in v) return v.richText.map((p) => p.text).join('');
+    if ('hyperlink' in v) return String(v.hyperlink);
+  }
+  return v;
+}
+
+export async function readTabs(path) {
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.readFile(path);
+  const tabs = {};
+  wb.eachSheet((sheet) => {
+    const rows = [];
+    let headers = [];
+    sheet.eachRow({ includeEmpty: false }, (row, n) => {
+      const vals = row.values.slice(1).map(cellValue);
+      if (n === 1) headers = vals.map((h) => String(h).trim());
+      else rows.push(Object.fromEntries(headers.map((h, i) => [h, vals[i] ?? ''])));
+    });
+    tabs[sheet.name] = rows;
+  });
+  return tabs;
+}
+
+async function readDocs(dir) {
+  const docs = {};
+  if (!dir) return docs;
+  for (const f of await readdir(dir)) {
+    const ext = extname(f).toLowerCase();
+    if (!['.md', '.txt', '.html'].includes(ext)) continue;
+    const text = await readFile(join(dir, f), 'utf8');
+    docs[f.slice(0, -ext.length)] = ext === '.html' ? htmlToMarkdown(text) : text.trim();
+  }
+  return docs;
+}
+
+async function send(method, path, body) {
+  const res = await fetch(`${a.url.replace(/\/$/, '')}/api${path}`, {
+    method,
+    headers: { Authorization: `Bearer ${a.token}`, 'X-Mode': a.mode, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(`${path}: ${res.status} ${data.error ?? ''}`);
+  return data;
+}
+
+const tabs = await readTabs(a.xlsx);
+const { rows, settings, warnings } = mapV1(tabs, await readDocs(a.docs));
+console.log(`Read ${Object.keys(tabs).length} tabs from ${a.xlsx}`);
+for (const k of ORDER) if (rows[k].length) console.log(`  ${k}: ${rows[k].length}`);
+for (const w of warnings) console.log(`  note: ${w}`);
+if (a['dry-run']) process.exit(0);
+
+let problems = 0;
+for (const kind of ORDER) {
+  for (let i = 0; i < rows[kind].length; i += 200) {
+    const r = await send('POST', `/import/${kind}`, { rows: rows[kind].slice(i, i + 200) });
+    console.log(`${kind}: ${r.created} added, ${r.skipped} already there${r.errors.length ? `, ${r.errors.length} refused` : ''}`);
+    for (const e of r.errors) console.log(`  ${e.id}: ${e.error}`);
+    problems += r.errors.length;
+  }
+}
+if (Object.keys(settings).length) {
+  await send('PUT', '/import/settings', { values: settings });
+  console.log(`settings: ${Object.keys(settings).length} rotation values`);
+}
+console.log(problems ? `Done with ${problems} refused rows (see above).` : 'Done.');

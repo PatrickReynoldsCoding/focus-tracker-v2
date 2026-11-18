@@ -283,3 +283,18 @@ describe('migrations', () => {
     expect(statements(sql).length).toBe(env.TEST_MIGRATIONS[0].queries.length);
   });
 });
+
+describe('import', () => {
+  it('keeps ids and dates, skips existing rows, makes no default columns and reports bad rows', async () => {
+    const m = { mode: 'work' };
+    let r = await call('POST', '/import/projects', { rows: [{ id: 'imp00001', name: 'Old', created: '2025-01-02T03:04:05Z' }, { id: 'imp00002', status: 'bogus', name: 'x' }] }, m);
+    expect(r).toMatchObject({ created: 1, skipped: 0 });
+    expect(r.errors[0].id).toBe('imp00002');
+    r = await call('POST', '/import/projects', { rows: [{ id: 'imp00001', name: 'Old' }] }, m);
+    expect(r).toMatchObject({ created: 0, skipped: 1 });
+    const p = await call('GET', '/projects/imp00001/full', undefined, m);
+    expect(p.created).toBe('2025-01-02T03:04:05.000Z');
+    expect(p.columns).toEqual([]);
+    await call('POST', '/import/accounts', { rows: [] }, { ...m, expect: 400 });
+  });
+});

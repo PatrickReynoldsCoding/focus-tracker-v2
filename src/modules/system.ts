@@ -88,6 +88,36 @@ export const systemModule: Module = {
       await oauth.revokeGrant(c.req.param('id'), 'owner');
       return c.json({ ok: true });
     });
+    // Bulk import (Phase 5, scripts/import-v1.mjs). Rows keep their ids; a row whose id exists is skipped,
+    // so an import can be run again. Not recorded for undo.
+    api.post('/import/:kind', async (c) => {
+      const ctx = c.get('ctx');
+      const e = entity(c.req.param('kind'));
+      if (['accounts', 'drive_links', 'modes'].includes(e.name)) throw bad(`${e.name} cannot be imported`);
+      const { rows } = await c.req.json<{ rows: Record<string, unknown>[] }>();
+      if (!Array.isArray(rows) || rows.length > 500) throw bad('Send rows as an array of at most 500');
+      const out = { created: 0, skipped: 0, errors: [] as { id: unknown; error: string }[] };
+      for (const row of rows) {
+        try {
+          if (typeof row.id === 'string' && (await ctx.db.prepare(`SELECT 1 FROM ${e.table} WHERE id = ?`).bind(row.id).first())) {
+            out.skipped++;
+            continue;
+          }
+          await create(ctx, e, row, { raw: true });
+          out.created++;
+        } catch (err) {
+          out.errors.push({ id: row.id ?? null, error: (err as Error).message });
+        }
+      }
+      ctx.changes.length = 0;
+      return c.json(out);
+    });
+    api.put('/import/settings', async (c) => {
+      const ctx = c.get('ctx');
+      const { values } = await c.req.json<{ values: Record<string, string> }>();
+      for (const [k, v] of Object.entries(values ?? {})) if (/^(rotation|week|nudge|pomodoro|next_action)\./.test(k)) await ctx.setSetting(k, v || null);
+      return c.json({ ok: true });
+    });
     api.get('/schema', (c) =>
       c.json(
         allEntities().map((e) => ({ name: e.name, singular: e.singular, desc: e.desc, mode_scoped: e.modeScoped, ordered: !!e.orderGroup, internal: !!e.internal, fields: e.fields })),
