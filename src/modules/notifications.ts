@@ -7,6 +7,7 @@ import type { Entity } from '../core/entity';
 import { newId } from '../core/ids';
 import type { Module } from '../core/registry';
 import { find, list, update } from '../core/store';
+import { deliverable, getPrefs, kindAllowed } from './notify-prefs';
 
 export const notificationsEntity: Entity = {
   name: 'notifications',
@@ -40,8 +41,14 @@ async function insertOnce(ctx: Ctx, n: { kind: string; title: string; body?: str
 /** Turn whatever is due into notifications. Cheap enough to run on every status read. */
 export async function generate(ctx: Ctx): Promise<void> {
   const now = ctx.now();
-  await pomodoroNotice(ctx);
-  const reminders = await ctx.db
+  // Notification settings (notify-prefs.ts): a switched-off kind is not made at all. Quiet hours only
+  // hold back delivery (pendingNotifications), so what is made during them waits until they end.
+  const prefs = await getPrefs(ctx);
+  if (kindAllowed(prefs, 'pomodoro')) await pomodoroNotice(ctx);
+  else await clearPomodoro(ctx);
+  const reminders = !kindAllowed(prefs, 'reminder')
+    ? { results: [] as { id: string; text: string | null; due: string; project: string | null }[] }
+    : await ctx.db
     .prepare(
       `SELECT r.id, r.text, r.due, p.name AS project FROM reminders r LEFT JOIN projects p ON p.id = r.project_id
        WHERE r.mode = ? AND r.done IS NULL AND r.due <= ? AND NOT EXISTS (SELECT 1 FROM notifications n WHERE n.dedupe_key = 'reminder:' || r.id)`,
@@ -51,7 +58,9 @@ export async function generate(ctx: Ctx): Promise<void> {
   for (const r of reminders.results) {
     await insertOnce(ctx, { kind: 'reminder', title: r.project ?? 'Reminder', body: r.text, due: r.due, dedupe_key: `reminder:${r.id}` });
   }
-  const habits = await ctx.db
+  const habits = !kindAllowed(prefs, 'habit')
+    ? { results: [] as { id: string; name: string; small_version: string | null; next_prompt: string }[] }
+    : await ctx.db
     .prepare(`SELECT id, name, small_version, next_prompt FROM habits WHERE mode = ? AND status = 'active' AND next_prompt IS NOT NULL AND next_prompt <= ?`)
     .bind(ctx.mode, now)
     .all<{ id: string; name: string; small_version: string | null; next_prompt: string }>();
@@ -64,6 +73,11 @@ export async function generate(ctx: Ctx): Promise<void> {
       dedupe_key: `habit:${h.id}:${h.next_prompt}`,
     });
   }
+}
+
+/** Session alerts switched off: make no pomodoro notices, and clear any left from before. */
+async function clearPomodoro(ctx: Ctx): Promise<void> {
+  await ctx.db.prepare("UPDATE notifications SET dismissed_at = ? WHERE mode = ? AND kind = 'pomodoro' AND dismissed_at IS NULL").bind(ctx.now(), ctx.mode).run();
 }
 
 /** "Break time" / "Back to work" when a running session's pomodoro changes phase. Older ones are cleared. */
@@ -99,7 +113,7 @@ export async function dailyNudge(ctx: Ctx): Promise<void> {
   const tz = await ctx.timezone();
   const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', hour12: false }).format(ctx.nowDate));
   if (hour < Number((await ctx.setting('nudge.hour')) ?? 9)) return;
-  if ((await ctx.setting('nudge.enabled')) === 'off') return;
+  if (!kindAllowed(await getPrefs(ctx), 'nudge')) return; // master switch, the nudge switch, and the older nudge.enabled
   const day = await ctx.today();
   const { neglected } = await import('./today');
   const projects = await neglected(ctx, day);
@@ -113,11 +127,17 @@ export async function dailyNudge(ctx: Ctx): Promise<void> {
   });
 }
 
+/**
+ * What clients should show now. Applies the notification settings on every read: master switch,
+ * the kind's switch, the client's switch (ctx.client, from ?client=android|swiftbar|web) and quiet
+ * hours (nothing is delivered then; it stays pending and shows when they end).
+ */
 export async function pendingNotifications(ctx: Ctx) {
   await generate(ctx);
-  return (
-    await list(ctx, notificationsEntity, { sql: 'dismissed_at IS NULL AND due <= ?', params: [ctx.now()], order: 'due', limit: 50 })
-  ).map(({ dedupe_key, ...n }) => n);
+  const prefs = await getPrefs(ctx);
+  if (!(await deliverable(ctx, prefs, ctx.client))) return [];
+  const all = await list(ctx, notificationsEntity, { sql: 'dismissed_at IS NULL AND due <= ?', params: [ctx.now()], order: 'due', limit: 50 });
+  return all.filter((n: any) => kindAllowed(prefs, n.kind)).map(({ dedupe_key, ...n }: any) => n);
 }
 
 export async function dismiss(ctx: Ctx, id: string) {
