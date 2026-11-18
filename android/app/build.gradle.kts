@@ -20,8 +20,9 @@ android {
         applicationId = "com.patrickreynolds.focustracker"
         minSdk = 30
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.2.0"
+        // -Pft.versionCode / -Pft.versionName: build an older-numbered copy to test in-app updates.
+        versionCode = (findProperty("ft.versionCode") as String?)?.toInt() ?: 3
+        versionName = (findProperty("ft.versionName") as String?) ?: "0.3.0"
     }
     signingConfigs {
         if (signingProps.isNotEmpty()) create("release") {

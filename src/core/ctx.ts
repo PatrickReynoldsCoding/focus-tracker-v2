@@ -30,6 +30,8 @@ export class Ctx {
   readonly batch = newId(12);
   readonly nowDate: Date;
   label = 'change';
+  /** Which client asked (?client=android|swiftbar|web), for per-client notification settings. */
+  client: string | null = null;
   private tz?: string;
   private settingsCache = new Map<string, string | null>();
 

@@ -88,6 +88,7 @@ export const swiftbarModule: Module = {
   routes(api) {
     api.get('/swiftbar', async (c) => {
       const origin = c.env.PUBLIC_URL?.replace(/\/$/, '') || new URL(c.req.url).origin;
+      c.get('ctx').client ??= 'swiftbar';
       return c.text(await swiftbarText(c.get('ctx'), origin));
     });
     // Form-encoded so the plugin can send it with curl --data-urlencode, no JSON needed.

@@ -13,7 +13,7 @@ let started = false;
 async function refresh() {
   if (signedIn.value !== true) return;
   try {
-    banners.value = await get<Banner[]>('/today-panels/banners');
+    banners.value = await get<Banner[]>('/today-panels/banners?client=web');
   } catch {
     /* offline or signed out: keep what is shown */
   }

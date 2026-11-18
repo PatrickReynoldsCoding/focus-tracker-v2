@@ -13,3 +13,5 @@ import './today-panels/index';
 import './modes/Modes';
 import './criteria/Criteria';
 import './links';
+import './notifications-settings';
+import './android-app';

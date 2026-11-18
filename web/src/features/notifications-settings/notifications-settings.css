@@ -1,0 +1,8 @@
+.ns fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.ns legend { font-weight: 600; padding: 0; margin-bottom: 6px; }
+.ns-body { margin-top: 14px; gap: 18px; }
+.ns-off { opacity: 0.5; }
+.ns-master { align-items: flex-start; }
+.ns-kind { align-items: flex-start; }
+.ns-hint { display: block; }
+.ns input[type='time'] { width: auto; }
