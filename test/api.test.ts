@@ -264,13 +264,6 @@ describe('backlog, resources, settings, tokens', () => {
     const after = await SELF.fetch(`${BASE}/api/status`, { headers: { Authorization: `Bearer ${t.token}` } });
     expect(after.status).toBe(401);
   });
-
-  it('never returns Google tokens', async () => {
-    await env.DB.prepare("INSERT INTO accounts (id, email, refresh_token_enc, created, updated_at) VALUES ('acc1', 'a@example.com', 'SECRET', 'x', 'x')").run();
-    const rows = await call('GET', '/accounts');
-    expect(JSON.stringify(rows)).not.toContain('SECRET');
-    await call('POST', '/accounts', { email: 'b@example.com' }, { expect: 400 });
-  });
 });
 
 describe('migrations', () => {
@@ -294,7 +287,7 @@ describe('import', () => {
     const p = await call('GET', '/projects/imp00001/full', undefined, m);
     expect(p.created).toBe('2025-01-02T03:04:05.000Z');
     expect(p.columns).toEqual([]);
-    await call('POST', '/import/accounts', { rows: [] }, { ...m, expect: 400 });
+    await call('POST', '/import/nonsense', { rows: [] }, { ...m, expect: 400 });
   });
 });
 
@@ -303,5 +296,32 @@ describe('feature flags', () => {
     const list = await call('GET', '/features');
     expect(Array.isArray(list)).toBe(true);
     await call('PUT', '/features/no-such-flag', { enabled: true }, { expect: 400 });
+  });
+});
+
+describe('migration 0016 (unused tables and columns dropped)', () => {
+  const columns = async (table: string) => ((await env.DB.prepare(`PRAGMA table_info(${table})`).all<{ name: string }>()).results ?? []).map((c) => c.name);
+
+  it('leaves no Drive tables and none of the dropped columns', async () => {
+    const tables = (await env.DB.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all<{ name: string }>()).results.map((t) => t.name);
+    expect(tables).not.toContain('accounts');
+    expect(tables).not.toContain('drive_links');
+    expect(await columns('projects')).not.toContain('next_action');
+    expect(await columns('projects')).not.toContain('show_next_action');
+    expect(await columns('log')).not.toContain('next_action');
+    expect(await columns('whiteboards')).not.toContain('scene');
+    expect(await columns('modes')).not.toContain('account_id');
+    expect(await columns('categories')).not.toContain('drive_folder_id');
+  });
+
+  it('undo still works when an old undo row holds a dropped column', async () => {
+    const p = await call('POST', '/projects', { name: 'Old shape' });
+    await call('DELETE', `/projects/${p.id}`);
+    // An undo row written before the columns went had next_action in it.
+    const row = await env.DB.prepare("SELECT id, before FROM undo WHERE entity = 'projects' AND row_id = ? AND before IS NOT NULL ORDER BY id DESC LIMIT 1").bind(p.id).first<{ id: number; before: string }>();
+    const old = { ...JSON.parse(row!.before), next_action: 'Ring Sam', show_next_action: 'on' };
+    await env.DB.prepare('UPDATE undo SET before = ? WHERE id = ?').bind(JSON.stringify(old), row!.id).run();
+    await call('POST', '/undo');
+    expect((await call('GET', `/projects/${p.id}`)).name).toBe('Old shape');
   });
 });

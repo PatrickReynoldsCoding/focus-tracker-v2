@@ -69,7 +69,7 @@ describe('MCP connector', () => {
   it('reports errors as tool errors', async () => {
     expect(await toolError('get_project', { id: 'missing' })).toContain('No project');
     expect(await toolError('add_card', {})).toContain('title');
-    expect(await toolError('create_item', { kind: 'accounts', fields: {} })).toContain('cannot be changed');
+    expect(await toolError('create_item', { kind: 'whiteboard_scenes', fields: {} })).toContain('cannot be changed');
     const r = await mcp<any>('tools/call', { name: 'nope', arguments: {} });
     expect(r.isError).toBe(true);
   });

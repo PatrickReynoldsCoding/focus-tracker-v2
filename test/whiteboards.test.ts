@@ -131,6 +131,7 @@ describe('whiteboards', () => {
   });
 
   it('moves drawings stored in the old column into their own table (migration 0012)', async () => {
+    await env.DB.prepare('ALTER TABLE whiteboards ADD COLUMN scene TEXT').run(); // migration 0016 dropped it
     await env.DB.prepare("INSERT INTO whiteboards (id, mode, name, scene, created, updated_at) VALUES ('oldboard1', 'personal', 'Imported', ?, '2026-10-01T00:00:00.000Z', '2026-10-01T00:00:00.000Z')")
       .bind(JSON.stringify(scene()))
       .run();
@@ -138,6 +139,7 @@ describe('whiteboards', () => {
     const [, ...copy] = statements(migration); // the table exists already
     await env.DB.batch(copy.map((s) => env.DB.prepare(s)));
     expect(await env.DB.prepare("SELECT scene FROM whiteboards WHERE id = 'oldboard1'").first('scene')).toBeNull();
+    await env.DB.prepare('ALTER TABLE whiteboards DROP COLUMN scene').run();
     const got = await call('GET', '/whiteboards/oldboard1/scene');
     expect(got.scene.appState.zoom.value).toBe(1.5);
     expect((await call('GET', '/whiteboards/oldboard2/scene')).scene).toBeNull();

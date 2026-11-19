@@ -128,7 +128,7 @@ export async function fullProject(ctx: Ctx, id: string) {
     list(ctx, entity('criteria'), { where }),
     list(ctx, entity('resources'), { where }),
     list(ctx, entity('notes'), { where }),
-    list(ctx, entity('whiteboards'), { where, order: 'ord' }).then((ws) => ws.map(({ scene, ...w }) => w)),
+    list(ctx, entity('whiteboards'), { where, order: 'ord' }),
     list(ctx, entity('lists'), { where }),
     import('./relations').then((m) => m.projectRelations(ctx, id)),
     list(ctx, entity('log'), { where, order: 'date DESC, created DESC', limit: 10 }),

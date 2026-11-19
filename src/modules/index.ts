@@ -1,7 +1,6 @@
 // Every feature module. Remove a line to remove a feature (and its tables stay unused).
 import type { Module } from '../core/registry';
 import { basicsModule } from './basics';
-import { extrasModule } from './extras';
 import { habitsModule } from './habits';
 import { insightsModule } from './insights';
 import { listsModule } from './lists';
@@ -38,7 +37,6 @@ export const MODULES: Module[] = [
   notifyPrefsModule,
   whiteboardsModule,
   stickiesModule,
-  extrasModule,
   insightsModule,
   swiftbarModule,
   systemModule,

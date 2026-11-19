@@ -55,7 +55,7 @@ Modular first: a feature lives in its own files on the server and in the browser
 ## Rules for the code
 
 - Every query on mode-scoped data filters on `ctx.mode` (the store does it; hand-written SQL must too).
-- Never return `accounts.refresh_token_enc` or any secret: only columns described in an entity leave the database.
+- Never return a secret (token, password hash): only columns described in an entity leave the database.
 - Workers free plan: 10 ms CPU per request. No heavy crypto or big loops per request.
 - Colours in a feature's CSS come from the tokens in `styles.css` (`var(--fg)`, `var(--surface)`, `var(--line)`, `var(--c-red)` ...), never hex or `rgb()`, so Light, Dark and E-ink (`features/theme/eink.css`) all follow. Where a colour carries meaning, E-ink needs a pattern: give the element a `c-<colour>` class or a `data-pat` attribute (see eink.css).
 - Markdown is the format for notes. Never store or render HTML from a client without DOMPurify (the web app's `Markdown` component does this).

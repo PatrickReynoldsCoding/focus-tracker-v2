@@ -51,7 +51,7 @@ function toDb(field: Field, value: unknown, name: string): unknown {
 }
 
 function fromDb(e: Entity, raw: Record<string, unknown>): Row {
-  // Only the described columns leave the database (accounts keep their tokens hidden this way).
+  // Only the described columns leave the database.
   const out: Record<string, unknown> = {};
   for (const c of columnsOf(e)) if (c in raw) out[c] = raw[c];
   for (const [name, f] of Object.entries(e.fields)) {
