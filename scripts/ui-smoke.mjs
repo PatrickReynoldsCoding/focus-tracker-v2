@@ -73,7 +73,7 @@ for (const [vp, name] of [[{ width: 390, height: 844 }, 'phone'], [{ width: 1280
   await page.keyboard.press('Escape');
   await page.goto(`${B}/#/projects`); await page.waitForSelector('table');
   await page.screenshot({ path: `${OUT}/${name}-projects.png`, fullPage: true });
-  await page.goto(`${B}/#/notes`); await page.waitForSelector('.masonry');
+  await page.goto(`${B}/#/notes`); await page.waitForSelector('.note-grid');
   await page.screenshot({ path: `${OUT}/${name}-notes.png`, fullPage: true });
   await page.goto(`${B}/#/habits`); await page.waitForSelector('.habits-page');
   await page.goto(`${B}/#/settings`); await page.waitForSelector('text=Weekly rotation');
