@@ -14,7 +14,7 @@ Updated 2026-11-19. Phases from the spec (`SPEC.md` §7).
 | 7 Mac SwiftBar plugin | **Done, untested on a Mac.** Menu, click actions and notifications (reminders, habit prompts, pomodoro). |
 | 8 Self-hosting | **Mostly done.** Deploy button, auto-provisioned D1/KV, self-migrating database, docs. The button needs the repository to be public. |
 | v1 parity, wave 1 | **Done** (v0.3.0–v0.10.0): Today panels, small items, issue links, notification settings, Android in-app updates, sessions, note editor, resources and Drive, habits. See [V1-GAPS.md](V1-GAPS.md). |
-| v1 parity, wave 2 | In progress, one feature at a time: whiteboards and stickies, Insights, Notes tab extras, themes and E-ink, Back and swipe, Plan my week, offline, movable panels. |
+| v1 parity, wave 2 | Built (v0.11.0–v0.16.0): whiteboards and stickies, Insights, Notes tab extras, themes and E-ink, Back and swipe, Plan my week, exact Android alarms, cleanup, offline. Still to do: movable panels, Today pills, pop-out windows. |
 | 9 Stretch | Parked: **export all data** button (wanted later), Work-mode PRs tab, fitness view. |
 
 ## Waiting for the owner
