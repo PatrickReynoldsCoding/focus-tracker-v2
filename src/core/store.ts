@@ -208,6 +208,7 @@ export async function create(ctx: Ctx, e: Entity, input: Input, opts: CreateOpti
   row.created = stamp(input.created);
   row.updated_at = stamp(input.updated_at ?? input.created);
   if (e.beforeCreate) await asInputError(e.beforeCreate(ctx, row));
+  for (const m of allModules()) if (m.beforeWrite) await asInputError(m.beforeWrite(ctx, e, row, null));
   for (const [k, f] of Object.entries(e.fields)) {
     if (f.required && (row[k] == null || row[k] === '')) throw bad(`${e.singular} needs ${k}`);
   }
@@ -217,6 +218,7 @@ export async function create(ctx: Ctx, e: Entity, input: Input, opts: CreateOpti
   ctx.changes.push({ entity: e.name, table: e.table, rowId: id, before: null, after: row });
   const out = fromDb(e, row);
   if (e.afterCreate && !opts.raw) await e.afterCreate(ctx, out);
+  for (const m of allModules()) if (m.afterWrite) await m.afterWrite(ctx, e, out, null);
   return out;
 }
 
@@ -226,6 +228,7 @@ export async function update(ctx: Ctx, e: Entity, id: string, input: Input): Pro
   const patch = clean(e, input, false);
   const asked = Object.keys(patch);
   if (e.beforeUpdate) await asInputError(e.beforeUpdate(ctx, fromDb(e, beforeRaw), patch));
+  for (const m of allModules()) if (m.beforeWrite) await asInputError(m.beforeWrite(ctx, e, patch, fromDb(e, beforeRaw)));
   await checkRefs(ctx, e, patch);
   const changed = Object.keys(patch).filter((k) => patch[k] !== beforeRaw[k]);
   if (!changed.length) return fromDb(e, beforeRaw);
@@ -239,7 +242,9 @@ export async function update(ctx: Ctx, e: Entity, id: string, input: Input): Pro
     .run();
   const after = { ...beforeRaw, ...Object.fromEntries(cols.map((c) => [c, patch[c] ?? null])) };
   ctx.changes.push({ entity: e.name, table: e.table, rowId: id, before: beforeRaw, after });
-  return fromDb(e, after);
+  const out = fromDb(e, after);
+  for (const m of allModules()) if (m.afterWrite) await m.afterWrite(ctx, e, out, fromDb(e, beforeRaw));
+  return out;
 }
 
 /** How far back the undo history reaches (pruneUndo keeps 14 days); older bases cannot be checked field by field. */

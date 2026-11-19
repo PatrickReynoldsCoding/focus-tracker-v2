@@ -32,6 +32,17 @@ export interface Module {
    * through the store are part of the same undo step.
    */
   beforeDelete?(ctx: Ctx, e: Entity, row: import('./entity').Row): Promise<void>;
+  /**
+   * Runs before any row of any kind is written through the store, after the entity's own
+   * beforeCreate / beforeUpdate: `data` is the new row (creating, `before` is null) or the patch,
+   * and may be changed. For modules that keep fields of other kinds in step (files: folder_id
+   * and project_id).
+   */
+  beforeWrite?(ctx: Ctx, e: Entity, data: Record<string, unknown>, before: import('./entity').Row | null): Promise<void>;
+  /** Runs after any row of any kind is created or changed through the store (same undo step). */
+  afterWrite?(ctx: Ctx, e: Entity, row: import('./entity').Row, before: import('./entity').Row | null): Promise<void>;
+  /** Kinds of rows the Files tab lists (src/core/files.ts). */
+  files?: import('./files').FileSource[];
   /** Feature flags this module reads (src/core/features.ts). */
   features?: import('./features').Feature[];
 }
