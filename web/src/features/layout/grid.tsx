@@ -25,6 +25,7 @@ const DRAG_START = 5; // px a pointer must move before a press on a title become
 /** The place whose grid is on screen (for the Edit layout button in the header), and the one being edited. */
 export const gridOn = signal<string | null>(null);
 export const editing = signal<string | null>(null);
+const onScreen = new Map<string, number>();
 
 type Placed = Pos & { auto?: boolean };
 
@@ -212,10 +213,14 @@ function Grid({ place, props, panels, all, saved }: { place: string; props: any;
   }, []);
 
   useEffect(() => {
+    // Counted, so a grid drawn again before the old one is gone does not hide the button.
+    onScreen.set(place, (onScreen.get(place) ?? 0) + 1);
     gridOn.value = place;
     // Edit layout stays on while the grid is drawn again (a window resized for a moment); a new page ends it (index.tsx).
     return () => {
-      if (gridOn.value === place) gridOn.value = null;
+      const n = (onScreen.get(place) ?? 1) - 1;
+      onScreen.set(place, n);
+      if (n <= 0 && gridOn.value === place) gridOn.value = null;
     };
   }, [place]);
   useEffect(() => {

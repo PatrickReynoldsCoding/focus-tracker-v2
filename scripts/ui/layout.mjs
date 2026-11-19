@@ -1,6 +1,6 @@
 // Browser check for page layouts (V1-GAPS 39–41): the desktop grid (drag, resize, remove, add
 // back, reset), the phone's Today pills and Today settings, and pop-out windows.
-// Needs a seeded server (seed.mjs). Usage: FT_URL=http://localhost:8817 node scripts/ui/layout.mjs [grid|pills|popout]
+// Needs a seeded server (seed.mjs). Usage: FT_URL=http://localhost:8787 node scripts/ui/layout.mjs [grid|pills|popout|offline]
 import { mkdirSync } from 'node:fs';
 import { apiCtx, B, launch, open, OUT } from './lib.mjs';
 
@@ -22,6 +22,7 @@ const projects = await api.get('/projects');
 const p1 = projects.find((p) => p.name === 'Focus Tracker v2');
 await api.put('/focus', { project_id: p1.id });
 for (const l of lists.filter((l) => ['Ideas', 'Shopping'].includes(l.name))) await api.put('/today-panels/show', { list_id: l.id, on: true });
+for (const l of lists.filter((l) => !['Ideas', 'Shopping', 'To-dos'].includes(l.name))) await api.put('/today-panels/show', { list_id: l.id, on: false });
 const board = (await api.get('/whiteboards'))[0];
 if (board) await api.call('PATCH', `/whiteboards/${board.id}`, { show_today: true });
 await api.call('DELETE', '/layout/today/grid').catch(() => {});
@@ -330,6 +331,56 @@ if (!only || only === 'popout') {
   await popout('light');
   await popout('eink');
 }
+
+// ---------------- offline, and the flags off ----------------
+
+async function offlineAndFlags() {
+  const name = 'offline';
+  await api.call('DELETE', '/layout/today/grid');
+  const { page, ctx } = await open(browser, { width: 1280, height: 900 }, errors, { name });
+  await page.goto(`${B}/#/today`);
+  await page.waitForSelector('.lg-item[data-panel="todos"]');
+  await page.waitForTimeout(400);
+  // A move made offline waits, and is sent when the connection is back.
+  await ctx.setOffline(true);
+  const h2 = await page.locator('.lg-item[data-panel="todos"] h2').first().boundingBox();
+  const habits = await box(page, 'habits');
+  await page.mouse.move(h2.x + 10, h2.y + 8);
+  await page.mouse.down();
+  await page.mouse.move(h2.x + 40, h2.y + 30, { steps: 4 });
+  await page.mouse.move(habits.x + 40, habits.y + habits.height + 20, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForTimeout(500);
+  ok(!(await api.get('/layout/today')).grid, `${name}: nothing reaches the server while offline`);
+  const placed = await box(page, 'todos');
+  await ctx.setOffline(false);
+  await page.evaluate(() => window.dispatchEvent(new Event('online')));
+  await page.waitForTimeout(2500);
+  const g = (await api.get('/layout/today')).grid;
+  ok(g && g.items.todos, `${name}: the move is sent when back online`);
+  const after = await box(page, 'todos');
+  ok(Math.abs(after.y - placed.y) < 4 && Math.abs(after.x - placed.x) < 4, `${name}: and the panel stays where it was put`);
+  await ctx.close();
+
+  // The three flags off: the usual pages.
+  for (const f of ['movable-panels', 'today-pills', 'popout-windows']) await api.put(`/features/${f}`, { enabled: false });
+  try {
+    for (const [w, label] of [[1280, 'desktop'], [390, 'phone']]) {
+      const { page: p2, ctx: c2 } = await open(browser, { width: w, height: 900 }, errors, { name: `flags-off-${label}`, touch: w < 700 });
+      await p2.goto(`${B}/#/today`);
+      await p2.waitForSelector('.focus');
+      await p2.waitForTimeout(500);
+      ok(!(await p2.$('.lg-item, .pl-pill, .po-btn, .lg-edit-btn')), `flags off, ${label}: Today is the plain page`);
+      ok(!!(await p2.$('.habits-panel')) && (await p2.$$('.tp-list, .tp-note')).length >= 2, `flags off, ${label}: every panel is there, lists too`);
+      await shot(p2, `flags-off-${label}`);
+      await c2.close();
+    }
+  } finally {
+    for (const f of ['movable-panels', 'today-pills', 'popout-windows']) await api.put(`/features/${f}`, { enabled: true });
+  }
+}
+
+if (!only || only === 'offline') await offlineAndFlags();
 
 console.log(errors.length ? `console errors:\n${errors.join('\n')}` : 'no console errors');
 await browser.close();
