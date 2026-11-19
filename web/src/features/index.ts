@@ -17,3 +17,4 @@ import './links';
 import './notifications-settings';
 import './android-app';
 import './editor';
+import './whiteboards';

@@ -58,6 +58,28 @@ describe('whiteboards', () => {
     expect(list[0].id).toBe(a.id);
   });
 
+  it('does not move a board up the list for a view change or a preview alone', async () => {
+    const w = await call('POST', '/whiteboards', { name: 'Quiet' });
+    await call('PUT', `/whiteboards/${w.id}/scene`, { scene: scene() });
+    const t1 = (await call('GET', `/whiteboards/${w.id}`)).updated_at;
+    await new Promise((r) => setTimeout(r, 5));
+    await call('PUT', `/whiteboards/${w.id}/scene`, { scene: scene({ appState: { scrollX: 1, scrollY: 2, zoom: { value: 1 } } }), view_only: true });
+    await call('PUT', `/whiteboards/${w.id}/thumbnail`, { thumbnail: THUMB });
+    const after = await call('GET', `/whiteboards/${w.id}`);
+    expect(after.updated_at).toBe(t1);
+    expect(after.thumbnail).toBe(THUMB);
+    expect((await call('GET', `/whiteboards/${w.id}/scene`)).scene.appState.scrollX).toBe(1);
+    await call('PUT', `/whiteboards/${w.id}/thumbnail`, { thumbnail: 'data:text/html;base64,AAAA' }, { expect: 400 });
+  });
+
+  it('gives undo steps readable names', async () => {
+    const w = await call('POST', '/whiteboards', { name: 'Label me' });
+    await call('PATCH', `/whiteboards/${w.id}`, { name: 'Labelled' });
+    expect((await call('POST', '/undo')).label).toBe('rename whiteboard');
+    await call('DELETE', `/whiteboards/${w.id}`);
+    expect((await call('POST', '/undo')).label).toBe('delete whiteboard');
+  });
+
   it('refuses drawings that are too big, with a clear message, and keeps the old one', async () => {
     const w = await call('POST', '/whiteboards', { name: 'Big' });
     await call('PUT', `/whiteboards/${w.id}/scene`, { scene: scene() });

@@ -12,7 +12,7 @@ import type { Entity } from '../core/entity';
 import { ApiError, bad } from '../core/errors';
 import { requireFeature } from '../core/features';
 import type { Module } from '../core/registry';
-import { create, get, getRaw, remove } from '../core/store';
+import { create, get, getRaw, remove, update } from '../core/store';
 
 export const FLAG = 'whiteboards';
 
@@ -87,7 +87,7 @@ export function sceneText(scene: unknown): string {
 }
 
 /** Write a drawing. Not undoable unless `undoable` (a new board made by Claude: undoing the board removes it too). */
-async function writeScene(ctx: Ctx, id: string, text: string, opts: { thumbnail?: string | null; undoable?: boolean } = {}) {
+async function writeScene(ctx: Ctx, id: string, text: string, opts: { thumbnail?: string | null; undoable?: boolean; viewOnly?: boolean } = {}) {
   const now = ctx.now();
   const before = await getRaw(ctx, whiteboardScenesEntity, id);
   const stmts = [
@@ -95,8 +95,9 @@ async function writeScene(ctx: Ctx, id: string, text: string, opts: { thumbnail?
       .prepare('INSERT INTO whiteboard_scenes (id, mode, scene, created, updated_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT (id) DO UPDATE SET scene = excluded.scene, updated_at = excluded.updated_at')
       .bind(id, ctx.mode, text, now, now),
   ];
-  if (opts.thumbnail !== undefined) stmts.push(ctx.db.prepare('UPDATE whiteboards SET thumbnail = ?, updated_at = ? WHERE id = ?').bind(opts.thumbnail || null, now, id));
-  else stmts.push(ctx.db.prepare('UPDATE whiteboards SET updated_at = ? WHERE id = ?').bind(now, id));
+  // Only scrolling or zooming (the view is saved so the board reopens there) does not make it "newest".
+  if (opts.thumbnail !== undefined) stmts.push(ctx.db.prepare(`UPDATE whiteboards SET thumbnail = ?${opts.viewOnly ? '' : ', updated_at = ?'} WHERE id = ?`).bind(...(opts.viewOnly ? [opts.thumbnail || null, id] : [opts.thumbnail || null, now, id])));
+  else if (!opts.viewOnly) stmts.push(ctx.db.prepare('UPDATE whiteboards SET updated_at = ? WHERE id = ?').bind(now, id));
   await ctx.db.batch(stmts);
   if (opts.undoable) {
     ctx.changes.push({ entity: whiteboardScenesEntity.name, table: whiteboardScenesEntity.table, rowId: id, before, after: { id, mode: ctx.mode, scene: text, created: before?.created ?? now, updated_at: now } });
@@ -168,11 +169,40 @@ export const whiteboardsModule: Module = {
         throw new ApiError(413, `This drawing is too big to save (${mb(length)}; the limit is ${mb(MAX_SCENE_BYTES)}). Remove some images or drawings and try again.`, 'too_big');
       }
       const board = await get(ctx, whiteboardsEntity, c.req.param('id'));
-      const body = await c.req.json<{ scene?: unknown; thumbnail?: string | null }>();
+      const body = await c.req.json<{ scene?: unknown; thumbnail?: string | null; view_only?: boolean }>();
       const text = sceneText(body.scene);
       if (body.thumbnail !== undefined) checkThumbnail(body.thumbnail);
-      const updated_at = await writeScene(ctx, board.id, text, { thumbnail: body.thumbnail });
+      const updated_at = await writeScene(ctx, board.id, text, { thumbnail: body.thumbnail, viewOnly: body.view_only === true });
       return c.json({ id: board.id, updated_at, size: bytes(text), limit: MAX_SCENE_BYTES });
+    });
+    // The generic routes, with readable undo labels.
+    api.post('/whiteboards', async (c) => {
+      const ctx = c.get('ctx');
+      ctx.label = 'new whiteboard';
+      return c.json(await create(ctx, whiteboardsEntity, await c.req.json()), 201);
+    });
+    api.patch('/whiteboards/:id', async (c) => {
+      const ctx = c.get('ctx');
+      const body = await c.req.json<Record<string, unknown>>();
+      ctx.label = 'name' in body ? 'rename whiteboard' : 'project_id' in body ? 'move whiteboard' : 'show_today' in body ? (body.show_today ? 'whiteboard on Today' : 'whiteboard off Today') : 'change whiteboard';
+      return c.json(await update(ctx, whiteboardsEntity, c.req.param('id'), body));
+    });
+    api.delete('/whiteboards/:id', async (c) => {
+      const ctx = c.get('ctx');
+      ctx.label = 'delete whiteboard';
+      await remove(ctx, whiteboardsEntity, c.req.param('id'));
+      return c.json({ deleted: c.req.param('id') });
+    });
+    // A preview on its own, for a board that has none yet (an imported one opened and closed unchanged).
+    // Not undoable, and it does not move the board up the "newest first" list.
+    api.put('/whiteboards/:id/thumbnail', async (c) => {
+      const ctx = c.get('ctx');
+      await requireFeature(ctx, FLAG);
+      const board = await get(ctx, whiteboardsEntity, c.req.param('id'));
+      const { thumbnail } = await c.req.json<{ thumbnail?: string | null }>();
+      checkThumbnail(thumbnail);
+      await ctx.db.prepare('UPDATE whiteboards SET thumbnail = ? WHERE id = ?').bind(thumbnail || null, board.id).run();
+      return c.json({ id: board.id, thumbnail: thumbnail || null });
     });
   },
   tools: [
