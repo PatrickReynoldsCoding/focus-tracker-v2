@@ -15,6 +15,8 @@ import { pendingNotifications } from './notifications';
 import { projectsEntity } from './projects';
 import { currentSession } from './sessions';
 import { notBlockedSql } from './relations';
+import { buildTodayList } from '../core/today-list';
+import { cardsForDay, TODAY_LIST_FLAG, todoListNames, withListNames } from './today-list';
 
 export const logEntity: Entity = {
   name: 'log',
@@ -198,7 +200,8 @@ export async function logSession(ctx: Ctx, input: { project_id?: string; date?: 
 
 export async function today(ctx: Ctx) {
   const day = await ctx.today();
-  const [focus, rot, session, todos, habits, lists, nudge] = await Promise.all([
+  const withList = await ctx.feature(TODAY_LIST_FLAG);
+  const [focus, rot, session, todos, habits, lists, nudge, cards, todoLists] = await Promise.all([
     focusOf(ctx, day),
     rotation(ctx, day),
     currentSession(ctx),
@@ -206,6 +209,8 @@ export async function today(ctx: Ctx) {
     habitProgress(ctx, day),
     list(ctx, listsEntity, { where: { show_today: true } }),
     neglected(ctx, day),
+    withList ? cardsForDay(ctx, day) : [],
+    withList ? todoListNames(ctx) : {},
   ]);
   return {
     mode: ctx.mode,
@@ -220,19 +225,24 @@ export async function today(ctx: Ctx) {
     habits,
     lists,
     neglected: nudge,
+    // The Today list (flag today-panel) also needs the cards for today and, with several to-do lists, their names.
+    cards,
+    todo_lists: todoLists,
   };
 }
 
 /** Small and cheap: for widgets, the menu bar and quick polls. */
 export async function status(ctx: Ctx) {
   const day = await ctx.today();
-  const [focus, session, todos, habits, notes] = await Promise.all([
+  const [focus, session, todos, habits, notes, extra] = await Promise.all([
     focusOf(ctx, day),
     currentSession(ctx),
     todosForDay(ctx, day),
     habitProgress(ctx, day),
     pendingNotifications(ctx),
+    ctx.feature(TODAY_LIST_FLAG).then(async (on) => (on ? { cards: await cardsForDay(ctx, day), names: await todoListNames(ctx) } : null)),
   ]);
+  const list = extra && buildTodayList(day, { habits, todos: withListNames(todos, extra.names), cards: extra.cards });
   return {
     mode: ctx.mode,
     day,
@@ -250,6 +260,12 @@ export async function status(ctx: Ctx) {
     },
     todos_due: todos.filter((t) => !t.done).map((t) => ({ id: t.id, title: t.title, day: t.day })),
     habits_left: habits.filter((h) => h.left > 0).map((h) => ({ id: h.id, name: h.name, left: h.left, per: h.per })),
+    // The Today list's open items (flag today-panel; null while it is off), for clients that show one list.
+    today_list: list && {
+      left: list.left,
+      done: list.done,
+      items: list.items.filter((x) => x.state === 'open').map((x) => ({ kind: x.kind, id: x.id, title: x.title, progress: x.progress ?? null, late: x.late ?? null })),
+    },
     notifications: notes,
   };
 }
@@ -275,7 +291,7 @@ export const todayModule: Module = {
     {
       name: 'get_today',
       description:
-        'Today: the focus project (none until the owner chooses one), rotation and suggestions, running session, to-dos due, habits, lists shown on Today and neglected projects.',
+        'Today: the focus project (none until the owner chooses one), rotation and suggestions, running session, to-dos due, habits, cards for today, lists shown on Today and neglected projects. get_today_list gives the Today list the owner sees.',
       readOnly: true,
       input: z.object({}),
       run: (ctx) => today(ctx),

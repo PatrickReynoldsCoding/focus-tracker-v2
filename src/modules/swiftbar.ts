@@ -10,6 +10,7 @@ import { checkHabit } from './habits';
 import { dismiss, notificationsEntity } from './notifications';
 import { extendSession, nextPeriod, pauseSession, resumeSession, startSession, stopSession } from './sessions';
 import { status } from './today';
+import { tickCard } from './today-list';
 
 /** SwiftBar treats "|" as the start of parameters; keep text safe and short. */
 const clean = (s: unknown, max = 60) => {
@@ -53,11 +54,22 @@ export async function swiftbarText(ctx: Ctx, origin: string): Promise<string> {
   }
   else if (s.focus) lines.push(`Start session | ${act('start')}`);
 
-  if (s.todos_due.length) {
+  if (s.today_list) {
+    // The Today list (flag today-panel): habits, then to-dos and cards, as on Today.
+    const open = s.today_list.items;
+    if (open.length) {
+      lines.push('---', `Today (${open.length} left)`);
+      for (const x of open.slice(0, 20)) {
+        const extra = x.progress ? ` (${x.progress})` : x.late ? ' (late)' : '';
+        const action = x.kind === 'habit' ? act('habit', x.id) : act(x.kind === 'card' ? 'card' : 'tick', x.id);
+        lines.push(`${x.kind === 'habit' ? '○' : '☐'} ${clean(x.title)}${extra} | ${action}`);
+      }
+    } else if (s.today_list.done) lines.push('---', `Today: all done (${s.today_list.done})`);
+  } else if (s.todos_due.length) {
     lines.push('---', `To do today (${s.todos_due.length})`);
     for (const t of s.todos_due.slice(0, 15)) lines.push(`☐ ${clean(t.title)} | ${act('tick', String(t.id))}`);
   }
-  if (s.habits_left.length) {
+  if (!s.today_list && s.habits_left.length) {
     lines.push('---', 'Habits left');
     for (const h of s.habits_left) lines.push(`+ ${clean(h.name)} (${h.left} ${h.per === 'week' ? 'this week' : 'today'}) | ${act('habit', h.id)}`);
   }
@@ -93,6 +105,8 @@ export async function swiftbarAction(ctx: Ctx, form: Record<string, string>) {
       const { todosEntity } = await import('./lists');
       return update(ctx, todosEntity, id, { done: await ctx.today() });
     }
+    case 'card':
+      return tickCard(ctx, id, true);
     case 'habit':
       return checkHabit(ctx, id);
     case 'dismiss':

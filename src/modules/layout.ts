@@ -34,7 +34,7 @@ export type Pill = { id: string; name: string; icon: string | null; panels: stri
 export type View = { focusCard?: (typeof FOCUS_CARD)[number]; pillCounts?: boolean; pillSwipe?: boolean; pillLast?: boolean; pillAll?: boolean };
 const VIEW_SWITCHES = ['pillCounts', 'pillSwipe', 'pillLast', 'pillAll'] as const;
 /** The pills the app shows while none are saved (drawn by the browser from the panels on Today). */
-export const USUAL_PILLS = 'Today (to-dos for today, habits, this week), Notes (the notes, lists, to-do lists and whiteboards on Today) and More (the other panels); empty ones are left out';
+export const USUAL_PILLS = 'Today (the Today list and this week; with the today-panel flag off: to-dos for today, habits, this week), Notes (the notes, lists, to-do lists and whiteboards on Today) and More (the other panels); empty ones are left out';
 
 function page(raw: string): string {
   if (!PAGE.test(raw)) throw bad('Unknown page');
@@ -154,8 +154,10 @@ async function pillPanels(ctx: Ctx) {
     ctx.db.prepare('SELECT id, name, show_today FROM whiteboards WHERE mode = ? ORDER BY name').bind(ctx.mode).all<{ id: string; name: string; show_today: number }>(),
     ctx.db.prepare("SELECT p.id, p.name FROM projects p JOIN notes n ON n.project_id = p.id WHERE p.mode = ? AND n.show_today = 1").bind(ctx.mode).all<{ id: string; name: string }>(),
   ]);
+  // With the Today list on (flag today-panel) it takes To do today's place; Habits can still be added.
+  const listOn = await ctx.feature('today-panel');
   return [
-    { id: 'todos', name: 'To do today' },
+    ...(listOn ? [{ id: 'today-list', name: 'Today (habits, to-dos and cards for today)' }] : [{ id: 'todos', name: 'To do today' }]),
     { id: 'habits', name: 'Habits' },
     { id: 'plan-week', name: 'This week' },
     { id: 'neglected', name: 'Waiting for you' },

@@ -29,7 +29,7 @@ describe('SwiftBar menu bar', () => {
     let out = await text();
     const lines = out.split('\n');
     expect(lines[0]).toMatch(/^◎ Menu\s+bar project •1$/); // "|" is removed: it would break SwiftBar
-    expect(out).toContain(`☐ Pay rent | bash=__SELF__ param1=tick param2=${todo.id}`);
+    expect(out).toContain(`☐ Pay rent (late) | bash=__SELF__ param1=tick param2=${todo.id}`); // the Today list (flag today-panel)
     expect(out).toContain(`param1=habit param2=${h.id}`);
     expect(out).toContain('Start session | bash=__SELF__ param1=start');
     const notify = lines.find((l) => l.startsWith('#notify'))!;

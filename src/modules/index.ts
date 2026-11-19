@@ -19,6 +19,7 @@ import { relationsModule } from './relations';
 import { swiftbarModule } from './swiftbar';
 import { systemModule } from './system';
 import { todayModule } from './today';
+import { todayListModule } from './today-list';
 import { todayPanelsModule } from './today-panels';
 import { whiteboardsModule } from './whiteboards';
 
@@ -35,6 +36,7 @@ export const MODULES: Module[] = [
   todayModule,
   sessionsModule,
   todayPanelsModule,
+  todayListModule,
   notificationsModule,
   notifyPrefsModule,
   whiteboardsModule,
