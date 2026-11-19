@@ -238,4 +238,14 @@ function App() {
 
 if (!location.hash) go('/today');
 render(<App />, document.getElementById('app')!);
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('/sw.js').catch(() => {});
+// The service worker keeps the app on this device, so it opens with no signal (public/sw.js).
+// Not under `vite` dev, where files have no hashes.
+if ('serviceWorker' in navigator && window.isSecureContext && !(import.meta as { env?: { DEV?: boolean } }).env?.DEV) {
+  navigator.serviceWorker
+    .register('/sw.js')
+    .then((reg) => {
+      // An app left open for days (the Android app) looks for a new deploy when it comes back to the front.
+      document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && navigator.onLine && reg.update().catch(() => {}));
+    })
+    .catch(() => {});
+}

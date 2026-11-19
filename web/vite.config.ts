@@ -2,6 +2,7 @@ import preact from '@preact/preset-vite';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
+import { serviceWorker } from './sw-plugin';
 
 /** Excalidraw's fonts, served from our own site (features/whiteboards sets EXCALIDRAW_ASSET_PATH),
  *  so a board draws its hand-written text without a CDN. Xiaolai (Chinese, 13 MB) is left out:
@@ -30,7 +31,7 @@ export default defineConfig({
   root: __dirname,
   // No react → preact/compat aliases: Excalidraw (features/whiteboards) runs on real React in its
   // own lazily loaded chunk; the rest of the app is Preact.
-  plugins: [preact({ reactAliasesEnabled: false }), excalidrawFonts()],
+  plugins: [preact({ reactAliasesEnabled: false }), excalidrawFonts(), serviceWorker()],
   build: { outDir: '../public', emptyOutDir: true, target: 'es2022', sourcemap: false },
   server: { proxy: { '/api': 'http://localhost:8787', '/auth': 'http://localhost:8787' } },
 });
