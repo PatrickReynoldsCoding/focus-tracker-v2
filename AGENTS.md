@@ -31,6 +31,7 @@ Modular first: a feature lives in its own files on the server and in the browser
   - `registerPanel('projects', …)` is a section of the Projects tab (under the table), gets `{ category }` (the tab's category filter),
   - `registerPanel('card', …)` is a section of the card dialog, gets `{ card, columns, save, update, close }`,
   - `registerPanel('settings', …)` is a section of Settings,
+  - `registerPanel('habits', …)` is a section at the top of the Habits tab (no props),
   - `registerOverlay` draws something over every page once signed in (gets `{ route }`), such as the session's corner timer.
   - `registerHeaderItem` puts something at the left edge of the header (gets `{ route }`), such as the Back button.
   - `registerPanel('card-tile', …)` is a small mark on a board card, gets `{ card }` (render a component, keep it tiny),

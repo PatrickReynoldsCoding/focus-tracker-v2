@@ -78,6 +78,8 @@ export interface CardTileProps {
   card: any;
 }
 export interface SettingsSectionProps {}
+/** A section at the top of the Habits tab, under its heading (Plan my week puts its week there). */
+export interface HabitsSectionProps {}
 
 /** Something drawn over every page once signed in (a corner timer, a background job with no UI). */
 export interface OverlayDef {
@@ -138,13 +140,14 @@ const editors: EditorDef[] = [];
 export const registerMarkdownEditor = (e: EditorDef) => add(editors, e);
 export const useMarkdownEditor = (): EditorDef | undefined => visible(editors, useFlags())[0];
 
-/** Panels by place: 'today', 'project', 'projects' (the Projects tab), 'card' (sections of the card dialog), 'card-tile' (marks on a board card), 'settings'. */
+/** Panels by place: 'today', 'project', 'projects' (the Projects tab), 'card' (sections of the card dialog), 'card-tile' (marks on a board card), 'settings', 'habits' (top of the Habits tab). */
 export function registerPanel(place: 'today', p: PanelDef<TodayPanelProps>): void;
 export function registerPanel(place: 'project', p: PanelDef<ProjectPanelProps>): void;
 export function registerPanel(place: 'projects', p: PanelDef<ProjectsPanelProps>): void;
 export function registerPanel(place: 'card', p: PanelDef<CardSectionProps>): void;
 export function registerPanel(place: 'card-tile', p: PanelDef<CardTileProps>): void;
 export function registerPanel(place: 'settings', p: PanelDef<SettingsSectionProps>): void;
+export function registerPanel(place: 'habits', p: PanelDef<HabitsSectionProps>): void;
 export function registerPanel(place: string, p: PanelDef<any>): void;
 export function registerPanel(place: string, p: PanelDef<any>) {
   add((panels[place] ??= []), p);

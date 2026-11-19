@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import { change, del, newId, optimistic, patch, post } from '../../core/api';
-import { registerTab } from '../../core/registry';
+import { Panels, registerTab, type HabitsSectionProps } from '../../core/registry';
 import { AddInput, InlineEdit, Loading, useData } from '../../core/ui';
 import { EditHabitDialog } from './EditHabit';
 import { HabitCards, HabitLine } from './HabitRow';
@@ -66,6 +66,7 @@ export function Habits() {
           + New
         </button>
       </div>
+      <Panels<HabitsSectionProps> place="habits" props={{}} />
       {GROUPS.map(([status, label]) => {
         const hs = habits.filter((h) => h.status === status);
         if (!hs.length && status !== 'aspiring') return null;
