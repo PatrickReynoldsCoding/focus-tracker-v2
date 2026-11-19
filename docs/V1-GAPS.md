@@ -2,6 +2,8 @@
 
 Compared on 2026-11-18 from v1's `docs/ROADMAP.md` and modules. Size: S under an hour, M a few hours, L a day or more.
 
+**Built in wave 1 (v0.3.0–v0.10.0):** 1–6, 8, 9, 11–13, 16–34, 36, 42, 46, 47. **Wave 2:** 10, 29 (partly done), 35, 37, 38, 39–41, 43–45.
+
 **Owner's audit (2026-11-18):** build everything except 7, 14 and 15; next action is removed altogether (DECISIONS D12). Changes:
 - 11: any note (not only a Today note) can be added to Today as a panel.
 - 16: issue relationships like Jira (typed links between items), not just project links.
