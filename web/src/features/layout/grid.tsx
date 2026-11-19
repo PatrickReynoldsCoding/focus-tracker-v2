@@ -175,10 +175,17 @@ function Grid({ place, props, panels, all, saved }: { place: string; props: any;
         }
         if (drag.kind === 'move') continue; // the dragged panel follows the pointer
       }
+      // A panel placed for the first time appears in its place; only later moves slide.
+      const first = !e.dataset.x;
+      if (first) e.style.transition = 'none';
       e.style.left = leftCss(a.x);
       e.style.width = widthCss(posNow[id].w);
       e.style.top = `${a.top}px`;
       e.dataset.x = String(a.x);
+      if (first) {
+        void e.offsetHeight;
+        e.style.transition = '';
+      }
     }
     el.style.height = `${total}px`;
   };
