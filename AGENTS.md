@@ -34,6 +34,8 @@ Modular first: a feature lives in its own files on the server and in the browser
   - `registerPanel('card-tile', …)` is a small mark on a board card, gets `{ card }` (render a component, keep it tiny),
   - `registerPanel('list', …)` is a section of a list's page (under its heading), gets `{ list, setList }` (GET /api/lists/:id/full),
   - `tabBadges` (a signal) sets a small count beside a tab's name in the side bar and phone bar.
+  - `registerMarkdownEditor` supplies the editor behind `MarkdownEditor` (core/ui.tsx); `features/editor` registers the rich one (flag `rich-editor`), otherwise the plain text box is used. Give `MarkdownEditor` a `note={{ kind, id }}` for a project's or list's note so it saves with conflict protection and keeps drafts.
+  - A panel with `override: true` replaces another feature's panel of the same id whatever the import order (the editor's card-dialog `note` section does this).
   A feature that needs a new plug-in point adds it to `core/registry.tsx` in a small, separate commit.
 - `styles.css` holds shared tokens and base styles; a feature's own styles go in `features/<name>/<name>.css`, imported by the feature.
 - `clients/swiftbar/`, `android/`: the Mac menu bar plugin and the Android app (see their READMEs).
