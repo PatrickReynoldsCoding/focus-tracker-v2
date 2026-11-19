@@ -1,4 +1,5 @@
 import { change, del, newId, optimistic, patch, post, put } from '../../core/api';
+import { useFlag } from '../../core/features';
 import { Panels } from '../../core/registry';
 import { Board } from '../projects/Board';
 import { AddInput, ColorPicker, fmtDay, go, InlineEdit, Loading, MarkdownEditor, todayLocal, useData } from '../../core/ui';
@@ -73,7 +74,10 @@ function TodoList({ l, setData }: { l: FullList; setData: (fn: (d: FullList) => 
 
 export function ListPage({ id }: { id: string }) {
   const { data: l, error, setData } = useData<FullList>(`/lists/${id}/full`);
+  // With the Files tab, "back" is the folder the list is in.
+  const files = useFlag('files-tab');
   if (!l) return <Loading error={error} />;
+  const home = files ? `/files${l.folder_id ? `/${l.folder_id}` : ''}` : '/notes';
   const save = (f: Partial<FullList>) => {
     setData((d) => ({ ...d, ...f }));
     change(() => patch(`/lists/${l.id}`, f));
@@ -81,8 +85,8 @@ export function ListPage({ id }: { id: string }) {
   return (
     <div class="stack">
       <div class="page-head">
-        <a href="#/notes" class="muted back">
-          ← Notes
+        <a href={`#${home}`} class="muted back">
+          ← {files ? 'Files' : 'Notes'}
         </a>
         <h1>
           <InlineEdit value={l.name} onSave={(name) => name && save({ name })} />
@@ -109,7 +113,7 @@ export function ListPage({ id }: { id: string }) {
           onClick={async () => {
             if (!confirm(`Delete ${l.name}? Undo brings it back.`)) return;
             await change(() => del(`/lists/${l.id}`), 'Deleted');
-            go('/notes');
+            go(home);
           }}
         >
           Delete

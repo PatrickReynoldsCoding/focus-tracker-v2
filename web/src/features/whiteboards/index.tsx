@@ -4,10 +4,11 @@
 // loaded only when a board opens; see ./Editor.tsx and ./host.ts.
 import type { VNode } from 'preact';
 import { useState } from 'preact/hooks';
-import { change, get, optimistic, patch } from '../../core/api';
-import { registerPanel, registerPanelSource, registerRoute, registerTab, type Addable, type PanelDef, type TodayPanelProps } from '../../core/registry';
+import { change, del, get, mode, optimistic, patch } from '../../core/api';
+import { useFlag } from '../../core/features';
+import { registerFileType, registerPanel, registerPanelSource, registerRoute, registerTab, type Addable, type PanelDef, type TodayPanelProps } from '../../core/registry';
 import { useSignal } from '../../core/signal';
-import { Loading, useData } from '../../core/ui';
+import { FileGlyph, Loading, useData } from '../../core/ui';
 import { BoardGrid, NewBoardDialog, Preview } from './Boards';
 import { BoardEditor } from './Editor';
 import { favouriteTool, openBoard, setFavouriteTool, TOOLS, type Board } from './model';
@@ -78,14 +79,15 @@ function WhiteboardsTab() {
 function ProjectBoards({ project, setProject }: { project: any; setProject: (fn: (p: any) => any) => void }) {
   const { data: projects } = useData<Project[]>('/projects');
   const [making, setMaking] = useState(false);
+  const files = useFlag('files-tab');
   const boards = [...((project.whiteboards ?? []) as Board[])].sort((a, b) => b.updated_at.localeCompare(a.updated_at));
   return (
     <section class="card wb-panel">
       <div class="card-head">
         <h2>Whiteboards</h2>
         <div class="row tight">
-          <a class="small" href="#/whiteboards">
-            All
+          <a class="small" href={files ? `#/files/p/${project.id}` : '#/whiteboards'}>
+            {files ? 'Folder' : 'All'}
           </a>
           <button class="ghost small" onClick={() => setMaking(true)}>
             + New
@@ -172,7 +174,9 @@ async function addableBoards(): Promise<Addable[]> {
 
 /** On a phone the Whiteboards tab is not in the bottom bar: the Projects tab links to it. */
 function ProjectsLink() {
-  const { data } = useData<Board[]>('/whiteboards');
+  const files = useFlag('files-tab');
+  const { data } = useData<Board[]>(files ? null : '/whiteboards');
+  if (files) return null; // the Files tab is on the phone's bar
   return (
     <a class="card wb-link" href="#/whiteboards">
       <span>
@@ -209,3 +213,23 @@ registerPanel('project', { id: 'whiteboards', title: 'Whiteboards', description:
 registerPanelSource('today', { id: 'whiteboards', order: 65, feature: FLAG, Provide: TodayBoardsSource, resolve: resolveBoard, addable: addableBoards });
 registerPanel('projects', { id: 'whiteboards-link', order: 90, feature: FLAG, render: () => <ProjectsLink /> });
 registerPanel('settings', { id: 'whiteboards', order: 60, feature: FLAG, render: () => <Settings /> });
+
+// Whiteboards as files on the Files tab: the preview image, opened full screen.
+registerFileType({
+  type: 'whiteboard',
+  group: { id: 'whiteboards', label: 'Whiteboards', order: 30 },
+  label: 'Whiteboard',
+  order: 30,
+  feature: FLAG,
+  icon: (_f, size) => (
+    <FileGlyph tint="purple" size={size}>
+      ✐
+    </FileGlyph>
+  ),
+  href: (f) => `#/w/${f.id}`,
+  open: (f) => openBoard(f.id),
+  preview: (f) => (f.thumbnail ? <img src={`/api/whiteboards/${f.id}/thumbnail?mode=${encodeURIComponent(mode.value)}&v=${encodeURIComponent(f.updated_at)}`} alt="" loading="lazy" decoding="async" /> : null),
+  rename: (f, name) => patch(`/whiteboards/${f.id}`, { name }),
+  remove: (f) => del(`/whiteboards/${f.id}`),
+  create: [{ id: 'whiteboard', label: 'Whiteboard', icon: <FileGlyph tint="purple" size={20}>✐</FileGlyph>, order: 30, dialog: ({ folderId, onClose }) => <NewBoardDialog folderId={folderId} onClose={onClose} /> }],
+});

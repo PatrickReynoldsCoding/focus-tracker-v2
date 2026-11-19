@@ -161,7 +161,7 @@ function BoardOptions({ board, projects, onChange, onClose }: { board: Board; pr
   );
 }
 
-export function NewBoardDialog({ projects, project, onClose }: { projects?: Project[]; project?: string | null; onClose: () => void }) {
+export function NewBoardDialog({ projects, project, folderId, onClose }: { projects?: Project[]; project?: string | null; folderId?: string | null; onClose: () => void }) {
   const [name, setName] = useState('');
   const [pid, setPid] = useState<string>(project ?? '');
   const [busy, setBusy] = useState(false);
@@ -175,7 +175,7 @@ export function NewBoardDialog({ projects, project, onClose }: { projects?: Proj
           const id = newId();
           const made = await optimistic(
             () => () => {},
-            () => post('/whiteboards', { id, name: name.trim() || 'Whiteboard', project_id: pid || null }),
+            () => post('/whiteboards', folderId !== undefined ? { id, name: name.trim() || 'Whiteboard', folder_id: folderId } : { id, name: name.trim() || 'Whiteboard', project_id: pid || null }),
           );
           setBusy(false);
           if (!made) return;
