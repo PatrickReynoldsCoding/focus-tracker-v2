@@ -1,6 +1,6 @@
 {
   "name": "focus-tracker",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "description": "Focus Tracker v2: a personal focus, projects and habits tracker on Cloudflare Workers + D1, editable by Claude through its own MCP connector.",
   "scripts": {
     "dev": "wrangler dev",
