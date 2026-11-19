@@ -17,7 +17,7 @@ import { requireFeature } from '../core/features';
 import type { Module } from '../core/registry';
 import { list } from '../core/store';
 import { formatLevel, levelFromRow, type Level } from '../core/habit-levels';
-import { habitsEntity, levelHistory, levelOn, mondayOf, pauseIntervals, type LevelRow } from './habits';
+import { awayForTargets, habitsEntity, levelHistory, levelOn, mondayOf, pauseIntervals, type LevelRow } from './habits';
 
 export const INSIGHTS_FLAG = 'insights';
 /** A project not touched for this many days is "stale" (the page shows it in bold). */
@@ -77,6 +77,8 @@ interface HabitInput {
   /** done / plan / skip rows of this habit. */
   rows: Row[];
   start: string;
+  /** Days that are Away in the rotation (only while the flag away-lowers-targets is on): a daily habit asks nothing then. */
+  away?: (day: string) => boolean;
 }
 
 /** The day a habit's history starts: `started`, else its first level row, else the day it was created. */
@@ -87,7 +89,7 @@ function startOf(habit: Row, history: LevelRow[]): string {
 }
 
 /** One week of one habit, against the level that applied then. `today` decides whether the week is over. */
-export function habitWeek({ habit, history, pauses, rows, start }: HabitInput, monday: string, today: string): HabitWeek {
+export function habitWeek({ habit, history, pauses, rows, start, away }: HabitInput, monday: string, today: string): HabitWeek {
   const sunday = addDays(monday, 6);
   const mine = rows.filter((r) => String(r.day) >= monday && String(r.day) <= sunday);
   const countOn = (kind: string, day: string) => sum(mine.filter((r) => r.kind === kind && r.day === day).map((r) => Number(r.count ?? 0)));
@@ -102,13 +104,13 @@ export function habitWeek({ habit, history, pauses, rows, start }: HabitInput, m
     target = level.sessions ?? 0;
     counted = Math.min(done, target);
   } else {
-    // A daily habit: each day against the level in force on that day; "not today" days ask for nothing.
+    // A daily habit: each day against the level in force on that day; "not today" days and away days (flag away-lowers-targets) ask for nothing.
     target = 0;
     counted = 0;
     for (const d of days) {
       if (d < start) continue;
       const l = levelOn(habit, history, d);
-      const asked = countOn('skip', d) > 0 ? 0 : l.per === 'day' ? (l.sessions ?? 0) : 0;
+      const asked = countOn('skip', d) > 0 || away?.(d) ? 0 : l.per === 'day' ? (l.sessions ?? 0) : 0;
       target += asked;
       counted += Math.min(countOn('done', d), asked);
     }
@@ -130,7 +132,7 @@ interface HabitData {
 
 /** The habits (active and paused) with their level history, pauses and the done / plan / skip rows from `from`. */
 async function loadHabits(ctx: Ctx, from: string, to: string, today: string): Promise<HabitData> {
-  const [habits, logs, meta] = await Promise.all([
+  const [habits, logs, meta, away] = await Promise.all([
     list(ctx, habitsEntity, { sql: "status IN ('active', 'paused')", limit: 500 }),
     ctx.db
       .prepare("SELECT habit_id, day, kind, count FROM habit_log WHERE mode = ? AND day >= ? AND day <= ? AND kind IN ('done', 'plan', 'skip') LIMIT 5000")
@@ -140,6 +142,7 @@ async function loadHabits(ctx: Ctx, from: string, to: string, today: string): Pr
       .prepare("SELECT habit_id, day, kind, count, value FROM habit_log WHERE mode = ? AND kind IN ('level', 'pause', 'resume') ORDER BY day LIMIT 2000")
       .bind(ctx.mode)
       .all<Row>(),
+    awayForTargets(ctx),
   ]);
   return {
     habits: habits.map((habit) => {
@@ -153,6 +156,7 @@ async function loadHabits(ctx: Ctx, from: string, to: string, today: string): Pr
           pauses: pauseIntervals(mineMeta, today),
           rows: logs.results.filter((l) => l.habit_id === habit.id),
           start: startOf(habit, history),
+          away,
         },
       };
     }),
