@@ -2,7 +2,7 @@ import { render } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { checkSignedIn, get, localStorageSet, login, mode, redo, saving, signedIn, toast, undo, version } from './core/api';
 import { loadFeatures } from './core/features';
-import { HeaderItems, Overlays, tabBadges, useRoutes, useTabs } from './core/registry';
+import { HeaderItems, Overlays, routeTab, tabBadges, useRoutes, useTabs } from './core/registry';
 import { useSignal } from './core/signal';
 import { go, route } from './core/ui';
 import './features';
@@ -11,12 +11,8 @@ import './styles.css';
 /** Which tab or route a hash like '/p/abc' belongs to, and its parameters. */
 function useCurrent() {
   const r = useSignal(route);
-  const tabs = useTabs();
-  const routes = useRoutes();
-  const [, head, ...params] = r.split('/');
-  const extra = routes.find((x) => x.prefix === `/${head}`);
-  if (extra) return { r, params, tabId: extra.tab, render: () => extra.render({ route: r, params }) };
-  const tab = tabs.find((t) => t.path === `/${head}`) ?? tabs[0];
+  const { tab, extra, params } = routeTab(r, useTabs(), useRoutes());
+  if (extra) return { r, params, tabId: tab?.id ?? extra.tab, render: () => extra.render({ route: r, params }) };
   return { r, params, tabId: tab?.id, render: () => (tab ? tab.render({ route: r, params }) : null) };
 }
 

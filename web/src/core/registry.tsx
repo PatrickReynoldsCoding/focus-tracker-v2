@@ -22,6 +22,9 @@ export interface TabDef {
   feature?: string;
   /** Hidden while this flag is on (a tab that another feature's tab takes over from, such as Log → Insights). */
   hideWith?: string;
+  /** Tabs this one takes the place of while it is shown: they are hidden, and pages that belong to
+   *  them (RouteDef.tab) highlight this tab instead (Files replaces Notes and Whiteboards). */
+  replaces?: string[];
   /** Shown in the phone's bottom bar (max 5); the rest only in the side bar. */
   phone?: boolean;
   /** Where the tab's link goes, given the current route (default: `path`). */
@@ -259,9 +262,82 @@ export function standIn<P>(list: PanelDef<P>[], id: string): PanelDef<P> | undef
 
 export function useTabs(): TabDef[] {
   const flags = useFlags();
-  return visible(tabs, flags)
-    .filter((t) => !t.hideWith || !flags[t.hideWith])
-    .sort((a, b) => a.order - b.order);
+  const on = visible(tabs, flags).filter((t) => !t.hideWith || !flags[t.hideWith]);
+  const gone = new Set(on.flatMap((t) => t.replaces ?? []));
+  return on.filter((t) => !gone.has(t.id)).sort((a, b) => a.order - b.order);
+}
+
+/** Which tab a route belongs to, among the tabs shown (useTabs), and the extra route that draws it
+ *  (a page that is not a tab). A query (`/files?type=notes`) does not count. */
+export function routeTab(route: string, shown: TabDef[], extras: RouteDef[]): { tab?: TabDef; extra?: RouteDef; params: string[] } {
+  const [, head, ...params] = route.split('?')[0].split('/');
+  const extra = extras.find((x) => x.prefix === `/${head}`);
+  if (extra) return { extra, params, tab: shown.find((t) => t.id === extra.tab) ?? shown.find((t) => t.replaces?.includes(extra.tab)) };
+  return { params, tab: shown.find((t) => t.path === `/${head}`) ?? shown[0] };
+}
+
+// ---------- files (the Files tab) ----------
+
+/** One file as GET /api/files lists it (src/core/files.ts). */
+export interface FileItem {
+  type: string;
+  id: string;
+  name: string;
+  folder_id: string | null;
+  project_id: string | null;
+  updated_at: string;
+  created: string;
+  show_today?: boolean;
+  preview?: string | null;
+  kind?: string | null;
+  url?: string | null;
+  count?: number | null;
+  thumbnail?: boolean;
+  /** Where it is (folder names), in a search or a type filter. */
+  location?: string | null;
+}
+/** One entry of the Files tab's New menu: its dialog makes the file in the folder on screen. */
+export interface FileCreateDef {
+  id: string;
+  label: string;
+  icon: ComponentChildren;
+  order: number;
+  dialog: ComponentType<{ folderId: string | null; onClose: () => void }>;
+}
+/** A kind of file the Files tab shows (the server lists it, src/core/files.ts). Each feature
+ *  registers its own: how it looks, opens, is renamed, deleted and made. Pickers (Add file) and
+ *  project labels can read the same list. */
+export interface FileTypeDef {
+  /** The server's type: 'note', 'todo', 'list', 'whiteboard', 'link', 'project-note'. */
+  type: string;
+  /** The filter chip it belongs to. */
+  group: { id: string; label: string; order: number };
+  /** 'Note', 'To-do list' ... */
+  label: string;
+  order: number;
+  feature?: string;
+  /** Its icon, `size` px square (24 in lists, bigger in the grid). */
+  icon: (f: FileItem, size?: number) => VNode;
+  /** Where it opens: an app page ('#/n/<id>') or an address (external). */
+  href: (f: FileItem) => string;
+  external?: boolean;
+  /** Open it another way than following href (a whiteboard remembers where it was opened from). */
+  open?: (f: FileItem) => void;
+  /** A bigger view for the grid (a board's preview, a note's first lines). */
+  preview?: (f: FileItem) => VNode | null;
+  /** One short line about it ('3 open', 'Google Doc'). */
+  detail?: (f: FileItem) => string | null;
+  /** It stays where it is (a project's notes). */
+  fixed?: boolean;
+  rename?: (f: FileItem, name: string) => Promise<unknown>;
+  remove?: (f: FileItem) => Promise<unknown>;
+  create?: FileCreateDef[];
+}
+const fileTypes: (FileTypeDef & { id: string })[] = [];
+export const registerFileType = (t: FileTypeDef) => add(fileTypes, { ...t, id: t.type });
+/** The file types whose flag is on, in order. */
+export function useFileTypes(): FileTypeDef[] {
+  return visible(fileTypes, useFlags()).sort((a, b) => a.order - b.order);
 }
 export function useRoutes(): RouteDef[] {
   return visible(routes, useFlags());

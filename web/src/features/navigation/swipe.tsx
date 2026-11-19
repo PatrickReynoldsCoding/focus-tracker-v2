@@ -6,7 +6,7 @@
 
 import { useEffect, useRef } from 'preact/hooks';
 import { useFlag } from '../../core/features';
-import { useRoutes, useTabs, type TabDef } from '../../core/registry';
+import { routeTab, useRoutes, useTabs, type TabDef } from '../../core/registry';
 import { isEink } from '../../core/theme';
 
 /** Where a swipe must not start. `data-no-swipe` is for any other feature to opt out. */
@@ -33,8 +33,8 @@ export function SwipeTabs({ route }: { route: string }) {
   const on = useFlag('swipe-tabs');
   const tabs = useTabs();
   const routes = useRoutes();
-  const head = route.split('/')[1];
-  const tabId = (routes.find((x) => x.prefix === `/${head}`)?.tab ?? tabs.find((t) => t.path === `/${head}`)?.id) ?? tabs[0]?.id;
+  const found = routeTab(route, tabs, routes);
+  const tabId = found.tab?.id ?? found.extra?.tab ?? tabs[0]?.id;
   const at = tabs.findIndex((t) => t.id === tabId);
 
   // Read by the handlers below, so the listeners stay put (and an animation is not cut short) when the page changes.
