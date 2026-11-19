@@ -9,12 +9,13 @@
 // set on the elements directly (no re-render) whenever a panel's height changes.
 
 import type { VNode } from 'preact';
-import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { del, say, undo } from '../../core/api';
 import type { PanelDef, PanelLayoutProps } from '../../core/registry';
 import { signal, useSignal } from '../../core/signal';
 import { isEink } from '../../core/theme';
 import { AddFeature } from './AddFeature';
+import { GridScope, type GridStore } from './scope';
 import { COLS, DESKTOP, layoutNow, saveGrid, saveLayout, titleOf, useLayout, useMedia, type Grid as GridData, type Pos } from './store';
 
 const GAP = 14;
@@ -102,16 +103,36 @@ type Drag = {
   h?: number | null;
 };
 
+/** The panels' ids in the order a narrow screen shows them (the grid's reading order). */
+export function readingOrder(ids: string[], saved: GridData | null): string[] {
+  const list = ids.map((id) => ({ id, order: 0, render: () => null }));
+  return sortedIds(ids, places(list, saved));
+}
+
 /** The layout for 'today' and 'project': the grid on a desktop; on a narrower screen the panels in
- *  the desktop's reading order without the removed ones. */
+ *  the desktop's reading order without the removed ones. Inside one of Today's pills the grid is
+ *  the pill's own (GridScope). */
 export function GridLayout({ place, props, panels, next }: PanelLayoutProps) {
   const desktop = useMedia(DESKTOP);
   const data = useLayout(place);
-  const removed = new Set(data?.grid?.removed ?? []);
+  const scope = useContext(GridScope);
+  const removed = new Set(scope ? [] : (data?.grid?.removed ?? []));
   const shown = panels.filter((p) => p.fixed || p.alwaysShown || !removed.has(p.id));
+  const store: GridStore = scope ?? {
+    key: place,
+    label: place === 'project' ? 'every project page' : 'Today',
+    saved: data?.grid ?? null,
+    read: () => layoutNow(place).grid,
+    save: (g) => saveGrid(place, g),
+    remove: (p, base) => removeFromPage(place, p, base),
+    add: () => {},
+    addLabel: '+ Add feature',
+    reset: () => resetPage(place),
+    resetLabel: 'Reset this page',
+  };
   if (!desktop) {
     const movable = shown.filter((p) => !p.fixed);
-    const pos = places(movable, data?.grid ?? null);
+    const pos = places(movable, store.saved);
     const order = sortedIds(
       movable.map((p) => p.id),
       pos,
@@ -119,10 +140,28 @@ export function GridLayout({ place, props, panels, next }: PanelLayoutProps) {
     const byId = new Map(movable.map((p) => [p.id, p]));
     return next([...shown.filter((p) => p.fixed === 'top'), ...order.map((id) => byId.get(id)!), ...shown.filter((p) => p.fixed === 'bottom')]);
   }
-  return <Grid place={place} props={props} panels={shown} all={panels} saved={data?.grid ?? null} />;
+  return <Grid key={store.key} place={place} props={props} panels={shown} all={panels} store={store} own={!scope} />;
 }
 
-function Grid({ place, props, panels, all, saved }: { place: string; props: any; panels: PanelDef<any>[]; all: PanelDef<any>[]; saved: GridData | null }) {
+/** Edit layout's Remove on a page's own grid: a note or list leaves Today; another panel is stored in `removed`. */
+function removeFromPage(place: string, p: PanelDef<any>, base?: GridData) {
+  if (p.onRemove) return p.onRemove();
+  const g = base ?? layoutNow(place).grid ?? { items: {}, removed: [] };
+  saveGrid(place, { ...g, removed: [...g.removed.filter((x) => x !== p.id), p.id] }).then(
+    (ok) =>
+      ok &&
+      say(`${titleOf(p)} removed. + Add feature brings it back.`, 'info', {
+        label: 'Undo',
+        run: () => {
+          const g2 = layoutNow(place).grid ?? g;
+          saveGrid(place, { ...g2, removed: g2.removed.filter((x) => x !== p.id) });
+        },
+      }),
+  );
+}
+
+function Grid({ place, props, panels, all, store, own }: { place: string; props: any; panels: PanelDef<any>[]; all: PanelDef<any>[]; store: GridStore; own: boolean }) {
+  const saved = store.saved;
   const edit = useSignal(editing) === place;
   const [adding, setAdding] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -232,7 +271,7 @@ function Grid({ place, props, panels, all, saved }: { place: string; props: any;
 
   /** The grid with every drawn panel in this order (panels not drawn now keep their place). */
   const gridFor = (order: string[], change: Record<string, Partial<Pos>> = {}): GridData => {
-    const cur = layoutNow(place).grid;
+    const cur = store.read();
     const els = items();
     const items_: Record<string, Pos> = {};
     order.forEach((id, i) => {
@@ -247,23 +286,10 @@ function Grid({ place, props, panels, all, saved }: { place: string; props: any;
     for (const [id, it] of Object.entries(cur?.items ?? {})) if (!items_[id]) items_[id] = { ...it };
     return { items: items_, removed: cur?.removed ?? [] };
   };
-  const save = (order: string[], change: Record<string, Partial<Pos>> = {}) => saveGrid(place, gridFor(order, change));
+  const save = (order: string[], change: Record<string, Partial<Pos>> = {}) => store.save(gridFor(order, change));
 
-  const remove = (p: PanelDef<any>) => {
-    if (p.onRemove) return p.onRemove();
-    const g = gridFor(sortedIds(now.current.ids, now.current.pos));
-    saveGrid(place, { ...g, removed: [...g.removed.filter((x) => x !== p.id), p.id] }).then(
-      (ok) =>
-        ok &&
-        say(`${titleOf(p)} removed. + Add feature brings it back.`, 'info', {
-          label: 'Undo',
-          run: () => {
-            const g2 = layoutNow(place).grid ?? g;
-            saveGrid(place, { ...g2, removed: g2.removed.filter((x) => x !== p.id) });
-          },
-        }),
-    );
-  };
+  // The page's grid also keeps the places the other panels have on screen, so Remove moves nothing else.
+  const remove = (p: PanelDef<any>) => store.remove(p, own ? gridFor(sortedIds(now.current.ids, now.current.pos)) : undefined);
 
   // ---------- dragging and resizing ----------
 
@@ -304,7 +330,8 @@ function Grid({ place, props, panels, all, saved }: { place: string; props: any;
       el.style.top = `${top}px`;
       d.x = Math.max(0, Math.min(COLS - p.w, Math.round(left / colW)));
       const others = now.current.ids.filter((x) => x !== d.id);
-      const key = (id: string) => (id === d.id ? top : d.tops[id]);
+      // On a tie (dragged to the very top, which is clamped to 0) the dragged panel goes first.
+      const key = (id: string) => (id === d.id ? top - 0.5 : d.tops[id]);
       const xOf = (id: string) => (id === d.id ? d.x! : Number(items().get(id)?.dataset.x ?? 0));
       d.order = [...others, d.id].sort((a, b) => key(a) - key(b) || xOf(a) - xOf(b));
     } else {
@@ -420,14 +447,14 @@ function Grid({ place, props, panels, all, saved }: { place: string; props: any;
         <div class="lg-bar card" role="region" aria-label="Edit layout">
           <p>
             <strong>Edit layout</strong>
-            <span class="muted"> · {place === 'project' ? 'every project page' : 'Today'}: drag a panel to move it, its corner to resize it.</span>
+            <span class="muted"> · {store.label}: drag a panel to move it, its corner to resize it.</span>
           </p>
           <div class="row">
-            <button class="primary small" onClick={() => setAdding(true)}>
-              + Add feature
+            <button class="primary small" onClick={() => (own ? setAdding(true) : store.add())}>
+              {store.addLabel}
             </button>
-            <button class="ghost small" onClick={() => resetPage(place)}>
-              Reset this page
+            <button class="ghost small" onClick={store.reset}>
+              {store.resetLabel}
             </button>
             <button class="ghost small" onClick={() => (editing.value = null)}>
               Done
