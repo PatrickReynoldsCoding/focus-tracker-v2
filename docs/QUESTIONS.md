@@ -13,7 +13,7 @@ Questions the owner could not be asked while an item was built. Each gives the d
 ## The Today list (v0.19.0)
 
 1. Cards can be for a day too, so project work shows in the list. Ticking a project card in the list moves it to its board's last column (Done); a plain list's item stays where it is. Default: on (flag `today-panel`).
-2. Habits is left out of the usual Today pill but stays in the All pill, so habits show twice there. Default: kept in All; Edit layout → Remove takes it out.
+2. Habits is left out of the usual Today pill but stays in the All pill, so habits show twice there. Default: kept in All; its ⋯ menu (a long press on a phone) → Remove takes it out.
 3. Reminders and sessions are not in the list (v1 did not have them either; due reminders show as banners above Today). Default: not included.
 4. "Not today" is offered on weekly habits only, as in v1. Default: weekly only (Claude can still skip a daily habit).
 5. The Android widget still shows to-dos for today and habits left, not cards. Moving it to the Today list (`today_list` in `/api/status`) needs a new app version. Default: not changed in this release.
@@ -32,3 +32,15 @@ Questions the owner could not be asked while an item was built. Each gives the d
 8. Grid view is the default on a computer, list view on a phone; sort is by name. Default: as described, remembered per device.
 9. `#/notes` opens the top of Files (all files), not a Notes filter, because the Notes tab held notes, to-do lists and lists. Default: the top of Files.
 10. The Notes tab's "Project notes" cards switch and colours are not used by Files (a file's colour does not show). Default: not shown.
+
+## Move and resize on the page, no Edit layout (v0.21.0)
+
+1. A phone's height for a panel is its own (`ph`), apart from the computer's (`h`): the widths differ, so one height rarely suits both. The order is shared (moving a panel on the phone moves it in the desktop grid's order too, as the pill sheet's ▲ ▼ already did). Default: separate heights, shared order.
+2. Where a long press starts arranging: anywhere on a panel (its title always) except fields, a note's text and editor (so text can still be selected), a whiteboard being drawn, a project's board, and list items that drag (resources, criteria). Default: as described.
+3. A long press works on any screen under 900 px (also a narrow window with a mouse); from 900 px the grid's hover handles are used. Default: under 900 px.
+4. Page actions (Add panels…, Reset this pill's/page's layout) sit at the bottom of every panel's ⋯ menu on a computer, and in the Arrange bar on a phone, not in a separate page menu. Default: as described.
+5. "Add panels…" is a stop-gap until the "Add panel" button: in a pill it opens the pill's sheet, on the All pill and the project page the old Add feature list (renamed Add panels). Default: kept until that item.
+6. In the desktop grid, Pop out moved from the ⧉ on the panel's edge into the ⋯ menu (fewer handles); between 760 and 899 px, where there is no grid, the ⧉ stays. Default: as described.
+7. A phone height can be 120–4000 px (room for the Arrange handles); a computer height stays 60–4000. Default: as described.
+8. There is no way to start arranging on a phone without a long press (no button). Default: long press only, as asked.
+

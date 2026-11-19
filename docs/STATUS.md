@@ -6,7 +6,7 @@ Updated 2026-11-19. Phases from the spec (`SPEC.md` §7).
 |---|---|
 | 0 Decisions and setup | **Done**. Decisions in [DECISIONS.md](DECISIONS.md). Deployed at `https://focus-tracker.focus-tracker.workers.dev`. |
 | 1 Backend API and data model | **Done.** Every entity in spec §4 has a table and REST endpoints; moves, cascading deletes, server-side undo, `/api/status`. Tests. |
-| 2 MCP connector | **Done.** 74 tools, OAuth for Claude's custom connectors, API tokens for Claude Code. Tested end to end (register → consent → token → tool call). Not yet tried from the real Claude app. |
+| 2 MCP connector | **Done.** 76 tools, OAuth for Claude's custom connectors, API tokens for Claude Code. Tested end to end (register → consent → token → tool call). Not yet tried from the real Claude app. |
 | 3 Web app | **Done.** Today, Projects, project page (Kanban, notes, criteria, resources, sessions, issue links), Files (notes, lists, whiteboards, links in folders), Habits, Insights, Settings; PWA, offline, movable panels, Today pills (tabs on every screen), pop-out windows. |
 | 4 Google Drive sync | **Dropped** by the owner (2026-11-18): notes stay in the tracker; Google Docs are linked as resources. See [DECISIONS.md D11](DECISIONS.md). |
 | 5 Migration from v1 | **Done** (2026-11-18): Personal and Work imported into the live deployment, notes from the .docx exports, whiteboard drawings stored. |
@@ -15,7 +15,7 @@ Updated 2026-11-19. Phases from the spec (`SPEC.md` §7).
 | 8 Self-hosting | **Mostly done.** Deploy button, auto-provisioned D1/KV, self-migrating database, docs. The button needs the repository to be public. |
 | v1 parity, wave 1 | **Done** (v0.3.0–v0.10.0): Today panels, small items, issue links, notification settings, Android in-app updates, sessions, note editor, resources and Drive, habits. See [V1-GAPS.md](V1-GAPS.md). |
 | v1 parity, wave 2 | **Done** (v0.11.0–v0.17.0): whiteboards and stickies, Insights, Notes tab extras, themes and E-ink, Back and swipe, Plan my week, exact Android alarms, cleanup, offline, movable panels, Today pills, pop-out windows. |
-| Owner's fixes | v0.18.0: Today pills are tabs on every screen, grouped by default, each with its own desktop layout, plus an All pill (D29). v0.19.0: the Today list, one panel with today's habits, to-dos and cards; cards can be for a day (D30). v0.20.0: Files, one Drive-like tab with folders, search and a folder per project, in place of Notes and Whiteboards (D31). |
+| Owner's fixes | v0.18.0: Today pills are tabs on every screen, grouped by default, each with its own desktop layout, plus an All pill (D29). v0.19.0: the Today list, one panel with today's habits, to-dos and cards; cards can be for a day (D30). v0.20.0: Files, one Drive-like tab with folders, search and a folder per project, in place of Notes and Whiteboards (D31). v0.21.0: no Edit layout: panels move and resize on the page (hover handles and ⋯ on a computer, a long press on a phone) (D32). |
 | 9 Stretch | Parked: **export all data** button (wanted later), Work-mode PRs tab, fitness view. |
 
 ## Waiting for the owner
