@@ -113,6 +113,46 @@ function Login() {
   );
 }
 
+/** The phone's bottom bar: the first four phone tabs, then More with every other tab (Settings, Insights, Whiteboards ...). */
+function PhoneTabs({ tabs, tabId, current, badges }: { tabs: ReturnType<typeof useTabs>; tabId?: string; current: string; badges: Record<string, number> }) {
+  const [open, setOpen] = useState(false);
+  const first = tabs.filter((t) => t.phone).slice(0, 4);
+  const rest = tabs.filter((t) => !first.includes(t));
+  const inMore = rest.some((t) => t.id === tabId);
+  const moreBadge = rest.reduce((n, t) => n + (badges[t.id] ?? 0), 0);
+  const link = (t: (typeof tabs)[number], onClick?: () => void) => (
+    <a key={t.id} href={`#${t.href?.(current) ?? t.path}`} class={tabId === t.id ? 'on' : ''} aria-current={tabId === t.id ? 'page' : undefined} onClick={onClick}>
+      <span class="ico" aria-hidden="true">
+        {t.icon}
+        {badges[t.id] > 0 && <span class="badge" aria-label={`${badges[t.id]} waiting`}>{badges[t.id]}</span>}
+      </span>
+      <span>{t.label}</span>
+    </a>
+  );
+  return (
+    <>
+      <nav class="tabs" aria-label="Main">
+        {first.map((t) => link(t))}
+        {rest.length > 0 && (
+          <button class={`more-tab ${inMore ? 'on' : ''}`} aria-expanded={open} aria-haspopup="dialog" onClick={() => setOpen(!open)}>
+            <span class="ico" aria-hidden="true">
+              ⋯{moreBadge > 0 && <span class="badge">{moreBadge}</span>}
+            </span>
+            <span>More</span>
+          </button>
+        )}
+      </nav>
+      {open && (
+        <div class="more-sheet-backdrop" onClick={() => setOpen(false)}>
+          <nav class="more-sheet" aria-label="More" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}>
+            {rest.map((t) => link(t, () => setOpen(false)))}
+          </nav>
+        </div>
+      )}
+    </>
+  );
+}
+
 function App() {
   const ok = useSignal(signedIn);
   const tabs = useTabs();
@@ -188,17 +228,7 @@ function App() {
           <Page />
         </main>
       </div>
-      <nav class="tabs" aria-label="Main">
-        {tabs.filter((t) => t.phone).slice(0, 5).map((t) => (
-          <a key={t.id} href={`#${t.href?.(current) ?? t.path}`} class={tabId === t.id ? 'on' : ''} aria-current={tabId === t.id ? 'page' : undefined}>
-            <span class="ico" aria-hidden="true">
-              {t.icon}
-              {badges[t.id] > 0 && <span class="badge" aria-label={`${badges[t.id]} waiting`}>{badges[t.id]}</span>}
-            </span>
-            <span>{t.label}</span>
-          </a>
-        ))}
-      </nav>
+      <PhoneTabs tabs={tabs} tabId={tabId} current={current} badges={badges} />
       <Toast />
       <Overlays route={current} />
     </div>

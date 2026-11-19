@@ -15,7 +15,7 @@ function Lazy({ open }: { open?: 'logs' }) {
   return Page ? <Page open={open} /> : <p class="empty">Loading…</p>;
 }
 
-registerTab({ id: 'insights', path: '/insights', label: 'Insights', icon: '◔', order: 50, feature: FLAG, render: () => <Lazy /> });
+registerTab({ id: 'insights', path: '/insights', label: 'Insights', icon: '▥', order: 50, feature: FLAG, render: () => <Lazy /> });
 // The old address of the Log tab opens the Logs sub-tab.
 registerRoute({ id: 'insights-log', prefix: '/log', tab: 'insights', feature: FLAG, render: () => <Lazy open="logs" /> });
 // The phone's bottom bar is full, so Settings carries a way in.
