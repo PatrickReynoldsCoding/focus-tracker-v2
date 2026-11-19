@@ -1,32 +1,98 @@
-// Today settings (the ⚙ at the end of the phone's pill row): the pills (add, rename, reorder,
-// delete, choose their panels), the focus card's size and the pill row's switches. Every change
-// shows at once and is saved behind; pill changes can be undone (Undo, or the message's Undo).
+// Today settings (the ⚙ at the end of the pill row, on every screen): the pills (add, rename,
+// reorder, delete, choose their panels), the focus card's size and the pill row's switches. The
+// pill sheet (PillSheet) is also opened straight from the row on a wide screen (✎ Edit pill,
+// + New pill). Every change shows at once and is saved behind; pill changes can be undone.
 
 import { useState } from 'preact/hooks';
-import { del, newId, undo } from '../../core/api';
+import { del, undo } from '../../core/api';
 import { useFlags } from '../../core/features';
 import { lookupPanel, type PanelDef } from '../../core/registry';
 import { Dialog } from '../../core/ui';
 import { groupByKind, useAddable } from './AddFeature';
-import { MAX_PILLS, PILL_ICONS, PILL_NAME_MAX, PINNED, saveLayout, savePills, saveView, titleOf, type Pill, type View } from './store';
+import { readingOrder } from './grid';
+import { layoutNow, MAX_PILLS, newPill, PILL_ICONS, PILL_NAME_MAX, PINNED, saveLayout, savePillGrid, savePills, saveView, titleOf, type Pill, type View } from './store';
 
 type Option = { id: string; title: string; kind?: string; description?: string };
 
-export function TodaySettings({ place, panels, pills, saved, view, onClose }: { place: string; panels: PanelDef<any>[]; pills: Pill[]; saved: boolean; view: View; onClose: () => void }) {
-  const [editing, setEditing] = useState<{ pill: Pill; isNew: boolean } | null>(null);
+/** Everything a pill can hold: Today's panels (not the pinned focus card), then what could go on Today. */
+function usePillOptions(place: string, panels: PanelDef<any>[]) {
   const flags = useFlags();
   const offered = useAddable(place);
-  // Everything a pill can hold: Today's panels (not the pinned focus card), then what could go on Today.
   const options: Option[] = [
     ...panels.filter((p) => !p.fixed && p.id !== PINNED).map((p) => ({ id: p.id, title: titleOf(p), kind: p.kind, description: p.description })),
     ...(offered ?? []).filter((a) => !panels.some((p) => p.id === a.id)),
   ];
   const nameOf = (id: string) => options.find((o) => o.id === id)?.title ?? lookupPanel(place, id, flags)?.title ?? 'Panel';
+  return { options, nameOf, loading: offered === null };
+}
+
+/** Save a pill made or changed in the sheet. When the pill has its own grid, the sheet's order
+ *  becomes the grid's order too (so ▲ ▼ mean the same on the phone and the computer). */
+async function savePill(place: string, pills: Pill[], p: Pill, isNew: boolean): Promise<boolean> {
+  const ok = await savePills(place, isNew ? [...pills, p] : pills.map((x) => (x.id === p.id ? p : x)));
+  const grid = layoutNow(place).grids[p.id];
+  if (ok && grid && readingOrder(p.panels, grid).join() !== p.panels.join()) {
+    const items: typeof grid.items = {};
+    p.panels.forEach((id, i) => grid.items[id] && (items[id] = { ...grid.items[id], y: i * 10 }));
+    await savePillGrid(place, p.id, { items, removed: [] });
+  }
+  return ok;
+}
+
+/** The sheet that makes or changes one pill, on its own (from the pill row) or over Today settings. */
+export function PillSheet({
+  place,
+  panels,
+  pills,
+  start,
+  isNew,
+  onClose,
+  onDone,
+}: {
+  place: string;
+  panels: PanelDef<any>[];
+  pills: Pill[];
+  start: Pill;
+  isNew: boolean;
+  onClose: () => void;
+  /** After a save or delete: what can be undone, and the pill to show (a new one). */
+  onDone: (undoable: string | null, show?: string) => void;
+}) {
+  const { options, nameOf, loading } = usePillOptions(place, panels);
+  const grid = layoutNow(place).grids[start.id];
+  const first = grid ? { ...start, panels: readingOrder(start.panels, grid) } : start;
+  return (
+    <PillEditor
+      start={first}
+      isNew={isNew}
+      options={options}
+      loading={loading}
+      nameOf={nameOf}
+      onClose={onClose}
+      onSave={async (p) => {
+        onDone(null, isNew ? p.id : undefined);
+        await savePill(place, pills, p, isNew);
+      }}
+      onDelete={
+        isNew
+          ? undefined
+          : async () => {
+              const ok = await savePills(place, pills.filter((x) => x.id !== start.id));
+              onDone(ok ? `Pill “${start.name}” deleted` : null);
+            }
+      }
+    />
+  );
+}
+
+export function TodaySettings({ place, panels, pills, saved, view, onClose }: { place: string; panels: PanelDef<any>[]; pills: Pill[]; saved: boolean; view: View; onClose: () => void }) {
+  const [editing, setEditing] = useState<{ pill: Pill; isNew: boolean } | null>(null);
+  const { nameOf } = usePillOptions(place, panels);
 
   // The sheet sits above the page's messages, so what can be undone is said here, with its Undo.
   const [notice, setNotice] = useState<string | null>(null);
   const save = (list: Pill[], done?: string) => savePills(place, list).then((ok) => setNotice(ok && done ? done : null));
-  const reset = () => saveLayout(place, { pills: null }, () => del(`/layout/${place}/pills`)).then((ok) => setNotice(ok ? 'Pills are back to one per panel.' : null));
+  const reset = () => saveLayout(place, { pills: null }, () => del(`/layout/${place}/pills`)).then((ok) => setNotice(ok ? 'Pills are back to the usual ones.' : null));
   const moveBy = (i: number, d: -1 | 1) => {
     const j = i + d;
     if (j < 0 || j >= pills.length) return;
@@ -34,10 +100,9 @@ export function TodaySettings({ place, panels, pills, saved, view, onClose }: { 
     [list[i], list[j]] = [list[j], list[i]];
     save(list);
   };
-  const remove = (pill: Pill) => save(pills.filter((p) => p.id !== pill.id), `Pill “${pill.name}” deleted`);
   const full = pills.length >= MAX_PILLS;
   const card = view.focusCard ?? 'compact';
-  const sw = (key: 'pillCounts' | 'pillSwipe' | 'pillLast', label: string, hint: string) => {
+  const sw = (key: 'pillCounts' | 'pillSwipe' | 'pillLast' | 'pillAll', label: string, hint: string) => {
     const on = view[key] !== false;
     return (
       <label class="pl-switch">
@@ -55,7 +120,7 @@ export function TodaySettings({ place, panels, pills, saved, view, onClose }: { 
       <div class="pl-settings">
         <section>
           <h3>Pills</h3>
-          <p class="muted small">Each pill shows its panels one under the other. Swipe on the panels to go to the next pill.</p>
+          <p class="muted small">Each pill is a tab of Today with the panels you put in it, the same on every device. On a computer each pill has its own layout; on a phone its panels stack, and a swipe on them goes to the next pill.</p>
           <ul class="pl-cards">
             {pills.map((pill, i) => (
               <li key={pill.id} class="pl-card">
@@ -105,16 +170,17 @@ export function TodaySettings({ place, panels, pills, saved, view, onClose }: { 
             </div>
           )}
           <div class="row">
-            <button class="primary" disabled={full} onClick={() => setEditing({ pill: { id: `p${newId()}`, name: '', icon: null, panels: [] }, isNew: true })}>
+            <button class="primary" disabled={full} onClick={() => setEditing({ pill: newPill(), isNew: true })}>
               + New pill
             </button>
             {saved && (
               <button class="ghost" onClick={reset}>
-                Back to one pill per panel
+                Back to the usual pills
               </button>
             )}
           </div>
           {full && <span class="muted small">At most {MAX_PILLS} pills.</span>}
+          {sw('pillAll', 'Show the All pill', 'at the end: every panel on Today, so nothing is out of reach')}
         </section>
 
         <section>
@@ -132,36 +198,31 @@ export function TodaySettings({ place, panels, pills, saved, view, onClose }: { 
               </button>
             ))}
           </div>
-          <p class="muted small">{card === 'compact' ? 'The project and its session; More shows the rest.' : card === 'full' ? 'The whole focus card.' : 'No focus card on Today. The corner timer still shows a running session.'}</p>
+          <p class="muted small">
+            Above the pills, on every device.{' '}
+            {card === 'compact' ? 'The project and its session; More shows the rest.' : card === 'full' ? 'The whole focus card.' : 'No focus card on Today. The corner timer still shows a running session.'}
+          </p>
         </section>
 
         <section>
           <h3>Pill row</h3>
           {sw('pillCounts', 'Show counts on pills', 'such as to-dos still open')}
-          {sw('pillSwipe', 'Swipe between pills', 'on the panels; off: a swipe there changes tab')}
+          {sw('pillSwipe', 'Swipe between pills', 'on a phone, on the panels; off: a swipe there changes tab')}
           {sw('pillLast', 'Open on the pill I used last', 'off: the first pill')}
         </section>
       </div>
       {editing && (
-        <PillEditor
+        <PillSheet
+          place={place}
+          panels={panels}
+          pills={pills}
           start={editing.pill}
           isNew={editing.isNew}
-          options={options}
-          loading={offered === null}
-          nameOf={nameOf}
           onClose={() => setEditing(null)}
-          onSave={(p) => {
+          onDone={(msg) => {
             setEditing(null);
-            save(editing.isNew ? [...pills, p] : pills.map((x) => (x.id === p.id ? p : x)));
+            setNotice(msg);
           }}
-          onDelete={
-            editing.isNew
-              ? undefined
-              : () => {
-                  setEditing(null);
-                  remove(editing.pill);
-                }
-          }
         />
       )}
     </Dialog>

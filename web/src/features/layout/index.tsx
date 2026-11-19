@@ -1,5 +1,5 @@
 // Shape the pages (V1-GAPS 39–41): the desktop grid of Today and the project page (flag
-// `movable-panels`), the phone's Today pills and Today settings (flag `today-pills`) and pop-out
+// `movable-panels`), Today's pills (tabs on every screen, each with its own grid) and Today settings (flag `today-pills`) and pop-out
 // windows on a wide screen (flag `popout-windows`). Works on any panel registered for those places, and on the panels their
 // sources add (each note, list and whiteboard on Today), so a feature added later is movable too.
 // Layout data: GET/PUT /api/layout/<place> (src/modules/layout.ts), per mode, for every device.
@@ -30,7 +30,7 @@ route.subscribe(() => (editing.value = null));
 // Pop-out windows first: they turn a popped-out panel into a placeholder for the layouts after them.
 registerPanelLayout({ id: 'popout', order: 10, feature: 'popout-windows', places: ['today', 'project'], component: PopoutLayout });
 registerOverlay({ id: 'popout-windows', order: 50, feature: 'popout-windows', render: () => <PopoutWindows /> });
-// The phone's Today pills come before the grid in the chain (on a phone the grid only filters and orders).
+// Today's pills come before the grid in the chain: they choose the panels, the grid (or a phone's stack) draws them.
 registerPanelLayout({ id: 'pills', order: 20, feature: 'today-pills', places: ['today'], component: PillsLayout });
 registerPanelLayout({ id: 'grid', order: 30, feature: 'movable-panels', places: ['today', 'project'], component: GridLayout });
 registerHeaderItem({ id: 'edit-layout', order: 20, feature: 'movable-panels', render: () => <EditLayoutButton /> });

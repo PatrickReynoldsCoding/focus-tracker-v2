@@ -1,30 +1,41 @@
-// Today on a phone (V1-GAPS 40, flag `today-pills`): the focus card pinned at the top, a row of
-// pills, and the chosen pill's panels one under the other. A pill is a name, an optional icon and
-// any Today panels in an order (also notes, lists and whiteboards not on the desktop's Today).
-// Swiping on the panels changes pill (a swipe anywhere else still changes tab). Pills and their
-// switches are saved per mode on the server (layout.today.pills / .view); with none saved, each
-// Today panel is its own pill.
+// Today's pills (V1-GAPS 40, flag `today-pills`), on every screen: the focus card pinned at the
+// top, a row of pills (tabs), and the chosen pill's panels. A pill is a name, an optional icon and
+// any Today panels (also notes, lists and whiteboards not on Today). On a wide screen the panels
+// are the grid (grid.tsx), each pill with its own layout; on a phone they stack, and a swipe on
+// them changes pill (a swipe anywhere else still changes tab). "All" shows every panel on Today
+// with the page's own grid. Pills and their switches are saved per mode on the server
+// (layout.today.pills / .grids / .view); with none saved, the usual pills group the panels.
 
-import type { VNode } from 'preact';
+import { Fragment, type VNode } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { localStorageSet, mode } from '../../core/api';
+import { localStorageSet, mode, say, undo } from '../../core/api';
 import { useFlags } from '../../core/features';
 import { lookupPanel, type PanelDef, type PanelLayoutProps } from '../../core/registry';
 import { useSignal } from '../../core/signal';
 import { isEink } from '../../core/theme';
-import { TodaySettings } from './TodaySettings';
-import { MAX_PILLS, PHONE, PILL_NAME_MAX, PINNED, titleOf, useLayout, useMedia, type Pill } from './store';
+import { GridScope, type GridStore } from './scope';
+import { PillSheet, TodaySettings } from './TodaySettings';
+import { layoutNow, MAX_PILLS, newPill, PHONE, PINNED, resetPillGrid, savePillGrid, savePills, titleOf, useLayout, useMedia, type Pill } from './store';
 
-/** A short name for a pill made from a panel. */
-export const shortName = (title: string) => ([...title].length > PILL_NAME_MAX ? [...title].slice(0, PILL_NAME_MAX - 1).join('') + '…' : title);
+/** The id of the built-in "All" pill (every panel on Today, the page's own grid). Never saved. */
+export const ALL = '_all';
+/** The usual "Today" pill: the focus card's companions. */
+const MAIN = ['todos', 'habits', 'plan-week'];
+const NOTE_KINDS = new Set(['note', 'list', 'todo', 'whiteboard']);
 
-/** With no pills saved: each Today panel is its own pill (removed ones left out); past 12 the last holds the rest. */
-export function defaultPills(panels: PanelDef<any>[], removed: string[]): Pill[] {
+/** With no pills saved: Today (to-dos, habits, this week), Notes (notes, lists, whiteboards on
+ *  Today) and More (the rest), leaving out panels removed from the page and empty pills. */
+export function usualPills(panels: PanelDef<any>[], removed: string[]): Pill[] {
   const list = panels.filter((p) => !p.fixed && p.id !== PINNED && !removed.includes(p.id));
-  const pills: Pill[] = list.map((p) => ({ id: p.id.replace(/[^A-Za-z0-9_-]/g, '-').slice(0, 40), name: shortName(titleOf(p)), icon: null, panels: [p.id] }));
-  if (pills.length <= MAX_PILLS) return pills;
-  const more: Pill = { id: 'more', name: 'More', icon: null, panels: pills.slice(MAX_PILLS - 1).flatMap((p) => p.panels) };
-  return [...pills.slice(0, MAX_PILLS - 1), more];
+  const main = MAIN.filter((id) => list.some((p) => p.id === id));
+  const notes = list.filter((p) => NOTE_KINDS.has(p.kind ?? '')).map((p) => p.id);
+  const rest = list.map((p) => p.id).filter((id) => !main.includes(id) && !notes.includes(id));
+  const pills: Pill[] = [
+    { id: 'today', name: 'Today', icon: '🎯', panels: main },
+    { id: 'notes', name: 'Notes', icon: '📚', panels: notes },
+    { id: 'more', name: 'More', icon: null, panels: rest },
+  ];
+  return pills.filter((p) => p.panels.length);
 }
 
 /** The pill chosen in this page load, per mode (kept even when "open on the pill I used last" is off). */
@@ -39,9 +50,7 @@ const readLast = (m: string) => {
 };
 
 export function PillsLayout({ place, props, panels, next }: PanelLayoutProps) {
-  const phone = useMedia(PHONE);
-  if (!phone) return next(panels);
-  return <Pills place={place} props={props} panels={panels} />;
+  return <Pills place={place} props={props} panels={panels} next={next} />;
 }
 
 /** Where a swipe means something else (the same places the tab swipe leaves alone). */
@@ -56,28 +65,28 @@ function blockedAt(el: Element | null, stop: Element): boolean {
 }
 const calm = () => isEink() || matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-function Pills({ place, props, panels }: { place: string; props: any; panels: PanelDef<any>[] }) {
+function Pills({ place, props, panels, next }: PanelLayoutProps) {
   const m = useSignal(mode);
   const flags = useFlags();
+  const phone = useMedia(PHONE);
   const data = useLayout(place);
   const [settings, setSettings] = useState(false);
+  const [sheet, setSheet] = useState<{ pill: Pill; isNew: boolean } | null>(null);
   const view = data?.view ?? {};
   const removed = data?.grid?.removed ?? [];
-  const pills = data?.pills ?? defaultPills(panels, removed);
+  const pills = data?.pills ?? usualPills(panels, removed);
+  const pillsNow = useRef(pills);
+  pillsNow.current = pills;
   const byId = new Map(panels.map((p) => [p.id, p]));
+  const movable = panels.filter((p) => !p.fixed && p.id !== PINNED);
 
-  /** A pill's panels, drawn: Today's own, else drawn on their own (a list not on Today). */
-  const drawn = (pill: Pill) =>
-    pill.panels
-      .map((id) => {
-        const p = byId.get(id) ?? lookupPanel(place, id, flags);
-        if (!p || p.fixed || p.id === PINNED) return null;
-        const node = p.render(props) as VNode | null;
-        return node ? { p, node } : null;
-      })
-      .filter(Boolean) as { p: PanelDef<any>; node: VNode }[];
+  /** A pill's panels: Today's own, else drawn on their own (a list not on Today). */
+  const panelsOf = (pill: Pill) =>
+    pill.panels.map((id) => byId.get(id) ?? lookupPanel(place, id, flags)).filter((p): p is PanelDef<any> => !!p && !p.fixed && p.id !== PINNED);
+  const entries = pills.map((pill) => ({ pill, list: panelsOf(pill) }));
+  if (view.pillAll !== false) entries.push({ pill: { id: ALL, name: 'All', icon: null, panels: movable.map((p) => p.id) }, list: movable });
   // A pill whose panels have nothing to show now is left out of the row (an empty pill stays: it says so).
-  const shown = pills.map((pill) => ({ pill, items: drawn(pill) })).filter((x) => !x.pill.panels.length || x.items.length);
+  const shown = entries.filter((x) => x.pill.id === ALL || !x.pill.panels.length || x.list.some((p) => p.render(props)));
 
   const [chosen, setChosenState] = useState<string | null>(() => chosenNow.get(m) ?? (view.pillLast !== false ? readLast(m) : null));
   useEffect(() => setChosenState(chosenNow.get(m) ?? (view.pillLast !== false ? readLast(m) : null)), [m]);
@@ -103,7 +112,7 @@ function Pills({ place, props, panels }: { place: string; props: any; panels: Pa
 
   // ---------- swipe on the panels: the pill before or after ----------
   const area = useRef<HTMLDivElement>(null);
-  const swipeOn = view.pillSwipe !== false;
+  const swipeOn = phone && view.pillSwipe !== false;
   const now = useRef({ at, n: shown.length, ids: shown.map((x) => x.pill.id) });
   now.current = { at, n: shown.length, ids: shown.map((x) => x.pill.id) };
   useEffect(() => {
@@ -192,11 +201,29 @@ function Pills({ place, props, panels }: { place: string; props: any; panels: Pa
 
   const focus = byId.get(PINNED);
   const card = view.focusCard ?? 'compact';
-  const countOf = (pill: Pill) =>
-    pill.panels
-      .map((id) => byId.get(id)?.count?.(props))
+  const countOf = (list: PanelDef<any>[]) =>
+    list
+      .map((p) => p.count?.(props))
       .filter((c) => c !== null && c !== undefined && c !== '')
       .join(' · ');
+
+  /** Inside a pill the grid keeps the pill's own layout; Remove takes a panel out of the pill. */
+  const scopeFor = (pill: Pill): GridStore => ({
+    key: `pill-${pill.id}`,
+    label: `the pill “${pill.name}”`,
+    saved: data?.grids?.[pill.id] ?? null,
+    read: () => layoutNow(place).grids[pill.id] ?? null,
+    save: (g) => savePillGrid(place, pill.id, g),
+    remove: (p) => {
+      const list = pillsNow.current.map((x) => (x.id === pill.id ? { ...x, panels: x.panels.filter((id) => id !== p.id) } : x));
+      savePills(place, list).then((ok) => ok && say(`${titleOf(p)} is out of “${pill.name}”. All still has it if it is on Today.`, 'info', { label: 'Undo', run: undo }));
+    },
+    add: () => setSheet({ pill, isNew: false }),
+    addLabel: '+ Add panels',
+    reset: () => resetPillGrid(place, pill.id),
+    resetLabel: 'Reset this pill',
+  });
+  const editable = current && current.pill.id !== ALL ? current.pill : null;
 
   return (
     <div class="pl-page">
@@ -210,9 +237,19 @@ function Pills({ place, props, panels }: { place: string; props: any; panels: Pa
         <div class="pl-row" role="tablist" aria-label="Today’s pills" ref={row} onKeyDown={(e) => keys(e as unknown as KeyboardEvent)}>
           {shown.map(({ pill }, i) => {
             const on = i === at;
-            const c = view.pillCounts !== false ? countOf(pill) : '';
+            const c = view.pillCounts !== false && pill.id !== ALL ? countOf(shown[i].list) : '';
             return (
-              <button key={pill.id} role="tab" class={`pl-pill ${on ? 'on' : ''}`} aria-selected={on} tabIndex={on ? 0 : -1} aria-controls="pl-panels" onClick={() => choose(pill.id)}>
+              <button
+                key={pill.id}
+                role="tab"
+                class={`pl-pill ${on ? 'on' : ''}`}
+                aria-selected={on}
+                tabIndex={on ? 0 : -1}
+                aria-controls="pl-panels"
+                title={pill.id === ALL ? 'Every panel on Today' : undefined}
+                onClick={() => choose(pill.id)}
+                onDblClick={() => pill.id !== ALL && setSheet({ pill, isNew: false })}
+              >
                 {pill.icon && <span aria-hidden="true">{pill.icon}</span>}
                 <span>{pill.name}</span>
                 {c && <span class="pl-count">{c}</span>}
@@ -220,19 +257,33 @@ function Pills({ place, props, panels }: { place: string; props: any; panels: Pa
             );
           })}
         </div>
-        <button class="pl-gear icon" aria-label="Today settings" title="Today settings" onClick={() => setSettings(true)}>
+        {!phone && editable && (
+          <button class="ghost small pl-tool" title={`Rename “${editable.name}” or choose its panels`} onClick={() => setSheet({ pill: editable, isNew: false })}>
+            ✎ Edit pill
+          </button>
+        )}
+        {!phone && (
+          <button class="ghost small pl-tool" disabled={pills.length >= MAX_PILLS} title={pills.length >= MAX_PILLS ? `At most ${MAX_PILLS} pills` : 'Make a new pill'} onClick={() => setSheet({ pill: newPill(), isNew: true })}>
+            + New pill
+          </button>
+        )}
+        <button class="pl-gear icon" aria-label="Today settings" title="Today settings: pills, focus card, switches" onClick={() => setSettings(true)}>
           ⚙
         </button>
       </div>
       <div id="pl-panels" class="pl-panels" role="tabpanel" aria-label={current?.pill.name ?? 'Today'} ref={area} data-no-swipe={swipeOn ? '' : undefined}>
         {!current ? (
-          <p class="empty">No pills yet. Today settings makes them.</p>
-        ) : current.items.length ? (
-          current.items.map(({ p, node }) => <Slot key={p.id} node={node} />)
+          <p class="empty">No pills yet. Today settings (⚙) makes them.</p>
+        ) : current.pill.id === ALL ? (
+          <Fragment key={ALL}>{next(current.list)}</Fragment>
+        ) : current.list.length ? (
+          <GridScope.Provider key={current.pill.id} value={scopeFor(current.pill)}>
+            {next(current.list)}
+          </GridScope.Provider>
         ) : (
           <div class="card pl-empty">
             <p class="muted">This pill has no panels yet.</p>
-            <button class="primary" onClick={() => setSettings(true)}>
+            <button class="primary" onClick={() => setSheet({ pill: current.pill, isNew: false })}>
               Add panels
             </button>
           </div>
@@ -244,6 +295,21 @@ function Pills({ place, props, panels }: { place: string; props: any; panels: Pa
           <Slot key={p.id} node={p.render(props)} />
         ))}
       {settings && <TodaySettings place={place} panels={panels} pills={pills} saved={!!data?.pills} view={view} onClose={() => setSettings(false)} />}
+      {sheet && (
+        <PillSheet
+          place={place}
+          panels={panels}
+          pills={pills}
+          start={sheet.pill}
+          isNew={sheet.isNew}
+          onClose={() => setSheet(null)}
+          onDone={(msg, made) => {
+            setSheet(null);
+            if (made) choose(made);
+            if (msg) say(msg, 'info', { label: 'Undo', run: undo });
+          }}
+        />
+      )}
     </div>
   );
 }

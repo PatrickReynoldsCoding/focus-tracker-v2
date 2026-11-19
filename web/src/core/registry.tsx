@@ -61,9 +61,9 @@ export interface PanelDef<P> {
   kind?: string;
   /** For a panel a source made (a list on Today): what Remove does instead of hiding it. */
   onRemove?: () => void;
-  /** A short count for the phone's Today pills (to-dos open, habits done of all); nothing = no count. */
+  /** A short count for Today's pills (to-dos open, habits done of all); nothing = no count. */
   count?: (props: P) => string | number | null | undefined;
-  /** A short version, for the top of a phone's Today (the focus card). */
+  /** A short version, for the top of Today above the pills (the focus card). */
   compact?: Render<P>;
   /** What it edits that may be on screen only once (a note: 'note:project:<id>'); while it is in a
    *  window, every other panel with the same key shows a placeholder. */
@@ -141,7 +141,7 @@ export interface PanelSourceDef<P> {
   order: number;
   feature?: string;
   Provide: ComponentType<{ props: P; children: (panels: PanelDef<P>[]) => VNode | null }>;
-  /** One of this source's panels by id, drawn anywhere (a phone pill, a window), loading its own
+  /** One of this source's panels by id, drawn anywhere (a pill of Today, a window), loading its own
    *  data; also for something not on the page now. null when the id is not this source's. */
   resolve?: (id: string) => PanelDef<any> | null;
   /** What could be put on the page (not on it now), for "+ Add feature" and the pills. */
@@ -157,7 +157,7 @@ export interface Addable {
   add: () => unknown;
 }
 
-/** Arranges a place's panels (the desktop grid, the phone's Today pills, pop-out windows). Layouts
+/** Arranges a place's panels (the desktop grid, Today's pills, pop-out windows). Layouts
  *  are chained by `order`: each gets the panels and calls `next(panels)` for the rest of the chain,
  *  so one can change what the next one draws (a placeholder, a filter) or draw everything itself. */
 export interface PanelLayoutProps<P = any> {

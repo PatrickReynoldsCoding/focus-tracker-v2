@@ -96,7 +96,7 @@ html[data-theme='eink'] .lg-moving { outline: 3px solid #000; opacity: 1; }
 .pl-seg button + button { border-left: 1px solid var(--line); }
 .pl-seg button.on { background: var(--accent-soft); color: var(--fg); font-weight: 600; box-shadow: inset 0 -3px 0 var(--accent); }
 .pl-switch { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; color: var(--fg); font-size: 1rem; min-height: 44px; }
-.pl-switch input { appearance: none; width: 46px; height: 28px; min-height: 0; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); position: relative; flex: none; cursor: pointer; padding: 0; }
+.pl-switch input[type='checkbox'] { appearance: none; width: 46px; height: 28px; min-height: 0; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); position: relative; flex: none; cursor: pointer; padding: 0; }
 .pl-switch input::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--muted); transition: left 0.15s; }
 .pl-switch input:checked { background: var(--accent); border-color: var(--accent); }
 .pl-switch input:checked::after { left: 21px; background: var(--accent-fg); }
@@ -176,3 +176,9 @@ html[data-theme='eink'] .po-chip { border: 3px solid #000; }
 html[data-theme='eink'] .po-tabs button.on { background: #000; color: #fff; }
 html[data-theme='eink'] .po-placeholder { border: 3px dashed #000; }
 html[data-theme='eink'] .po-size { width: 26px; height: 26px; background: linear-gradient(135deg, transparent 50%, #000 50%); }
+
+/* ---------- Today's pills on a wide screen (pills.tsx) ---------- */
+.pl-tool { flex: none; white-space: nowrap; }
+html[data-theme='eink'] .pl-tool { min-height: 44px; border: 2px solid #000; }
+@media (min-width: 760px) { .pl-panels { min-height: 0; } }
+html[data-theme='eink'] .pl-switch input[type='checkbox'] { width: 52px; height: 30px; }
