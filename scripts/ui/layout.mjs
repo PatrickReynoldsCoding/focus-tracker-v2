@@ -1,8 +1,9 @@
-// Browser check for page layouts (V1-GAPS 39–41): the desktop grid (drag, resize, remove, add
-// back, reset; on Today in the All pill), Today's pills on a computer (each pill its own grid,
-// Edit pill, New pill, Edit layout inside a pill) and on a phone (Today settings, swipes), and
-// pop-out windows.
-// Needs a seeded server (seed.mjs). Usage: FT_URL=http://localhost:8787 node scripts/ui/layout.mjs [grid|desk-pills|pills|popout|offline]
+// Browser check for page layouts (V1-GAPS 39–41): the desktop grid, straight on the page (drag by
+// the title, resize from the corner, the ⋯ menu's Remove, Add panels and Reset; on Today in the All
+// pill), Today's pills on a computer (each pill its own grid, Edit pill, New pill, Remove from a
+// pill) and on a phone (Today settings, swipes), arranging on a phone (a long press: move, height,
+// remove, add back; leaving it), and pop-out windows.
+// Needs a seeded server (seed.mjs). Usage: FT_URL=http://localhost:8787 node scripts/ui/layout.mjs [grid|desk-pills|pills|arrange|popout|offline]
 import { mkdirSync } from 'node:fs';
 import { apiCtx, B, launch, open, OUT } from './lib.mjs';
 
@@ -16,6 +17,8 @@ const ok = (cond, msg) => {
   console.log(`ok - ${msg}`);
 };
 const shot = (page, name) => page.screenshot({ path: `${OUT}/layout-${name}.png`, fullPage: true });
+/** The screen as it is (a full-page shot resizes the window, which closes an open menu). */
+const view = (page, name) => page.screenshot({ path: `${OUT}/layout-${name}.png` });
 const eink = () => localStorage.setItem('ft.theme', 'eink');
 
 // Data: two lists and a whiteboard on Today, a focus project, a fresh layout.
@@ -87,11 +90,17 @@ async function grid(theme) {
   const again = await box(page, 'today-list');
   ok(Math.abs(again.x - moved.x) < 4 && Math.abs(again.y - moved.y) < 4, `${name}: same place after a reload`);
 
-  // Edit layout: resize, remove, add back, reset.
-  await page.click('.lg-edit-btn');
-  await page.waitForSelector('.lg-bar');
-  await shot(page, `${name}-edit`);
+  // No Edit layout: the handles show on hover only, and are hidden otherwise.
+  ok(!(await page.$('.lg-edit-btn, .lg-bar')), `${name}: there is no Edit layout`);
+  await page.mouse.move(5, 5);
+  await page.waitForTimeout(300);
+  const hidden = await page.$eval('.lg-item[data-panel="habits"] .lg-more', (b) => getComputedStyle(b).opacity);
+  ok(hidden === '0', `${name}: ⋯ and the corner are hidden until a panel is hovered`);
+  // Resize from the corner, in normal view.
   const habits = await box(page, 'habits');
+  await page.hover('.lg-item[data-panel="habits"]');
+  await page.waitForTimeout(250);
+  await shot(page, `${name}-hover`);
   const handle = page.locator('.lg-item[data-panel="habits"] .lg-resize');
   const rb = await handle.boundingBox();
   await page.mouse.move(rb.x + rb.width / 2, rb.y + rb.height / 2);
@@ -100,49 +109,71 @@ async function grid(theme) {
   await page.mouse.up();
   await page.waitForTimeout(400);
   const bigger = await box(page, 'habits');
-  ok(bigger.width > habits.width + 100, `${name}: Habits resized wider (${Math.round(habits.width)} → ${Math.round(bigger.width)})`);
+  ok(bigger.width > habits.width + 100, `${name}: Habits resized wider from its corner (${Math.round(habits.width)} → ${Math.round(bigger.width)})`);
   saved = (await api.get('/layout/today')).grid;
   ok(saved.items.habits.w > 6 && saved.items.habits.h >= 60, `${name}: its size is saved (w ${saved.items.habits.w}, h ${saved.items.habits.h})`);
+  // Text in a panel can still be selected (a press there is not a drag).
+  const line = await page.locator('.lg-item[data-panel="habits"] .lg-body').boundingBox();
+  await page.mouse.move(line.x + 30, line.y + line.height - 30);
+  await page.mouse.down();
+  await page.mouse.move(line.x + 200, line.y + line.height - 28, { steps: 4 });
+  await page.mouse.up();
+  ok(!(await page.$('.lg-moving')) && Math.abs((await box(page, 'habits')).x - bigger.x) < 2, `${name}: a press inside a panel's content does not move it`);
 
-  await page.click('.lg-item[data-panel="neglected"] button:has-text("Remove"), .lg-item[data-panel="plan-week"] button:has-text("Remove")');
+  // ⋯: Auto height, Remove, Add panels, Reset.
+  const menu = async (id) => {
+    await page.hover(`.lg-item[data-panel="${id}"]`);
+    await page.click(`.lg-item[data-panel="${id}"] .lg-more`);
+    await page.waitForSelector('.files-menu[role="menu"]');
+  };
+  await menu('habits');
+  await view(page, `${name}-menu`);
+  ok((await page.textContent('.files-menu')).includes('Pop out'), `${name}: the ⋯ menu has Pop out`);
+  await page.click('.files-menu button:has-text("Auto height")');
+  await page.waitForTimeout(400);
+  ok(!(await api.get('/layout/today')).grid.items.habits.h, `${name}: Auto height goes back to following the content`);
+  const gone = (await page.$('.lg-item[data-panel="neglected"]')) ? 'neglected' : 'plan-week';
+  await menu(gone);
+  await page.click('.files-menu button:has-text("Remove from Today")');
   await page.waitForTimeout(300);
   saved = (await api.get('/layout/today')).grid;
-  const gone = saved.removed[0];
-  ok(gone && !(await page.$(`.lg-item[data-panel="${gone}"]`)), `${name}: Remove takes ${gone} off the page and saves it`);
+  ok(saved.removed.includes(gone) && !(await page.$(`.lg-item[data-panel="${gone}"]`)), `${name}: ⋯ Remove takes ${gone} off the page and saves it`);
 
-  await page.click('.lg-bar button:has-text("Add feature")');
+  await menu('habits');
+  await page.click('.files-menu button:has-text("Add panels")');
   await page.waitForSelector('dialog[open] .lg-add');
   await page.waitForSelector('dialog[open] .lg-add h3:has-text("Notes")');
-  await shot(page, `${name}-add-feature`);
+  await shot(page, `${name}-add-panels`);
   await page.click(`dialog[open] li:has-text("${gone === 'plan-week' ? 'This week' : 'Waiting for you'}") button:has-text("Add")`);
   await page.waitForTimeout(300);
   saved = (await api.get('/layout/today')).grid;
-  ok(!saved.removed.includes(gone), `${name}: Add feature puts ${gone} back`);
+  ok(!saved.removed.includes(gone), `${name}: Add panels puts ${gone} back`);
   // Add a note that was not on Today.
   const recipes = page.locator('dialog[open] li:has-text("Recipes") button:has-text("Add")');
   await recipes.click();
   await page.keyboard.press('Escape');
   await page.waitForTimeout(800);
   const recipesId = `list-${lists.find((l) => l.name === 'Recipes').id}`;
-  ok(!!(await page.$(`.lg-item[data-panel="${recipesId}"]`)), `${name}: a note added from Add feature is a new panel`);
+  ok(!!(await page.$(`.lg-item[data-panel="${recipesId}"]`)), `${name}: a note added from Add panels is a new panel`);
 
-  await page.click('.lg-bar button:has-text("Reset this page")');
+  await menu('habits');
+  await page.click('.files-menu button:has-text("Reset this page")');
   await page.waitForTimeout(500);
-  ok((await api.get('/layout/today')).grid === null, `${name}: Reset this page clears the saved layout`);
+  ok((await api.get('/layout/today')).grid === null, `${name}: Reset this page’s layout clears the saved layout`);
   await page.click('.toast button:has-text("Undo")');
   await page.waitForTimeout(800);
   ok((await api.get('/layout/today')).grid !== null, `${name}: Undo brings the layout back`);
-  await page.click('.lg-edit-btn');
   await api.put('/today-panels/show', { list_id: recipesId.slice(5), on: false });
 
   // The project page has its own layout; the board cannot be removed.
   await page.goto(`${B}/#/p/${p1.id}`);
   await page.waitForSelector('.lg-item[data-panel="board"]');
   await page.waitForTimeout(300);
-  await page.click('.lg-edit-btn');
-  ok(!(await page.$('.lg-item[data-panel="board"] .lg-edit-bar button:has-text("Remove")')), `${name}: the board has no Remove`);
-  await shot(page, `${name}-project-edit`);
-  await page.click('.lg-edit-btn');
+  await menu('board');
+  ok(!(await page.$('.files-menu button:has-text("Remove")')), `${name}: the board has no Remove`);
+  await page.keyboard.press('Escape');
+  await page.mouse.move(5, 5);
+  await page.waitForTimeout(300);
   await shot(page, `${name}-project`);
   await ctx.close();
 }
@@ -226,19 +257,19 @@ async function deskPills(theme) {
   const first = await page.$eval('.lg-item', (e) => e.dataset.panel);
   ok(first.startsWith('list-'), `${name}: the note is first on screen`);
 
-  // Edit layout inside a pill: Remove takes the panel out of the pill (with Undo); Reset this pill.
-  await page.click('.lg-edit-btn');
-  await page.waitForSelector('.lg-bar');
-  ok((await page.textContent('.lg-bar')).includes('Thinking'), `${name}: Edit layout says which pill it changes`);
-  await shot(page, `${name}-edit`);
-  await page.click('.lg-item[data-panel="habits"] button:has-text("Remove")');
+  // Inside a pill, ⋯ Remove takes the panel out of the pill (with Undo).
+  await page.hover('.lg-item[data-panel="habits"]');
+  await page.click('.lg-item[data-panel="habits"] .lg-more');
+  await page.waitForSelector('.files-menu[role="menu"]');
+  ok((await page.textContent('.files-menu')).includes('Reset this pill’s layout'), `${name}: the ⋯ menu resets the pill’s layout`);
+  await view(page, `${name}-menu`);
+  await page.click('.files-menu button:has-text("Remove from this pill")');
   await page.waitForTimeout(500);
   saved = await api.get('/layout/today');
   ok(!saved.pills.find((p) => p.id === deep.id).panels.includes('habits') && !saved.grid?.removed?.includes('habits'), `${name}: Remove takes Habits out of the pill only`);
   await page.click('.toast button:has-text("Undo")');
   await page.waitForTimeout(800);
   ok((await api.get('/layout/today')).pills.find((p) => p.id === deep.id).panels.includes('habits'), `${name}: Undo puts it back in the pill`);
-  await page.click('.lg-edit-btn');
 
   // Delete the pill from its sheet; Undo from the message.
   await page.click('.pl-bar button:has-text("Edit pill")');
@@ -350,7 +381,7 @@ async function pills(theme) {
   // The new pill shows its two panels, the note first.
   await page.click('.pl-pill:has-text("Evening")');
   await page.waitForTimeout(800);
-  const cards = await page.$$eval('#pl-panels > *', (els) => els.map((e) => e.textContent.slice(0, 30)));
+  const cards = await page.$$eval('#pl-panels .lg-row', (els) => els.map((e) => e.textContent.slice(0, 30)));
   ok(cards.length === 2 && cards[0].includes('Travel'), `${name}: the pill shows its panels in order (${cards.join(' | ')})`);
   await shot(page, `${name}-evening`);
   // Delete it with Undo.
@@ -373,6 +404,184 @@ if (!only || only === 'pills') {
   await pills('eink');
 }
 
+// ---------------- arranging on a phone: a long press ----------------
+
+const touch = (cdp) => ({
+  down: (x, y) => cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y, id: 1 }] }),
+  move: (x, y) => cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y, id: 1 }] }),
+  up: () => cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }),
+});
+/** Press and hold at a point (a finger that does not move). */
+async function hold(page, cdp, x, y, ms = 700) {
+  const t = touch(cdp);
+  await t.down(x, y);
+  await page.waitForTimeout(ms);
+  await t.up();
+  await page.waitForTimeout(300);
+}
+/** Drag with a finger from one point to another, in steps. */
+async function fingerDrag(page, cdp, from, to, steps = 12) {
+  const t = touch(cdp);
+  await t.down(from.x, from.y);
+  for (let i = 1; i <= steps; i++) {
+    await t.move(from.x + ((to.x - from.x) * i) / steps, from.y + ((to.y - from.y) * i) / steps);
+    await page.waitForTimeout(20);
+  }
+  await page.waitForTimeout(100);
+  await t.up();
+  await page.waitForTimeout(500);
+}
+const centre = (b) => ({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
+const rowIds = (page) => page.$$eval('#pl-panels .lg-row, .project .lg-row', (els) => els.map((e) => e.dataset.panel));
+
+async function arrange(theme) {
+  const name = `arrange-${theme}`;
+  await api.call('DELETE', '/layout/today/pills');
+  await api.call('DELETE', '/layout/today/grid').catch(() => {});
+  for (const id of ['today', 'notes', 'more']) await api.call('DELETE', `/layout/today/grids/${id}`).catch(() => {});
+  const { page, ctx } = await open(browser, { width: 390, height: 844 }, errors, { name, touch: true, init: theme === 'eink' ? eink : undefined });
+  const cdp = await ctx.newCDPSession(page);
+  await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('ft.pills.')).forEach((k) => localStorage.removeItem(k)));
+  await page.goto(`${B}/#/today`);
+  await page.waitForSelector('#pl-panels .lg-row[data-panel="today-list"]');
+  await page.waitForTimeout(500);
+  ok(!(await page.$('.lg-arr, .lg-grip, .lg-more')), `${name}: no handles on a phone until a long press`);
+  ok((await rowIds(page)).join() === 'today-list,plan-week', `${name}: the Today pill stacks the Today list, then this week`);
+
+  // A hold in a field does nothing; a finger that moves (a scroll) does nothing.
+  const input = await page.locator('#pl-panels .lg-row[data-panel="today-list"] input').first().boundingBox();
+  if (input) {
+    await hold(page, cdp, input.x + 20, input.y + input.height / 2);
+    ok(!(await page.$('.lg-arranging')), `${name}: a hold in a text field does not arrange`);
+    await page.evaluate(() => document.activeElement?.blur());
+  }
+  const title = await page.locator('#pl-panels .lg-row[data-panel="plan-week"] h2').first().boundingBox();
+  const t = touch(cdp);
+  await t.down(title.x + 20, title.y + 8);
+  await page.waitForTimeout(150);
+  await t.move(title.x + 20, title.y + 60);
+  await page.waitForTimeout(600);
+  await t.up();
+  await page.waitForTimeout(300);
+  ok(!(await page.$('.lg-arranging')), `${name}: a press that scrolls does not arrange`);
+
+  // A hold on a to-do arranges, and does not tick it.
+  const todo = page.locator('#pl-panels .lg-row[data-panel="today-list"] :text("Reply to landlord")').first();
+  const tb = await todo.boundingBox();
+  await hold(page, cdp, tb.x + 10, tb.y + tb.height / 2);
+  ok(!!(await page.$('.lg-arranging')) && (await page.$$('.lg-arr')).length === 2, `${name}: a long press on a panel shows move and size handles on every panel`);
+  ok(!!(await page.$('#pl-panels .lg-row[data-panel="today-list"] :text("Reply to landlord")')), `${name}: and the to-do under the finger is not ticked`);
+  ok((await page.textContent('.lg-arr-bar')).includes('Today'), `${name}: the Arrange bar says which pill`);
+  await page.waitForTimeout(300);
+  await shot(page, `${name}-on`);
+
+  // Drag This week above the Today list by its bar: up to the top of the screen, which scrolls the page.
+  await page.locator('.lg-row[data-panel="plan-week"] .lg-arr-head').scrollIntoViewIfNeeded();
+  await page.evaluate(() => scrollBy(0, 200));
+  await page.waitForTimeout(200);
+  const head = await page.locator('.lg-row[data-panel="plan-week"] .lg-arr-head').boundingBox();
+  {
+    const f = touch(cdp);
+    const x = head.x + head.width / 2;
+    await f.down(x, head.y + head.height / 2);
+    for (let i = 1; i <= 12; i++) {
+      await f.move(x, head.y + head.height / 2 + ((60 - head.y - head.height / 2) * i) / 12);
+      await page.waitForTimeout(20);
+    }
+    await page.waitForTimeout(1500); // the page scrolls up while the finger waits near the top
+    ok((await page.evaluate(() => scrollY)) === 0, `${name}: holding a panel near the top scrolls the page up`);
+    await f.up();
+    await page.waitForTimeout(500);
+  }
+  ok((await rowIds(page)).join() === 'plan-week,today-list', `${name}: This week moved to the top (${(await rowIds(page)).join(', ')})`);
+  let g = (await api.get('/layout/today')).grids?.today;
+  ok(g && g.items['plan-week'].y < g.items['today-list'].y, `${name}: the new order is the pill’s grid order, saved on the server`);
+  ok(g.items['plan-week'].x + g.items['plan-week'].w <= 12 && g.items['today-list'].w >= 1, `${name}: with desktop columns for both panels`);
+  ok(!!(await page.$('.lg-arranging')), `${name}: still arranging after a move`);
+
+  // The height: drag the bottom handle up; Auto height puts it back.
+  await page.locator('.lg-row[data-panel="today-list"] .lg-arr-size').scrollIntoViewIfNeeded();
+  await page.evaluate(() => scrollBy(0, 150));
+  await page.waitForTimeout(200);
+  const before = (await page.locator('.lg-row[data-panel="today-list"]').boundingBox()).height;
+  const size = centre(await page.locator('.lg-row[data-panel="today-list"] .lg-arr-size').boundingBox());
+  await fingerDrag(page, cdp, size, { x: size.x, y: size.y - 120 });
+  const after = (await page.locator('.lg-row[data-panel="today-list"]').boundingBox()).height;
+  g = (await api.get('/layout/today')).grids.today;
+  ok(after < before - 80 && Math.abs(after - g.items['today-list'].ph) < 2 && !g.items['today-list'].h, `${name}: the bottom handle sets the phone height (${Math.round(before)} → ${Math.round(after)}, ph ${g.items['today-list'].ph}), not the computer’s`);
+  await shot(page, `${name}-height`);
+  await page.click('.lg-row[data-panel="today-list"] .lg-arr-acts button:has-text("Auto height")');
+  await page.waitForTimeout(500);
+  ok(!(await api.get('/layout/today')).grids.today.items['today-list'].ph, `${name}: Auto height`);
+
+  // Back leaves it, and stays on Today.
+  await page.goBack();
+  await page.waitForTimeout(400);
+  ok(!(await page.$('.lg-arranging, .lg-arr')) && (await page.evaluate(() => location.hash)) === '#/today', `${name}: Back leaves arranging and stays on Today`);
+  ok((await rowIds(page)).join() === 'plan-week,today-list', `${name}: the order stays after arranging`);
+
+  // A tap outside leaves it; a swipe on the panels changes pill again afterwards.
+  const t2 = await page.locator('.lg-row[data-panel="plan-week"] h2').first().boundingBox();
+  await hold(page, cdp, t2.x + 20, t2.y + 8);
+  ok(!!(await page.$('.lg-arranging')), `${name}: a long press on a title arranges`);
+  await page.tap('.pl-page .focus');
+  await page.waitForTimeout(300);
+  ok(!(await page.$('.lg-arranging')), `${name}: a tap outside the panels leaves it`);
+
+  // In the All pill: Remove, then + Add panels in the bar brings it back; Done.
+  await pill(page, 'All');
+  await page.waitForSelector('#pl-panels .lg-row[data-panel="habits"]');
+  const hb = await page.locator('#pl-panels .lg-row[data-panel="habits"] h2').first().boundingBox();
+  await hold(page, cdp, hb.x + 20, hb.y + 8);
+  await page.click('.lg-row[data-panel="habits"] .lg-arr-acts button:has-text("Remove")');
+  await page.waitForTimeout(500);
+  ok((await api.get('/layout/today')).grid.removed.includes('habits') && !(await page.$('.lg-row[data-panel="habits"]')), `${name}: Remove takes Habits off Today`);
+  ok(!!(await page.$('.lg-arranging')), `${name}: still arranging after Remove`);
+  await page.click('.lg-arr-bar button:has-text("Add panels")');
+  await page.waitForSelector('dialog[open] .lg-add');
+  await page.click('dialog[open] li:has-text("Habits") button:has-text("Add")');
+  await page.waitForTimeout(400);
+  await page.goBack();
+  await page.waitForTimeout(400);
+  ok(!(await page.$('dialog[open]')) && !!(await page.$('.lg-arranging')), `${name}: Back closes Add panels, still arranging`);
+  ok(!(await api.get('/layout/today')).grid.removed.includes('habits'), `${name}: Add panels brings Habits back`);
+  await shot(page, `${name}-all`);
+  await page.click('.lg-arr-done');
+  await page.waitForTimeout(300);
+  ok(!(await page.$('.lg-arranging')), `${name}: Done leaves it`);
+  ok((await page.evaluate(() => history.state?.arrange)) !== true, `${name}: and leaves no step in the Back history`);
+
+  // The project page: the same.
+  await page.goto(`${B}/#/p/${p1.id}`);
+  await page.waitForSelector('.project .lg-row[data-panel="board"]');
+  await page.waitForTimeout(400);
+  const ids = await rowIds(page);
+  // The last panel with a title.
+  const last = await page.$$eval('.project .lg-row', (els) => els.filter((e) => e.querySelector('h2')).pop().dataset.panel);
+  await page.locator(`.project .lg-row[data-panel="${last}"] h2`).first().scrollIntoViewIfNeeded();
+  await page.waitForTimeout(200);
+  const lh = await page.locator(`.project .lg-row[data-panel="${last}"] h2`).first().boundingBox();
+  await hold(page, cdp, lh.x + 20, lh.y + 8);
+  ok(!!(await page.$('.project .lg-arranging')), `${name}: a long press arranges the project page`);
+  ok(!(await page.$('.lg-row[data-panel="board"] .lg-arr-acts button:has-text("Remove")')), `${name}: the board has no Remove`);
+  await shot(page, `${name}-project`);
+  // Keyboard on the bar's ⠿: up one.
+  await page.focus(`.lg-row[data-panel="${last}"] .lg-arr-grip`);
+  await page.keyboard.press('ArrowUp');
+  await page.waitForTimeout(500);
+  const ids2 = await rowIds(page);
+  ok(ids2.indexOf(last) === ids.indexOf(last) - 1, `${name}: ↑ on the ⠿ moves ${last} up one`);
+  ok((await api.get('/layout/project')).grid?.items[last], `${name}: saved as every project page’s layout`);
+  await page.click('.lg-arr-done');
+  await ctx.close();
+  await api.call('DELETE', '/layout/project/grid');
+}
+
+if (!only || only === 'arrange') {
+  await arrange('light');
+  await arrange('eink');
+}
+
 // ---------------- pop-out windows ----------------
 
 async function popout(theme) {
@@ -380,9 +589,10 @@ async function popout(theme) {
   const { page, ctx } = await open(browser, { width: 1280, height: 900 }, errors, { name, init: theme === 'eink' ? eink : undefined });
   await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('ft.popout.')).forEach((k) => localStorage.removeItem(k)));
   await page.goto(`${B}/#/today`);
-  await page.waitForSelector('.lg-item[data-panel="today-list"] .po-btn', { state: 'attached' });
+  await page.waitForSelector('.lg-item[data-panel="today-list"] .lg-more', { state: 'attached' });
   await page.hover('.lg-item[data-panel="today-list"]');
-  await page.click('.lg-item[data-panel="today-list"] .po-btn');
+  await page.click('.lg-item[data-panel="today-list"] .lg-more');
+  await page.click('.files-menu button:has-text("Pop out")');
   await page.waitForSelector('.po-win');
   ok(!!(await page.$('.lg-item[data-panel="today-list"] .po-placeholder')), `${name}: the page shows a placeholder where the panel was`);
   await page.waitForSelector('.po-win :text("Reply to landlord")', { timeout: 5000 }).catch(() => {});
@@ -425,7 +635,8 @@ async function popout(theme) {
   ok(!!(await page.$('.po-pane')), `${name}: the pane stays on a project page`);
   // One notes editor on screen: pop out the project's notes, then its notes on Today show a placeholder.
   await page.hover('.lg-item[data-panel="notes"]');
-  await page.click('.lg-item[data-panel="notes"] .po-btn');
+  await page.click('.lg-item[data-panel="notes"] .lg-more');
+  await page.click('.files-menu button:has-text("Pop out")');
   await page.waitForSelector('.po-win');
   await shot(page, `${name}-project`);
   await api.put('/today-panels/show', { project_id: p1.id, on: true });
@@ -526,7 +737,7 @@ async function offlineAndFlags() {
       await p2.goto(`${B}/#/today`);
       await p2.waitForSelector('.focus');
       await p2.waitForTimeout(500);
-      ok(!(await p2.$('.lg-item, .pl-pill, .po-btn, .lg-edit-btn')), `flags off, ${label}: Today is the plain page`);
+      ok(!(await p2.$('.lg-item, .lg-more, .pl-pill, .po-btn')), `flags off, ${label}: Today is the plain page`);
       ok(!!(await p2.$('.habits-panel')) && (await p2.$$('.tp-list, .tp-note')).length >= 2, `flags off, ${label}: every panel is there, lists too`);
       await shot(p2, `flags-off-${label}`);
       await c2.close();
