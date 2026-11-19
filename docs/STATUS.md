@@ -6,7 +6,7 @@ Updated 2026-11-19. Phases from the spec (`SPEC.md` §7).
 |---|---|
 | 0 Decisions and setup | **Done**. Decisions in [DECISIONS.md](DECISIONS.md). Deployed at `https://focus-tracker.focus-tracker.workers.dev`. |
 | 1 Backend API and data model | **Done.** Every entity in spec §4 has a table and REST endpoints; moves, cascading deletes, server-side undo, `/api/status`. Tests. |
-| 2 MCP connector | **Done.** 68 tools, OAuth for Claude's custom connectors, API tokens for Claude Code. Tested end to end (register → consent → token → tool call). Not yet tried from the real Claude app. |
+| 2 MCP connector | **Done.** 74 tools, OAuth for Claude's custom connectors, API tokens for Claude Code. Tested end to end (register → consent → token → tool call). Not yet tried from the real Claude app. |
 | 3 Web app | **Done.** Today, Projects, project page (Kanban, notes, criteria, resources, sessions, issue links), Files (notes, lists, whiteboards, links in folders), Habits, Insights, Settings; PWA, offline, movable panels, Today pills (tabs on every screen), pop-out windows. |
 | 4 Google Drive sync | **Dropped** by the owner (2026-11-18): notes stay in the tracker; Google Docs are linked as resources. See [DECISIONS.md D11](DECISIONS.md). |
 | 5 Migration from v1 | **Done** (2026-11-18): Personal and Work imported into the live deployment, notes from the .docx exports, whiteboard drawings stored. |
