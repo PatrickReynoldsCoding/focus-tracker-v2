@@ -177,7 +177,7 @@ export function ListPage({ id }: { id: string }) {
       <Panels place="list" props={{ list: l, setList: setData }} />
       {l.kind === 'note' && (
         <section class="card">
-          <MarkdownEditor value={l.body ?? ''} rows={14} placeholder="Write (Markdown)…" onSave={(body) => change(() => put(`/notes/of/list/${l.id}`, { body }))} />
+          <MarkdownEditor value={l.body ?? ''} note={{ kind: 'list', id: l.id }} rows={14} placeholder="Write…" onSave={(body) => change(() => put(`/notes/of/list/${l.id}`, { body }))} />
         </section>
       )}
       {l.kind === 'list' && <Board columns={l.columns!} owner={{ list_id: l.id }} />}

@@ -15,3 +15,4 @@ import './criteria/Criteria';
 import './links';
 import './notifications-settings';
 import './android-app';
+import './editor';

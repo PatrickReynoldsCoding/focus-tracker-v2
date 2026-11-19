@@ -33,6 +33,7 @@ function NotePanel({ n, setBody, onRemove }: { n: NoteItem; setBody: (body: stri
       </div>
       <MarkdownEditor
         value={n.body}
+        note={n.kind === 'project' ? { kind: 'project', id: n.project_id! } : { kind: 'list', id: n.key.slice(5) }}
         rows={6}
         placeholder="Tap to write (Markdown)…"
         onSave={(body) => {
