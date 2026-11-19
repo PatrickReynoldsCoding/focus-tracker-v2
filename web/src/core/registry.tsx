@@ -6,7 +6,7 @@
 // Every entry may name a `feature` flag (server-declared, src/core/features.ts): while
 // the flag is off the entry is not shown.
 
-import type { ComponentChildren, VNode } from 'preact';
+import type { ComponentChildren, ComponentType, VNode } from 'preact';
 import { useFlags } from './features';
 import { signal } from './signal';
 
@@ -43,6 +43,8 @@ export interface PanelDef<P> {
   feature?: string;
   /** Wider panels span the row on wide screens. */
   wide?: boolean;
+  /** Replaces another feature's panel with the same id, whichever is registered first. */
+  override?: boolean;
   render: Render<P>;
 }
 
@@ -86,8 +88,9 @@ const routes: RouteDef[] = [];
 const panels: Record<string, PanelDef<any>[]> = {};
 const overlays: OverlayDef[] = [];
 
-const add = <T extends { id: string }>(list: T[], item: T) => {
+const add = <T extends { id: string; override?: boolean }>(list: T[], item: T) => {
   const i = list.findIndex((x) => x.id === item.id);
+  if (i >= 0 && list[i].override && !item.override) return; // an override stays, whatever the import order
   if (i >= 0) list[i] = item; // re-registering replaces (hot reload, or a feature overriding a default)
   else list.push(item);
 };
@@ -95,6 +98,30 @@ const add = <T extends { id: string }>(list: T[], item: T) => {
 export const registerTab = (t: TabDef) => add(tabs, t);
 export const registerRoute = (r: RouteDef) => add(routes, r);
 export const registerOverlay = (o: OverlayDef) => add(overlays, o);
+
+/** What `MarkdownEditor` (core/ui.tsx) takes. Features may pass the optional ones. */
+export interface MarkdownEditorProps {
+  value: string;
+  /** Called with the new text (by the plain editor, and by the rich one when no `note` is given). May return a promise. */
+  onSave: (v: string) => unknown;
+  placeholder?: string;
+  rows?: number;
+  /** The note this text is (PUT /api/notes/of/:kind/:id). The rich editor then saves it itself, with conflict protection. */
+  note?: { kind: 'project' | 'list'; id: string };
+  /** Keep a draft on this device under this key (made from `note` when not given). */
+  draftKey?: string;
+  /** Advanced: how to read and write the text (see features/editor/targets.ts). */
+  target?: unknown;
+}
+/** The editor `MarkdownEditor` uses. The first registered one whose flag is on wins; none: the plain text box. */
+export interface EditorDef {
+  id: string;
+  feature?: string;
+  component: ComponentType<MarkdownEditorProps>;
+}
+const editors: EditorDef[] = [];
+export const registerMarkdownEditor = (e: EditorDef) => add(editors, e);
+export const useMarkdownEditor = (): EditorDef | undefined => visible(editors, useFlags())[0];
 
 /** Panels by place: 'today', 'project', 'card' (sections of the card dialog), 'card-tile' (marks on a board card), 'settings'. */
 export function registerPanel(place: 'today', p: PanelDef<TodayPanelProps>): void;

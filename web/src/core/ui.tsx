@@ -4,6 +4,7 @@ import { marked } from 'marked';
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { get, HttpError, mode, version } from './api';
+import { useMarkdownEditor, type MarkdownEditorProps } from './registry';
 import { signal, useSignal } from './signal';
 
 // ---------- routing (hash based: #/today, #/p/<id> ...) ----------
@@ -89,8 +90,16 @@ export function Markdown({ text, class: cls }: { text: string; class?: string })
   return <div class={`md ${cls ?? ''}`} dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
-/** A Markdown text: shown formatted, tap to edit; saves when you leave the box. */
-export function MarkdownEditor({ value, onSave, placeholder, rows = 8 }: { value: string; onSave: (v: string) => void; placeholder?: string; rows?: number }) {
+/** A Markdown text: shown formatted, tap to edit. Uses the registered editor (features/editor, flag
+ *  'rich-editor'); without one, the plain text box below. */
+export function MarkdownEditor(props: MarkdownEditorProps) {
+  const impl = useMarkdownEditor();
+  const Impl = impl?.component ?? PlainMarkdownEditor;
+  return <Impl {...props} />;
+}
+
+/** The plain editor: a Markdown text box that saves when you leave it. */
+export function PlainMarkdownEditor({ value, onSave, placeholder, rows = 8 }: MarkdownEditorProps) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(value);
   useEffect(() => {

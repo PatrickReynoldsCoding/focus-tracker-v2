@@ -134,7 +134,7 @@ registerPanel('project', {
   render: ({ project }) => (
     <section class="card">
       <h2>Notes</h2>
-      <MarkdownEditor value={project.notes} placeholder="Notes for this project (Markdown)…" onSave={(body) => change(() => put(`/notes/of/project/${project.id}`, { body }))} />
+      <MarkdownEditor value={project.notes} note={{ kind: 'project', id: project.id }} placeholder="Notes for this project…" onSave={(body) => change(() => put(`/notes/of/project/${project.id}`, { body }))} />
     </section>
   ),
 });
