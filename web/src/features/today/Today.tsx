@@ -85,6 +85,15 @@ function FocusCard({ data, compact }: { data: TodayData; compact?: boolean }) {
           </button>
         </div>
         {!f && <p class="muted small">No focus yet. Each day starts empty until you choose.</p>}
+        {!f && data.suggestions.length > 0 && (
+          <div class="chips">
+            {data.suggestions.map((p) => (
+              <button key={p.id} class="chip" onClick={() => change(() => put('/focus', { project_id: p.id }), `Focus: ${p.name}`)}>
+                {p.name}
+              </button>
+            ))}
+          </div>
+        )}
         {live && f && live.session.project_id !== f.id && <p class="muted small">Session running on {live.session.project_name}.</p>}
         <SessionArea projectId={null} showStart={data.show_session_controls && !!f} />
       </section>
