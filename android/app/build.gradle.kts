@@ -21,8 +21,8 @@ android {
         minSdk = 30
         targetSdk = 35
         // -Pft.versionCode / -Pft.versionName: build an older-numbered copy to test in-app updates.
-        versionCode = (findProperty("ft.versionCode") as String?)?.toInt() ?: 4
-        versionName = (findProperty("ft.versionName") as String?) ?: "0.3.1"
+        versionCode = (findProperty("ft.versionCode") as String?)?.toInt() ?: 5
+        versionName = (findProperty("ft.versionName") as String?) ?: "0.3.2"
     }
     signingConfigs {
         if (signingProps.isNotEmpty()) create("release") {

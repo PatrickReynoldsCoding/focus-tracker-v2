@@ -32,6 +32,7 @@ class MainActivity : Activity() {
         web.settings.javaScriptEnabled = true
         web.settings.domStorageEnabled = true
         CookieManager.getInstance().setAcceptCookie(true)
+        web.webChromeClient = WebDialogs(this)
         web.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 // Links to other sites (resources) open in the browser.
