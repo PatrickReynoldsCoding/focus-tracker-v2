@@ -15,7 +15,7 @@ import { leadOn, loadRotation, setWeekChanges, weekdayOf, type Rotation } from '
 import { create, get, list, remove, update } from '../core/store';
 import { categoriesEntity } from './basics';
 import { AWAY_FLAG, habitLogEntity, habitsEntity, levelForDay, levelHistory } from './habits';
-import { todosEntity } from './lists';
+import { listsEntity, todosEntity } from './lists';
 
 export const PLAN_FLAG = 'plan-week';
 /** A day holds at most this many planned sessions of one habit. */
@@ -48,7 +48,7 @@ export async function weekPlan(ctx: Ctx, which: Which = 'this') {
   const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
   // To-dos still open from before: before this week (this week's past days show their own), or before today for next week.
   const earlierThan = which === 'this' ? monday : today;
-  const [cats, habits, logs, levels, todos, loose, awayOn] = await Promise.all([
+  const [cats, habits, logs, levels, todos, loose, awayOn, todoLists] = await Promise.all([
     list(ctx, categoriesEntity),
     list(ctx, habitsEntity, { where: { status: 'active' } }),
     list(ctx, habitLogEntity, { sql: "day >= ? AND day <= ? AND kind IN ('done', 'plan', 'skip')", params: [monday, sunday], limit: 2000 }),
@@ -56,6 +56,7 @@ export async function weekPlan(ctx: Ctx, which: Which = 'this') {
     list(ctx, todosEntity, { sql: 'day >= ? AND day <= ?', params: [monday, sunday], order: 'day, done IS NOT NULL, ord', limit: 500 }),
     list(ctx, todosEntity, { sql: 'done IS NULL AND (day IS NULL OR day < ?)', params: [earlierThan], order: 'day IS NOT NULL, day, ord', limit: 200 }),
     ctx.feature(AWAY_FLAG),
+    list(ctx, listsEntity, { where: { kind: 'todo' } }),
   ]);
   const countOf = (habitId: string, kind: string, day: string) => sum(logs.filter((l) => l.habit_id === habitId && l.kind === kind && l.day === day).map((l) => Number(l.count ?? 0)));
   const dayRows = days.map((day) => {
@@ -113,6 +114,8 @@ export async function weekPlan(ctx: Ctx, which: Which = 'this') {
     away_lowers_targets: awayOn,
     categories: cats.map((c) => ({ id: String(c.id), label: String(c.label), color: (c.color as string | null) ?? null })),
     habits: habitRows,
+    /** The to-do lists, in order; the first is where new to-dos go. */
+    lists: todoLists.map((l) => ({ id: String(l.id), name: String(l.name) })),
     days: dayRows,
     /** Open to-dos with no day, then those from before (still open). */
     unscheduled: loose.filter((t) => t.day == null).map(todoOut),
