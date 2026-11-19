@@ -6,6 +6,7 @@
 import type { Entity } from '../core/entity';
 import { bad } from '../core/errors';
 import type { Module } from '../core/registry';
+import { create, remove, update } from '../core/store';
 
 /** Pastels that keep dark text readable (the web app has the shades: features/stickies/colours.ts). */
 export const STICKY_COLORS = ['yellow', 'sand', 'peach', 'orange', 'red', 'pink', 'lavender', 'purple', 'blue', 'sky', 'teal', 'mint', 'green', 'lime', 'grey'] as const;
@@ -51,5 +52,25 @@ export const stickiesModule: Module = {
   id: 'stickies',
   description: 'Sticky notes on project pages.',
   entities: [stickiesEntity],
+  routes(api) {
+    // The generic routes, with readable undo labels.
+    api.post('/stickies', async (c) => {
+      const ctx = c.get('ctx');
+      ctx.label = 'new sticky note';
+      return c.json(await create(ctx, stickiesEntity, await c.req.json()), 201);
+    });
+    api.patch('/stickies/:id', async (c) => {
+      const ctx = c.get('ctx');
+      const body = await c.req.json<Record<string, unknown>>();
+      ctx.label = 'text' in body ? 'sticky note text' : 'x' in body || 'w' in body ? 'move sticky note' : 'sticky note colour';
+      return c.json(await update(ctx, stickiesEntity, c.req.param('id'), body));
+    });
+    api.delete('/stickies/:id', async (c) => {
+      const ctx = c.get('ctx');
+      ctx.label = 'delete sticky note';
+      await remove(ctx, stickiesEntity, c.req.param('id'));
+      return c.json({ deleted: c.req.param('id') });
+    });
+  },
   features: [{ id: 'stickies', label: 'Sticky notes', description: 'Floating sticky notes on project pages (“+ Note” at the bottom right).', default: true }],
 };
