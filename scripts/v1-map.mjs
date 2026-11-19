@@ -23,35 +23,165 @@ function time(v) {
   const t = Date.parse(s);
   return Number.isNaN(t) ? undefined : new Date(t).toISOString();
 }
+/** A name for matching: lower case, letters and digits only. */
+export const nameKey = (s) => String(s).toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '');
+/** v1 category ids can be short names ("job"); v2 ids are 6 to 40 letters, digits, _ or -. Same input, same output. */
+const catId = (v) => {
+  const s = str(v);
+  return !s || /^[A-Za-z0-9_-]{6,40}$/.test(s) ? s || undefined : `cat_${s.replace(/[^A-Za-z0-9_-]+/g, '_')}`.slice(0, 40).padEnd(6, '_');
+};
 const enumOr = (v, allowed, fallback) => (allowed.includes(str(v)) ? str(v) : fallback);
 
-/** Rich text from v1's editor to Markdown: headings, bold, italic, links, lists, checkboxes, line breaks. */
+const VOID = new Set(['br', 'hr', 'img', 'input', 'meta', 'link']);
+const ENTITIES = { nbsp: ' ', lt: '<', gt: '>', quot: '"', amp: '&', apos: "'", ndash: '–', mdash: '—', hellip: '…', rsquo: '’', lsquo: '‘', ldquo: '“', rdquo: '”' };
+const decode = (t) =>
+  t.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e) => {
+    if (e[0] === '#') {
+      const n = e[1].toLowerCase() === 'x' ? parseInt(e.slice(2), 16) : Number(e.slice(1));
+      return Number.isFinite(n) && n > 0 && n < 0x110000 ? String.fromCodePoint(n) : m;
+    }
+    return ENTITIES[e.toLowerCase()] ?? m;
+  });
+
+/** Tiny forgiving HTML parser: { tag, attrs, kids } nodes and text strings. */
+function parseHtml(html) {
+  const root = { tag: '#root', attrs: '', kids: [] };
+  const stack = [root];
+  const re = /<!--[\s\S]*?-->|<(\/?)([a-z][a-z0-9]*)\b([^>]*)>|([^<]+|<)/gi;
+  let m;
+  while ((m = re.exec(html))) {
+    if (m[4] !== undefined) stack.at(-1).kids.push(m[4]);
+    else if (m[2]) {
+      const tag = m[2].toLowerCase();
+      if (m[1]) {
+        const i = stack.map((n) => n.tag).lastIndexOf(tag);
+        if (i > 0) stack.length = i;
+      } else {
+        const node = { tag, attrs: m[3], kids: [] };
+        // an unclosed <li>/<p>/<td> ends when the next one starts
+        if (['li', 'p', 'td', 'th', 'tr'].includes(tag)) {
+          const i = stack.map((n) => n.tag).lastIndexOf(tag);
+          const barrier = stack.map((n) => n.tag).findLastIndex((t) => ['ul', 'ol', 'table'].includes(t));
+          if (i > 0 && i > barrier) stack.length = i;
+        }
+        stack.at(-1).kids.push(node);
+        if (!VOID.has(tag) && !/\/\s*$/.test(m[3])) stack.push(node);
+      }
+    }
+  }
+  return root;
+}
+
+const attr = (n, name) => decode(n.attrs.match(new RegExp(`\\b${name}\\s*=\\s*("([^"]*)"|'([^']*)')`, 'i'))?.slice(2).find((x) => x !== undefined) ?? '');
+const BLOCK = new Set(['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'blockquote', 'pre', 'hr', 'section', 'article', 'body', 'html', 'head', 'style', 'script']);
+const wrap = (mark, s) => {
+  const core = s.trim();
+  if (!core) return s;
+  return `${s.match(/^\s*/)[0]}${mark}${core}${mark}${s.match(/\s*$/)[0]}`;
+};
+
+function inline(nodes, plain = false) {
+  let out = '';
+  for (const n of nodes) {
+    if (typeof n === 'string') {
+      out += decode(n.replace(/\s+/g, ' '));
+      continue;
+    }
+    const kids = () => inline(n.kids, plain);
+    switch (n.tag) {
+      case 'br': out += '\n'; break;
+      case 'strong': case 'b': out += plain ? kids() : wrap('**', kids()); break;
+      case 'em': case 'i': out += plain ? kids() : wrap('*', kids()); break;
+      case 's': case 'strike': case 'del': out += plain ? kids() : wrap('~~', kids()); break;
+      case 'code': out += plain ? kids() : wrap('`', kids()); break;
+      case 'a': {
+        const href = attr(n, 'href');
+        const text = kids();
+        out += href && text.trim() ? `[${text.trim()}](${href})` : text;
+        break;
+      }
+      case 'img': out += attr(n, 'alt'); break;
+      case 'input': out += /\bchecked\b/i.test(n.attrs) ? '[x] ' : '[ ] '; break;
+      case 'style': case 'script': case 'head': break;
+      default: out += kids();
+    }
+  }
+  return out;
+}
+
+const tidy = (s) => s.replace(/[ \t]*\n[ \t]*/g, '\n').replace(/ {2,}/g, ' ').replace(/^\n+|\n+$/g, '').trim();
+const indent = (s, pad) => s.split('\n').map((l) => (l ? pad + l : l)).join('\n');
+
+function list(n) {
+  const ordered = n.tag === 'ol';
+  let i = 0;
+  const lines = [];
+  for (const li of n.kids.filter((k) => typeof k !== 'string' && k.tag === 'li')) {
+    const marker = ordered ? `${++i}. ` : '- ';
+    const parts = blocks(li.kids);
+    const first = parts.shift() ?? '';
+    let item = marker + first.replace(/\n/g, '\n' + ' '.repeat(marker.length));
+    for (const p of parts) item += '\n' + indent(p, p.startsWith('- ') || /^\d+\. /.test(p) ? '  ' : ' '.repeat(marker.length));
+    lines.push(item);
+  }
+  return lines.join('\n');
+}
+
+function table(n) {
+  const rows = [];
+  const walk = (nodes) => {
+    for (const k of nodes) {
+      if (typeof k === 'string') continue;
+      if (k.tag === 'tr') rows.push(k.kids.filter((c) => typeof c !== 'string' && (c.tag === 'td' || c.tag === 'th')).map((c) => tidy(inline(c.kids)).replace(/\n+/g, ' ').replace(/\|/g, '\\|')));
+      else walk(k.kids);
+    }
+  };
+  walk(n.kids);
+  if (!rows.length) return '';
+  const width = Math.max(...rows.map((r) => r.length));
+  const line = (r) => `| ${Array.from({ length: width }, (_, i) => r[i] ?? '').join(' | ')} |`;
+  return [line(rows[0]), line(Array(width).fill('---')), ...rows.slice(1).map(line)].join('\n');
+}
+
+/** Render child nodes as an array of Markdown blocks. */
+function blocks(nodes, plainHeading = false) {
+  const out = [];
+  let buf = [];
+  const flush = () => {
+    const t = tidy(inline(buf));
+    if (t) out.push(t);
+    buf = [];
+  };
+  for (const n of nodes) {
+    if (typeof n === 'string' || !BLOCK.has(n.tag)) {
+      buf.push(n);
+      continue;
+    }
+    flush();
+    if (/^h[1-6]$/.test(n.tag)) {
+      const t = tidy(inline(n.kids, true)).replace(/\n+/g, ' ');
+      if (t) out.push(`${'#'.repeat(Number(n.tag[1]))} ${t}`);
+    } else if (n.tag === 'ul' || n.tag === 'ol') {
+      const t = list(n);
+      if (t) out.push(t);
+    } else if (n.tag === 'li') out.push(...blocks(n.kids));
+    else if (n.tag === 'table') {
+      const t = table(n);
+      if (t) out.push(t);
+    } else if (n.tag === 'blockquote') out.push(indent(blocks(n.kids).join('\n\n'), '> ').replace(/^(\s*)$/gm, '>'));
+    else if (n.tag === 'pre') out.push('```\n' + decode(n.kids.map((k) => (typeof k === 'string' ? k : inline([k]))).join('')).replace(/^\n+|\n+$/g, '') + '\n```');
+    else if (n.tag === 'hr') out.push('---');
+    else if (['style', 'script', 'head'].includes(n.tag)) continue;
+    else out.push(...blocks(n.kids));
+  }
+  flush();
+  return out;
+}
+
+/** Rich text (v1 editor HTML, or Word via mammoth) to Markdown: headings, bold, italic, links, nested lists, checkboxes, tables, code, quotes. */
 export function htmlToMarkdown(html) {
   if (!html) return '';
-  let s = String(html);
-  s = s.replace(/\r?\n/g, ' ');
-  s = s.replace(/<(h[1-6])[^>]*>(.*?)<\/\1>/gi, (_, h, t) => `\n\n${'#'.repeat(Number(h[1]))} ${t}\n\n`);
-  s = s.replace(/<(strong|b)\b[^>]*>(.*?)<\/\1>/gi, '**$2**');
-  s = s.replace(/<(em|i)\b[^>]*>(.*?)<\/\1>/gi, '*$2*');
-  s = s.replace(/<(s|strike|del)\b[^>]*>(.*?)<\/\1>/gi, '~~$2~~');
-  s = s.replace(/<a [^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)');
-  s = s.replace(/<li[^>]*>\s*<input[^>]*checked[^>]*>/gi, '<li>[x] ');
-  s = s.replace(/<li[^>]*>\s*<input[^>]*type="checkbox"[^>]*>/gi, '<li>[ ] ');
-  s = s.replace(/<ol[^>]*>(.*?)<\/ol>/gi, (_, body) => {
-    let n = 0;
-    return '\n' + body.replace(/<li[^>]*>(.*?)<\/li>/gi, (_m, t) => `${++n}. ${t.trim()}\n`) + '\n';
-  });
-  s = s.replace(/<ul[^>]*>(.*?)<\/ul>/gi, (_, body) => '\n' + body.replace(/<li[^>]*>(.*?)<\/li>/gi, (_m, t) => `- ${t.trim()}\n`) + '\n');
-  s = s.replace(/<br\s*\/?>/gi, '\n');
-  s = s.replace(/<\/(p|div)>/gi, '\n\n').replace(/<(p|div)[^>]*>/gi, '');
-  s = s.replace(/<[^>]+>/g, '');
-  s = s.replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
-  return s
-    .split('\n')
-    .map((l) => l.replace(/[ \t]+$/g, ''))
-    .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+  return blocks(parseHtml(String(html)).kids).join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 const noteOf = (r) => (str(r.note_html) ? htmlToMarkdown(r.note_html) : opt(r.note));
@@ -59,24 +189,28 @@ const noteOf = (r) => (str(r.note_html) ? htmlToMarkdown(r.note_html) : opt(r.no
 /**
  * @param tabs {Record<string, Record<string, unknown>[]>} rows of each v1 tab, keyed by tab name ("Projects", "To-dos" ...)
  * @param docs {Record<string, string>} Markdown of each notes Doc, keyed by Doc id (optional)
+ * @param extra {{ named?: Record<string, string>, scenes?: Record<string, object> }} `named`: Markdown keyed by file name without
+ *   extension ("My project notes"), matched to a project or note list by name when the Doc id has no file; `scenes`: Excalidraw
+ *   scenes keyed by whiteboard id.
  */
-export function mapV1(tabs, docs = {}) {
+export function mapV1(tabs, docs = {}, extra = {}) {
   const t = (name) => (tabs[name] ?? []).filter((r) => str(r.id) || name === 'Settings');
   const out = Object.fromEntries(ORDER.map((k) => [k, []]));
   const warnings = [];
+  const unmatched = { docs: [], scenes: [] };
 
-  out.categories = t('Categories').map((r) => ({ id: str(r.id), label: str(r.label) || 'Unnamed', color: opt(r.color), ord: num(r.order) }));
+  out.categories = t('Categories').map((r) => ({ id: catId(r.id), label: str(r.label) || 'Unnamed', color: opt(r.color), ord: num(r.order) }));
   out.projects = t('Projects').map((r) => ({
     id: str(r.id),
     name: str(r.name) || 'Unnamed project',
-    category_id: opt(r.category),
+    category_id: catId(r.category),
     status: enumOr(r.status, ['active', 'paused', 'done', 'dropped'], str(r.status) === 'finished' ? 'done' : 'active'),
     locked_until: day(r.locked_until),
     last_touched: day(r.last_touched),
     created: time(r.created),
     updated_at: time(r.updated_at),
   }));
-  out.backlog = t('Backlog').map((r) => ({ id: str(r.id), title: str(r.title), category_id: opt(r.category), note: opt(r.note), ord: num(r.order), created: time(r.created) }));
+  out.backlog = t('Backlog').map((r) => ({ id: str(r.id), title: str(r.title), category_id: catId(r.category), note: opt(r.note), ord: num(r.order), created: time(r.created) }));
   out.lists = t('Lists').map((r) => ({
     id: str(r.id),
     name: str(r.name) || 'Unnamed',
@@ -130,7 +264,7 @@ export function mapV1(tabs, docs = {}) {
     grp: opt(r.group),
     note: opt(r.note),
     project_id: opt(r.project_id),
-    category_id: opt(r.category),
+    category_id: catId(r.category),
     created: time(r.added),
   }));
   out.habits = t('Habits').map((r) => ({
@@ -144,7 +278,7 @@ export function mapV1(tabs, docs = {}) {
     goal: opt(r.goal),
     step_up_every: opt(r.step_up_every),
     prompts: opt(r.prompts),
-    category_id: opt(r.category),
+    category_id: catId(r.category),
     description: opt(r.description),
     status: enumOr(r.status, ['active', 'paused', 'ended', 'aspiring'], 'active'),
     started: day(r.started),
@@ -179,15 +313,31 @@ export function mapV1(tabs, docs = {}) {
   out.links = t('Links').map((r) => ({ id: str(r.id), from_id: str(r.from_id), to_id: str(r.to_id), type: enumOr(r.type, ['blocks', 'relates'], 'relates'), note: opt(r.note), created: time(r.created) }));
   // Whiteboard scenes live in .excalidraw files in Drive; the rows come across, the drawings come with Drive sync.
   out.whiteboards = t('Whiteboards').map((r) => ({ id: str(r.id), name: str(r.name) || 'Whiteboard', project_id: opt(r.project_id), show_today: yes(r.show_today), created: time(r.created) }));
-  if (out.whiteboards.length) warnings.push(`${out.whiteboards.length} whiteboards: names imported, drawings stay in Drive for now`);
+  const scenes = extra.scenes ?? {};
+  const boardIds = new Set(out.whiteboards.map((w) => w.id));
+  for (const w of out.whiteboards) if (scenes[w.id]) w.scene = scenes[w.id];
+  unmatched.scenes = Object.keys(scenes).filter((id) => !boardIds.has(id));
+  const bare = out.whiteboards.filter((w) => !w.scene).length;
+  if (bare) warnings.push(`${bare} whiteboards have no drawing file (names imported, drawing stays in Drive)`);
 
+  const named = new Map(Object.entries(extra.named ?? {}).map(([k, v]) => [nameKey(k), { file: k, text: v, used: false }]));
+  const projectName = new Map(out.projects.map((p) => [p.id, p.name]));
+  const listName = new Map(out.lists.map((l) => [l.id, l.name]));
   for (const r of t('Notes')) {
     if (r.id === 'today') continue;
     const docId = str(r.doc_id);
-    const body = docs[docId];
-    if (docId && body === undefined) warnings.push(`Notes ${r.id}: no text for Doc ${docId} (export it into the docs folder as ${docId}.md)`);
-    out.notes.push({ id: str(r.id), project_id: opt(r.project_id), list_id: opt(r.list_id), body: body ?? str(r.preview), show_today: yes(r.show_today) });
+    let body = docs[docId];
+    if (body === undefined) {
+      const owner = projectName.get(str(r.project_id)) ?? listName.get(str(r.list_id));
+      const hit = owner && (named.get(nameKey(`${owner} notes`)) ?? named.get(nameKey(owner)));
+      if (hit && !hit.used) {
+        hit.used = true;
+        body = hit.text;
+      } else if (docId) warnings.push(`Notes ${r.id}: no file for Doc ${docId}${owner ? ` or "${owner} notes"` : ''}; used the v1 preview`);
+    }
+    out.notes.push({ id: str(r.id), project_id: opt(r.project_id), list_id: opt(r.list_id), body: body || str(r.preview), show_today: yes(r.show_today) });
   }
+  unmatched.docs = [...named.values()].filter((n) => !n.used).map((n) => n.file);
 
   // Drop empty optional values; the server fills defaults.
   for (const k of ORDER) out[k] = out[k].map((row) => Object.fromEntries(Object.entries(row).filter(([, v]) => v !== undefined && v !== '')));
@@ -197,5 +347,5 @@ export function mapV1(tabs, docs = {}) {
     const key = str(r.key);
     if (/^(rotation|week)\./.test(key)) settings[key] = str(r.value);
   }
-  return { rows: out, settings, warnings };
+  return { rows: out, settings, warnings, unmatched };
 }

@@ -1,0 +1,4 @@
+.criteria .checks li { display: flex; align-items: center; gap: 8px; }
+.criteria .crit-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.criteria .done .crit-text { text-decoration: line-through; color: var(--muted); }
+.criteria .grip { cursor: grab; color: var(--muted); letter-spacing: -3px; padding: 6px 4px; touch-action: none; user-select: none; }

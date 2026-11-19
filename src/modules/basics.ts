@@ -1,13 +1,17 @@
-// Small modules: modes, categories, backlog, criteria, resources, links, stickies.
+// Small modules: modes, categories, backlog, criteria, resources, stickies. (Links: relations.ts.)
 
 import { z } from 'zod';
 import type { Entity } from '../core/entity';
 import { bad } from '../core/errors';
-import type { Module } from '../core/registry';
+import { allEntities, type Module } from '../core/registry';
 import { create, get, list, remove, update } from '../core/store';
 import { projectsEntity } from './projects';
 
 const COLOR = { type: 'text', desc: 'A colour name or #rrggbb' } as const;
+
+function checkColour(v: unknown) {
+  if (typeof v === 'string' && v !== '' && !/^#[0-9a-fA-F]{6}$/.test(v)) throw bad('color must look like #3366cc');
+}
 
 export const modesEntity: Entity = {
   name: 'modes',
@@ -20,8 +24,26 @@ export const modesEntity: Entity = {
     label: { type: 'text', required: true },
     account_id: { type: 'text', ref: 'accounts', desc: 'Google account used for Drive sync' },
     drive_folder_id: { type: 'text' },
+    color: { type: 'text', desc: 'Accent colour as #rrggbb, used by the web app while this mode is open' },
+  },
+  beforeUpdate(_ctx, _before, patch) {
+    checkColour(patch.color);
+  },
+  async onDelete(ctx, row) {
+    // A mode can only go when it holds no data (and never the last one).
+    const modes = await ctx.db.prepare('SELECT COUNT(*) AS n FROM modes').first<{ n: number }>();
+    if ((modes?.n ?? 0) <= 1) throw bad('The last mode cannot be deleted');
+    const used: string[] = [];
+    for (const e of allEntities()) {
+      if (!e.modeScoped) continue;
+      const r = await ctx.db.prepare(`SELECT COUNT(*) AS n FROM ${e.table} WHERE mode = ?`).bind(row.id).first<{ n: number }>();
+      if (r?.n) used.push(`${r.n} ${r.n === 1 ? e.singular : e.name}`);
+    }
+    if (used.length) throw bad(`The mode "${row.label}" still has data (${used.join(', ')}). Delete that first.`);
+    if ((await ctx.setting('default_mode', '')) === row.id) throw bad('This is the default mode; make another mode the default first');
   },
   beforeCreate(_ctx, row) {
+    checkColour(row.color);
     // A mode's id is chosen from its label, so it reads well in URLs: "side-projects".
     if (typeof row.label === 'string' && row.id && /^[a-z0-9]{10}$/.test(String(row.id))) {
       const slug = row.label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -42,6 +64,15 @@ export const categoriesEntity: Entity = {
     color: COLOR,
     account_id: { type: 'text', ref: 'accounts', desc: 'Overrides the mode’s Google account for Drive sync' },
     drive_folder_id: { type: 'text' },
+  },
+  async onDelete(ctx, row) {
+    // A category in use cannot be deleted: say what uses it, so the owner can move those first.
+    const parts: string[] = [];
+    for (const [table, noun] of [['projects', 'project'], ['backlog', 'backlog item'], ['habits', 'habit'], ['resources', 'resource']] as const) {
+      const r = await ctx.db.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE mode = ? AND category_id = ?`).bind(ctx.mode, row.id).first<{ n: number }>();
+      if (r?.n) parts.push(`${r.n} ${noun}${r.n === 1 ? '' : 's'}`);
+    }
+    if (parts.length) throw bad(`The category "${row.label}" is still used by ${parts.join(', ')}. Move or delete those first.`);
   },
 };
 
@@ -75,47 +106,6 @@ export const criteriaEntity: Entity = {
   },
 };
 
-export const resourcesEntity: Entity = {
-  name: 'resources',
-  table: 'resources',
-  singular: 'resource',
-  desc: 'Links and contact details kept with a project, or shared by a category. Never store anything sensitive (bank details, passwords, ID numbers).',
-  modeScoped: true,
-  orderGroup: ['project_id', 'category_id'],
-  filters: ['project_id', 'category_id', 'type', 'grp'],
-  fields: {
-    title: { type: 'text', required: true },
-    type: { type: 'text', enum: ['link', 'drive', 'phone', 'email', 'text'], default: 'link' },
-    value: { type: 'text', required: true, desc: 'The address, number or text' },
-    grp: { type: 'text', desc: 'Free-text group such as "Code" or "Suppliers"' },
-    note: { type: 'text' },
-    project_id: { type: 'text', ref: 'projects', cascade: true, desc: 'Empty means shared by the category' },
-    category_id: { type: 'text', ref: 'categories', cascade: true },
-  },
-  beforeCreate(_ctx, row) {
-    if (!row.project_id && !row.category_id) throw bad('A resource needs project_id or category_id');
-    if (row.type === 'link' && typeof row.value === 'string' && /^https:\/\/(docs|drive)\.google\.com\//.test(row.value)) row.type = 'drive';
-  },
-};
-
-export const linksEntity: Entity = {
-  name: 'links',
-  table: 'links',
-  singular: 'link',
-  desc: 'A typed link between two projects. "blocks": from must be done before to starts.',
-  modeScoped: true,
-  filters: ['from_id', 'to_id', 'type'],
-  fields: {
-    from_id: { type: 'text', required: true, ref: 'projects', cascade: true },
-    to_id: { type: 'text', required: true, ref: 'projects', cascade: true },
-    type: { type: 'text', enum: ['blocks', 'relates'], default: 'relates' },
-    note: { type: 'text' },
-  },
-  beforeCreate(_ctx, row) {
-    if (row.from_id === row.to_id) throw bad('A project cannot link to itself');
-  },
-};
-
 export const stickiesEntity: Entity = {
   name: 'stickies',
   table: 'stickies',
@@ -137,8 +127,8 @@ export const stickiesEntity: Entity = {
 
 export const basicsModule: Module = {
   id: 'basics',
-  description: 'Modes, categories, backlog, done criteria, resources, project links and stickies.',
-  entities: [modesEntity, categoriesEntity, backlogEntity, criteriaEntity, resourcesEntity, linksEntity, stickiesEntity],
+  description: 'Modes, categories, backlog, done criteria and stickies.',
+  entities: [modesEntity, categoriesEntity, backlogEntity, criteriaEntity, stickiesEntity],
   routes(api) {
     // Start a backlog item: it becomes an active project.
     api.post('/backlog/:id/start', async (c) => {
@@ -177,6 +167,7 @@ async function startBacklogItem(ctx: import('../core/ctx').Ctx, id: string) {
     category_id: item.category_id,
     status: 'active',
   });
+  await (await import('./relations')).moveLinks(ctx, { kind: 'backlog', id }, { kind: 'projects', id: project.id });
   await remove(ctx, backlogEntity, id);
   if (item.note) {
     const { setNote } = await import('./notes');

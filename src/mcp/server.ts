@@ -16,6 +16,7 @@ const INSTRUCTIONS = `Focus Tracker is the owner's personal tracker: projects wi
 - Start with get_today for the day, list_projects / get_project for projects, search to find anything.
 - Never choose today's focus project unless the owner asks: each day starts empty until they choose.
 - Never store sensitive material (bank or card details, passwords, ID numbers, health records) in resources or notes.
+- Link a Google Doc, Sheet, Drive file or any address to a project (or share it with a category) with add_resource; the type and icon are worked out from the address.
 - Every change can be undone with the undo tool; tell the owner what you changed.`;
 
 type Rpc = { jsonrpc: '2.0'; id?: string | number | null; method: string; params?: Record<string, unknown> };

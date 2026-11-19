@@ -1,0 +1,35 @@
+/* Resources feature */
+.resources-card { gap: 8px; }
+.res-block { display: flex; flex-direction: column; gap: 8px; }
+.res-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+.res-group-name { margin: 8px 0 2px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+ul.res-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; min-height: 8px; }
+.res-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); min-height: 48px; background: var(--surface); }
+ul.res-list > .res-row:last-child { border-bottom: 0; }
+.res-drag { color: var(--muted); cursor: grab; touch-action: none; user-select: none; padding: 6px 2px; letter-spacing: -2px; font-size: 0.9rem; flex: none; }
+.res-row .kind-icon { flex: none; }
+.res-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.res-title { font-weight: 600; overflow-wrap: anywhere; color: var(--fg); }
+a.res-title { color: var(--accent); }
+.res-sub { overflow-wrap: anywhere; }
+.res-text { white-space: pre-wrap; }
+.res-row button.small { min-height: 34px; padding: 4px 10px; flex: none; }
+.res-shared { border-top: 1px dashed var(--line); margin-top: 6px; padding-top: 8px; }
+.res-shared-head { margin: 0 0 4px; font-size: 0.95rem; }
+.res-cat { width: auto; max-width: 55%; min-height: 34px; padding: 2px 8px; }
+
+/* dialogs */
+.res-form, .drive-dialog { display: flex; flex-direction: column; gap: 10px; }
+.res-types { display: flex; gap: 6px; flex-wrap: wrap; }
+.res-types .chip { gap: 6px; }
+.res-detected { display: flex; align-items: center; gap: 8px; margin: -4px 0 0; color: var(--muted); font-size: 0.9rem; }
+.res-rule { margin: 0; padding: 6px 10px; background: var(--accent-soft); border-radius: 8px; color: var(--fg); }
+.res-actions { display: flex; align-items: center; gap: 8px; }
+.res-actions .spacer { flex: 1; }
+.drive-tools { display: flex; gap: 6px; flex-wrap: wrap; }
+.drive-paste { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 0.85rem; }
+ul.drive-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 38vh; overflow-y: auto; }
+.drive-rows li { display: flex; align-items: center; gap: 8px; }
+.drive-rows li.dup { opacity: 0.55; }
+.drive-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.drive-row-main input { min-height: 36px; }

@@ -12,6 +12,10 @@ export interface Env {
   SESSION_SECRET: string;
   /** Set when the instance should use a fixed public URL (otherwise the request's origin). */
   PUBLIC_URL?: string;
+  /** Google Picker (docs/google-picker.md). Public values, sent to the signed-in browser. */
+  GOOGLE_PICKER_CLIENT_ID?: string;
+  GOOGLE_PICKER_API_KEY?: string;
+  GOOGLE_PICKER_APP_ID?: string;
 }
 
 export interface Change {
@@ -30,6 +34,8 @@ export class Ctx {
   readonly batch = newId(12);
   readonly nowDate: Date;
   label = 'change';
+  /** Which client asked (?client=android|swiftbar|web), for per-client notification settings. */
+  client: string | null = null;
   private tz?: string;
   private settingsCache = new Map<string, string | null>();
 
@@ -100,6 +106,8 @@ export class Ctx {
   /** Write the changes of this request to the undo history. */
   async flushUndo(): Promise<void> {
     if (!this.changes.length) return;
+    // A new change ends what could be redone in this mode.
+    await this.db.prepare('DELETE FROM undo WHERE mode = ? AND undone = 1').bind(this.mode).run();
     const stmt = this.db.prepare(
       'INSERT INTO undo (mode, batch, label, entity, row_id, before, after, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
     );

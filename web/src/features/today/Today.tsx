@@ -1,11 +1,14 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useState } from 'preact/hooks';
 import { change, newId, optimistic, post, put } from '../../core/api';
 import { Panels, registerPanel, registerTab, type TodayPanelProps } from '../../core/registry';
-import { AddInput, daysAgo, Dialog, fmtDay, Loading, useData } from '../../core/ui';
+import { AddInput, daysAgo, fmtDay, Linkify, Loading, useData } from '../../core/ui';
+import { useSession, type Session } from './session';
+import { SessionArea } from './SessionControls';
+import './sessions';
+import { SwapDialog } from './SwapDialog';
 
 type Project = { id: string; name: string; last_touched?: string | null; category_id?: string | null };
 type Todo = { id: string; title: string; day: string | null; done: string | null };
-type Session = { project_id: string; project_name: string; started: string; elapsed_seconds: number; pomodoro: null | { phase: string; seconds_left: number; round: number; work: number; break: number } };
 type TodayData = {
   day: string;
   focus: Project | null;
@@ -19,120 +22,57 @@ type TodayData = {
   neglected: Project[];
 };
 
-const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
-
-function SessionTimer({ session }: { session: Session }) {
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
-  const elapsed = Math.floor((now - Date.parse(session.started)) / 1000);
-  let pomo = null;
-  if (session.pomodoro) {
-    const work = session.pomodoro.work * 60;
-    const cycle = work + session.pomodoro.break * 60;
-    const inCycle = elapsed % cycle;
-    const phase = inCycle < work ? 'Work' : 'Break';
-    const left = phase === 'Work' ? work - inCycle : cycle - inCycle;
-    pomo = (
-      <div class={`pomo ${phase.toLowerCase()}`}>
-        <span class="big">{clock(left)}</span>
-        <span class="muted">
-          {phase} · round {Math.floor(elapsed / cycle) + 1}
-        </span>
-      </div>
-    );
+function readAway(): string | null {
+  try {
+    return localStorage.getItem('ft.away.shown');
+  } catch {
+    return null;
   }
-  return (
-    <div class="timer">
-      {pomo}
-      <span class="muted">Session {clock(elapsed)}</span>
-    </div>
-  );
 }
 
-function ShutdownDialog({ project, onClose }: { project: Project | null; onClose: () => void }) {
-  const [where, setWhere] = useState('');
-  return (
-    <Dialog title="Finish session" onClose={onClose}>
-      <form
-        class="stack"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          onClose();
-          await change(() => post('/session/stop', { where_stopped: where || undefined }), 'Session logged');
-        }}
-      >
-        <label>
-          Where did you stop?
-          <textarea rows={3} value={where} onInput={(e) => setWhere((e.target as HTMLTextAreaElement).value)} autoFocus />
-        </label>
-        <div class="row">
-          <button
-            type="button"
-            class="ghost"
-            onClick={async () => {
-              onClose();
-              await change(() => post('/session/stop', { discard: true }), 'Session discarded');
-            }}
-          >
-            Discard
-          </button>
-          <button class="primary">Log session</button>
-        </div>
-      </form>
-    </Dialog>
-  );
-}
-
-function FocusPicker({ data, onClose }: { data: TodayData; onClose: () => void }) {
-  const { data: projects } = useData<Project[]>('/projects?status=active');
-  return (
-    <Dialog title={data.focus ? 'Swap focus' : 'Choose today’s focus'} onClose={onClose}>
-      {data.focus && <p class="muted">{data.focus.name} will be remembered, with a reminder tomorrow.</p>}
-      {!projects ? (
-        <Loading />
-      ) : (
-        <ul class="pick">
-          {projects
-            .filter((p) => p.id !== data.focus?.id)
-            .map((p) => (
-              <li key={p.id}>
-                <button
-                  onClick={async () => {
-                    onClose();
-                    await change(() => put('/focus', { project_id: p.id }), `Focus: ${p.name}`);
-                  }}
-                >
-                  <strong>{p.name}</strong>
-                  <span class="muted">touched {daysAgo(p.last_touched, data.day)}</span>
-                </button>
-              </li>
-            ))}
-        </ul>
-      )}
-    </Dialog>
-  );
-}
-
+/** The focus card: the day's focus project and its session (sessions.tsx, SessionControls.tsx). */
 function FocusCard({ data }: { data: TodayData }) {
   const [picking, setPicking] = useState(false);
-  const [stopping, setStopping] = useState(false);
+  const [anyway, setAnyway] = useState(() => readAway() === data.day);
+  const { live } = useSession();
   const f = data.focus;
-  const s = data.session;
+  const running = !!(live ?? data.session);
+  const head = (
+    <div class="card-head">
+      <h2>Focus</h2>
+      <span class="muted">{fmtDay(data.day)}</span>
+    </div>
+  );
+  if (data.rotation?.category === 'away' && !f && !running && !anyway)
+    return (
+      <section class="card focus away">
+        {head}
+        <p class="away-title">Day off — nothing planned</p>
+        <p class="muted">Rest counts too.</p>
+        <div class="row">
+          <button
+            class="ghost"
+            onClick={() => {
+              setAnyway(true);
+              try {
+                localStorage.setItem('ft.away.shown', data.day);
+              } catch {
+                /* private mode */
+              }
+            }}
+          >
+            Show my focus anyway
+          </button>
+        </div>
+      </section>
+    );
   return (
     <section class="card focus">
-      <div class="card-head">
-        <h2>Focus</h2>
-        <span class="muted">{fmtDay(data.day)}</span>
-      </div>
+      {head}
       {f ? (
-        <>
-          <a class="focus-name" href={`#/p/${f.id}`}>
-            {f.name}
-          </a>
-        </>
+        <a class="focus-name" href={`#/p/${f.id}`}>
+          {f.name}
+        </a>
       ) : (
         <>
           <p class="muted">No focus yet. Each day starts empty until you choose.</p>
@@ -147,24 +87,14 @@ function FocusCard({ data }: { data: TodayData }) {
           )}
         </>
       )}
-      {s && <SessionTimer session={s} />}
+      {live && f && live.session.project_id !== f.id && <p class="muted small">Session running on {live.session.project_name}.</p>}
+      <SessionArea projectId={null} showStart={data.show_session_controls && !!f} />
       <div class="row">
         <button class="ghost" onClick={() => setPicking(true)}>
           {f ? 'Swap' : 'Choose…'}
         </button>
-        {data.show_session_controls &&
-          (s ? (
-            <button class="primary" onClick={() => setStopping(true)}>
-              Stop
-            </button>
-          ) : (
-            <button class="primary" onClick={() => change(() => post('/session/start', {}), 'Session started')}>
-              Start session
-            </button>
-          ))}
       </div>
-      {picking && <FocusPicker data={data} onClose={() => setPicking(false)} />}
-      {stopping && <ShutdownDialog project={f} onClose={() => setStopping(false)} />}
+      {picking && <SwapDialog current={f} day={data.day} onClose={() => setPicking(false)} />}
     </section>
   );
 }
@@ -191,7 +121,7 @@ function TodoPanel({ data, setData }: { data: TodayData; setData: (fn: (d: Today
           <li key={t.id} class={t.done ? 'done' : ''}>
             <label>
               <input type="checkbox" checked={!!t.done} onChange={() => tick(t)} />
-              <span>{t.title}</span>
+              <span><Linkify text={t.title} /></span>
               {t.day && t.day < data.day && !t.done && <span class="tag late">{fmtDay(t.day)}</span>}
             </label>
           </li>

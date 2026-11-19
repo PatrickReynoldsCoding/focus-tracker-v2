@@ -1,11 +1,12 @@
-import { useState } from 'preact/hooks';
+import { useEffect } from 'preact/hooks';
 import { change, del, newId, optimistic, patch, post, put } from '../../core/api';
 import { Panels, registerPanel, registerRoute, type ProjectPanelProps } from '../../core/registry';
-import { AddInput, daysAgo, fmtDay, fmtMinutes, go, InlineEdit, Loading, MarkdownEditor, todayLocal, useData } from '../../core/ui';
+import { AddInput, daysAgo, fmtDay, fmtMinutes, go, InlineEdit, Linkify, Loading, MarkdownEditor, todayLocal, useData } from '../../core/ui';
 import { Board, type Column } from './Board';
+import { CategorySelect } from './CategorySelect';
+import { lastProject } from './last-project';
 
 type Criterion = { id: string; text: string; done: boolean };
-type Resource = { id: string; title: string; type: string; value: string; grp: string | null; note: string | null };
 type LogEntry = { id: string; date: string; minutes: number | null; where_stopped: string | null };
 type Full = {
   id: string;
@@ -16,128 +17,19 @@ type Full = {
   locked_until: string | null;
   columns: Column[];
   criteria: Criterion[];
-  resources: Resource[];
+  resources: unknown[];
   notes: string;
   lists: { id: string; name: string; kind: string }[];
   recent_log: LogEntry[];
 };
 
-function href(r: Resource): string | undefined {
-  if (r.type === 'link' || r.type === 'drive') return /^https?:\/\//.test(r.value) ? r.value : undefined;
-  if (r.type === 'email') return `mailto:${r.value}`;
-  if (r.type === 'phone') return `tel:${r.value}`;
-  return undefined;
-}
-
-function Criteria({ p, setData }: { p: Full; setData: (fn: (d: Full) => Full) => void }) {
-  const done = p.criteria.filter((c) => c.done).length;
-  return (
-    <section class="card">
-      <div class="card-head">
-        <h2>Done when</h2>
-        <span class="muted">
-          {done}/{p.criteria.length}
-        </span>
-      </div>
-      <ul class="checks">
-        {p.criteria.map((c) => (
-          <li key={c.id} class={c.done ? 'done' : ''}>
-            <label>
-              <input
-                type="checkbox"
-                checked={c.done}
-                onChange={() =>
-                  optimistic(
-                    () => {
-                      setData((d) => ({ ...d, criteria: d.criteria.map((x) => (x.id === c.id ? { ...x, done: !c.done } : x)) }));
-                      return () => setData((d) => ({ ...d, criteria: d.criteria.map((x) => (x.id === c.id ? c : x)) }));
-                    },
-                    () => patch(`/criteria/${c.id}`, { done: !c.done }),
-                  )
-                }
-              />
-              <span>{c.text}</span>
-            </label>
-            <button class="icon small" aria-label="Delete" onClick={() => change(() => del(`/criteria/${c.id}`))}>
-              ✕
-            </button>
-          </li>
-        ))}
-      </ul>
-      <AddInput
-        placeholder="Add a done criterion"
-        onAdd={(text) => {
-          const id = newId();
-          optimistic(
-            () => {
-              setData((d) => ({ ...d, criteria: [...d.criteria, { id, text, done: false }] }));
-              return () => setData((d) => ({ ...d, criteria: d.criteria.filter((x) => x.id !== id) }));
-            },
-            () => post('/criteria', { id, project_id: p.id, text }),
-          );
-        }}
-      />
-    </section>
-  );
-}
-
-function Resources({ p }: { p: Full }) {
-  const [adding, setAdding] = useState(false);
-  const [title, setTitle] = useState('');
-  const [value, setValue] = useState('');
-  return (
-    <section class="card">
-      <div class="card-head">
-        <h2>Resources</h2>
-        <button class="ghost small" onClick={() => setAdding(!adding)}>
-          {adding ? 'Cancel' : '+ Add'}
-        </button>
-      </div>
-      <ul class="plain resources">
-        {p.resources.map((r) => (
-          <li key={r.id}>
-            {href(r) ? (
-              <a href={href(r)} target="_blank" rel="noopener noreferrer">
-                {r.title}
-              </a>
-            ) : (
-              <span>
-                {r.title}: {r.value}
-              </span>
-            )}
-            {r.grp && <span class="tag">{r.grp}</span>}
-            <button class="icon small" aria-label="Delete" onClick={() => change(() => del(`/resources/${r.id}`), 'Removed')}>
-              ✕
-            </button>
-          </li>
-        ))}
-      </ul>
-      {adding && (
-        <form
-          class="stack"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const v = value.trim();
-            const type = /^https?:\/\//.test(v) ? 'link' : /^[^@\s]+@[^@\s]+$/.test(v) ? 'email' : /^[+\d][\d\s-]{5,}$/.test(v) ? 'phone' : 'text';
-            change(() => post('/resources', { project_id: p.id, title: title.trim() || v, value: v, type }));
-            setTitle('');
-            setValue('');
-            setAdding(false);
-          }}
-        >
-          <input placeholder="Title" value={title} onInput={(e) => setTitle((e.target as HTMLInputElement).value)} />
-          <input placeholder="Link, email, phone or text" required value={value} onInput={(e) => setValue((e.target as HTMLInputElement).value)} />
-          <p class="muted small">Never add bank details, passwords or ID numbers.</p>
-          <button class="primary">Add</button>
-        </form>
-      )}
-    </section>
-  );
-}
-
 export function ProjectPage({ id }: { id: string }) {
   const { data: p, error, setData } = useData<Full>(`/projects/${id}/full`);
   const { data: cats } = useData<{ id: string; label: string }[]>('/categories');
+  useEffect(() => {
+    if (p) lastProject.set(id);
+    else if (error) lastProject.clear(id);
+  }, [id, !!p, error]);
   if (!p) return <Loading error={error} />;
   const save = (fields: Partial<Full>) => {
     setData((d) => ({ ...d, ...fields }));
@@ -147,7 +39,7 @@ export function ProjectPage({ id }: { id: string }) {
   return (
     <div class="stack project">
       <div class="page-head">
-        <a href="#/projects" class="muted back">
+        <a href="#/projects" class="muted back" onClick={() => lastProject.clear()}>
           ← Projects
         </a>
         <h1>
@@ -159,14 +51,7 @@ export function ProjectPage({ id }: { id: string }) {
               <option key={s}>{s}</option>
             ))}
           </select>
-          <select value={p.category_id ?? ''} onChange={(e) => save({ category_id: (e.target as HTMLSelectElement).value || null })} aria-label="Category">
-            <option value="">No category</option>
-            {cats?.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label}
-              </option>
-            ))}
-          </select>
+          <CategorySelect value={p.category_id ?? null} cats={cats} onPick={(category_id) => save({ category_id })} />
           <span class="muted small">touched {daysAgo(p.last_touched, today)}</span>
           <button class="ghost small" onClick={() => change(() => put('/focus', { project_id: p.id }), `Focus: ${p.name}`)}>
             ◎ Focus today
@@ -187,12 +72,11 @@ registerPanel('project', {
   render: ({ project }) => (
     <section class="card">
       <h2>Notes</h2>
-      <MarkdownEditor value={project.notes} placeholder="Notes for this project (Markdown)…" onSave={(body) => change(() => put(`/notes/of/project/${project.id}`, { body }))} />
+      <MarkdownEditor value={project.notes} note={{ kind: 'project', id: project.id }} placeholder="Notes for this project…" onSave={(body) => change(() => put(`/notes/of/project/${project.id}`, { body }))} />
     </section>
   ),
 });
-registerPanel('project', { id: 'criteria', order: 30, render: ({ project, setProject }) => <Criteria p={project} setData={setProject} /> });
-registerPanel('project', { id: 'resources', order: 40, render: ({ project }) => <Resources p={project} /> });
+// The 'resources' panel (order 40) is registered by features/resources.
 registerPanel('project', {
   id: 'sessions',
   order: 50,
@@ -204,7 +88,11 @@ registerPanel('project', {
           {project.recent_log.map((l: LogEntry) => (
             <li key={l.id}>
               <strong>{fmtDay(l.date)}</strong> {l.minutes ? <span class="muted">{fmtMinutes(l.minutes)}</span> : null}
-              {l.where_stopped && <div class="small">{l.where_stopped}</div>}
+              {l.where_stopped && (
+                <div class="small">
+                  <Linkify text={l.where_stopped} />
+                </div>
+              )}
             </li>
           ))}
         </ul>
@@ -242,6 +130,7 @@ registerPanel('project', {
         onClick={async () => {
           if (!confirm(`Delete ${project.name} with its board, notes and criteria? Undo brings it back.`)) return;
           await change(() => del(`/projects/${project.id}`), 'Project deleted');
+          lastProject.clear(project.id);
           go('/projects');
         }}
       >

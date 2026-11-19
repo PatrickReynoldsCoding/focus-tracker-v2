@@ -17,6 +17,7 @@ import kotlin.concurrent.thread
 /** The app's screens are the tracker's web app; this activity hosts it and keeps the widgets fresh. */
 class MainActivity : Activity() {
     private lateinit var web: WebView
+    private lateinit var updateBar: UpdateBar
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,8 +42,15 @@ class MainActivity : Activity() {
         }
         // Android 15 draws behind the status and navigation bars: keep the page clear of them.
         // (A WebView ignores its own padding, so a frame around it takes the insets.)
+        // The update bar (UpdateBar.kt) sits above the web app and shows only when there is an update to act on.
+        web.addJavascriptInterface(UpdateBridge(this), UpdateBridge.NAME)
+        updateBar = UpdateBar(this)
+        val column = android.widget.LinearLayout(this)
+        column.orientation = android.widget.LinearLayout.VERTICAL
+        column.addView(updateBar)
+        column.addView(web, android.widget.LinearLayout.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         val frame = android.widget.FrameLayout(this)
-        frame.addView(web)
+        frame.addView(column)
         frame.setOnApplyWindowInsetsListener { v, insets ->
             val bars = insets.getInsets(android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.ime())
             v.setPadding(bars.left, bars.top, bars.right, bars.bottom)
@@ -56,10 +64,29 @@ class MainActivity : Activity() {
             onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) { goBack() }
         }
         RefreshWorker.schedule(this)
+        Updater.init(this)
+        if (intent.hasExtra(EXTRA_UPDATE_URL)) Updater.setTestUrl(this, intent.getStringExtra(EXTRA_UPDATE_URL)) // debug builds only
+        Updater.checkIfDue(this) // at most every few hours
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (::updateBar.isInitialized) updateBar.start()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (::updateBar.isInitialized) updateBar.stop()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        Updater.continueInstall(this) // back from Android's "install unknown apps" page
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        if (intent.hasExtra(EXTRA_UPDATE_URL)) Updater.setTestUrl(this, intent.getStringExtra(EXTRA_UPDATE_URL))
         intent.getStringExtra(EXTRA_FRAGMENT)?.let { web.loadUrl(Prefs(this).url + "/#" + it) }
         if (intent.getBooleanExtra(EXTRA_PIN_WIDGET, false)) pinWidget()
     }
@@ -86,5 +113,7 @@ class MainActivity : Activity() {
     companion object {
         const val EXTRA_FRAGMENT = "ft.fragment"
         const val EXTRA_PIN_WIDGET = "ft.pinWidget"
+        /** Debug builds only: where the updater looks for releases (a local test server). */
+        const val EXTRA_UPDATE_URL = "ft.updateUrl"
     }
 }
