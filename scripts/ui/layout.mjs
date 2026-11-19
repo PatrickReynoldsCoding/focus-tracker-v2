@@ -46,12 +46,12 @@ async function grid(theme) {
   await page.goto(`${B}/#/today`);
   await page.waitForSelector('.pl-pill');
   await pill(page, 'All');
-  await page.waitForSelector('.lg-item[data-panel="todos"]');
+  await page.waitForSelector('.lg-item[data-panel="today-list"]');
   await page.waitForTimeout(400);
   ok(!(await page.$('.lg-item[data-panel="focus"]')) && !!(await page.$('.pl-page > .focus, .pl-page > .po-slot .focus')), `${name}: the focus card is pinned above the pills, not in the grid`);
   await shot(page, `${name}-start`);
   const ids = await page.$$eval('.lg-item', (els) => els.map((e) => e.dataset.panel));
-  ok(ids.includes('todos') && ids.includes('habits') && ids.some((i) => i.startsWith('list-')) && ids.some((i) => i.startsWith('wb-')), `${name}: Today panels, lists and the whiteboard are grid items (${ids.join(', ')})`);
+  ok(ids.includes('today-list') && ids.includes('habits') && ids.some((i) => i.startsWith('list-')) && ids.some((i) => i.startsWith('wb-')), `${name}: Today panels, lists and the whiteboard are grid items (${ids.join(', ')})`);
   // No two panels overlap.
   const rects = [];
   for (const id of ids) {
@@ -61,9 +61,9 @@ async function grid(theme) {
   const overlap = rects.some((a, i) => rects.some((b, j) => j > i && a.x < b.x + b.width - 1 && b.x < a.x + a.width - 1 && a.y < b.y + b.height - 1 && b.y < a.y + a.height - 1));
   ok(!overlap, `${name}: no panels overlap`);
 
-  // Drag "To do today" by its title to the top right.
-  const todo = await box(page, 'todos');
-  const h2 = page.locator('.lg-item[data-panel="todos"] h2').first();
+  // Drag the Today list by its title to the top right.
+  const todo = await box(page, 'today-list');
+  const h2 = page.locator('.lg-item[data-panel="today-list"] h2').first();
   const hb = await h2.boundingBox();
   const gb = await page.locator('.lg-grid').boundingBox();
   await page.mouse.move(hb.x + 10, hb.y + hb.height / 2);
@@ -74,17 +74,17 @@ async function grid(theme) {
   await shot(page, `${name}-dragging`);
   await page.mouse.up();
   await page.waitForTimeout(500);
-  const moved = await box(page, 'todos');
-  ok(moved.x > gb.x + 100 && Math.abs(moved.y - gb.y) < 4, `${name}: To do today moved to the top of the right column (${Math.round(moved.x)},${Math.round(moved.y)})`);
+  const moved = await box(page, 'today-list');
+  ok(moved.x > gb.x + 100 && Math.abs(moved.y - gb.y) < 4, `${name}: the Today list moved to the top of the right column (${Math.round(moved.x)},${Math.round(moved.y)})`);
   let saved = (await api.get('/layout/today')).grid;
-  ok(saved && saved.items.todos && saved.items.todos.x > 0, `${name}: the new place is saved on the server`);
+  ok(saved && saved.items['today-list'] && saved.items['today-list'].x > 0, `${name}: the new place is saved on the server`);
 
   // It is still there after a reload.
   await page.reload();
-  await page.waitForSelector('.lg-item[data-panel="todos"]');
+  await page.waitForSelector('.lg-item[data-panel="today-list"]');
   await page.waitForTimeout(400);
   ok((await selected(page)) === 'All', `${name}: Today opens on the pill used last (All)`);
-  const again = await box(page, 'todos');
+  const again = await box(page, 'today-list');
   ok(Math.abs(again.x - moved.x) < 4 && Math.abs(again.y - moved.y) < 4, `${name}: same place after a reload`);
 
   // Edit layout: resize, remove, add back, reset.
@@ -163,13 +163,13 @@ async function deskPills(theme) {
   await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('ft.pills.')).forEach((k) => localStorage.removeItem(k)));
   await page.goto(`${B}/#/today`);
   await page.waitForSelector('.pl-pill');
-  await page.waitForSelector('.lg-item[data-panel="todos"]');
+  await page.waitForSelector('.lg-item[data-panel="today-list"]');
   await page.waitForTimeout(500);
   await shot(page, `${name}-start`);
   const names = await page.$$eval('.pl-pill', (els) => els.map((e) => e.textContent.trim()));
   ok(names.length === 3 && names[0].startsWith('🎯Today') && names[1].startsWith('📚Notes') && names[2] === 'All', `${name}: the usual pills, not one per panel (${names.join(' | ')})`);
   let ids = await page.$$eval('.lg-item', (els) => els.map((e) => e.dataset.panel));
-  ok(ids.join() === 'todos,habits,plan-week', `${name}: the Today pill holds to-dos, habits and this week (${ids.join(', ')})`);
+  ok(ids.join() === 'today-list,plan-week', `${name}: the Today pill holds the Today list and this week (${ids.join(', ')})`);
   ok(!!(await page.$('.pl-page > .focus, .pl-page > .po-slot .focus')), `${name}: the focus card is pinned above the pills`);
 
   // Each pill has its own grid: a move in the Today pill leaves the All pill's layout alone.
@@ -184,7 +184,8 @@ async function deskPills(theme) {
   await page.mouse.up();
   await page.waitForTimeout(500);
   const moved = await box(page, 'plan-week');
-  ok(Math.abs(moved.y - gb.y) < 4 && moved.y < pw.y, `${name}: This week moved to the top of the Today pill`);
+  // (It starts at the top of the right column, beside the Today list: it moves to the top left.)
+  ok(Math.abs(moved.y - gb.y) < 4 && (moved.y < pw.y || moved.x < pw.x - 100), `${name}: This week moved to the top left of the Today pill`);
   let saved = await api.get('/layout/today');
   ok(saved.grids?.today?.items['plan-week'] && JSON.stringify(saved.grid) === pageGrid, `${name}: saved as the pill's own grid, not the page's`);
   await pill(page, 'All');
@@ -293,12 +294,12 @@ async function pills(theme) {
   ok(names.length === 3 && names[0].includes('Today') && names[1].includes('Notes') && names[2] === 'All', `${name}: the usual pills, the same as on a computer (${names.join(' | ')})`);
   ok(!!(await page.$('.pl-page .focus.compact')), `${name}: the focus card is pinned, compact`);
   ok(/Today\s*\d/.test(names[0]), `${name}: pills show counts`);
-  ok(!!(await page.$('#pl-panels .habits-panel')) && !(await page.$('#pl-panels .tp-list')), `${name}: the Today pill stacks to-dos, habits and this week`);
+  ok(!!(await page.$('#pl-panels .today-list')) && !(await page.$('#pl-panels .habits-panel')) && !(await page.$('#pl-panels .tp-list')), `${name}: the Today pill stacks the Today list and this week`);
 
   // Tap a pill.
   await page.click('.pl-pill:has-text("Notes")');
   await page.waitForTimeout(400);
-  ok((await selected(page)).includes('Notes') && !!(await page.$('#pl-panels .tp-list')) && !(await page.$('#pl-panels .habits-panel')), `${name}: tapping Notes shows the notes and lists`);
+  ok((await selected(page)).includes('Notes') && !!(await page.$('#pl-panels .tp-list')) && !(await page.$('#pl-panels .today-list')), `${name}: tapping Notes shows the notes and lists`);
   // Swipe on the panels: the next pill, not the next tab.
   const area = await page.locator('#pl-panels').boundingBox();
   const before = await selected(page);
@@ -379,11 +380,11 @@ async function popout(theme) {
   const { page, ctx } = await open(browser, { width: 1280, height: 900 }, errors, { name, init: theme === 'eink' ? eink : undefined });
   await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('ft.popout.')).forEach((k) => localStorage.removeItem(k)));
   await page.goto(`${B}/#/today`);
-  await page.waitForSelector('.lg-item[data-panel="todos"] .po-btn', { state: 'attached' });
-  await page.hover('.lg-item[data-panel="todos"]');
-  await page.click('.lg-item[data-panel="todos"] .po-btn');
+  await page.waitForSelector('.lg-item[data-panel="today-list"] .po-btn', { state: 'attached' });
+  await page.hover('.lg-item[data-panel="today-list"]');
+  await page.click('.lg-item[data-panel="today-list"] .po-btn');
   await page.waitForSelector('.po-win');
-  ok(!!(await page.$('.lg-item[data-panel="todos"] .po-placeholder')), `${name}: the page shows a placeholder where the panel was`);
+  ok(!!(await page.$('.lg-item[data-panel="today-list"] .po-placeholder')), `${name}: the page shows a placeholder where the panel was`);
   await page.waitForSelector('.po-win :text("Reply to landlord")', { timeout: 5000 }).catch(() => {});
   ok((await page.textContent('.po-win')).includes('Reply to landlord'), `${name}: the window shows the to-dos`);
   await shot(page, `${name}-window`);
@@ -468,26 +469,26 @@ async function offlineAndFlags() {
   await api.call('DELETE', '/layout/today/grids/today');
   const { page, ctx } = await open(browser, { width: 1280, height: 900 }, errors, { name });
   await page.goto(`${B}/#/today`);
-  await page.waitForSelector('.lg-item[data-panel="todos"]');
+  await page.waitForSelector('.lg-item[data-panel="today-list"]');
   await page.waitForTimeout(400);
   // A move made offline waits, and is sent when the connection is back.
   await ctx.setOffline(true);
-  const h2 = await page.locator('.lg-item[data-panel="todos"] h2').first().boundingBox();
-  const habits = await box(page, 'habits');
+  const h2 = await page.locator('.lg-item[data-panel="today-list"] h2').first().boundingBox();
+  const week = await box(page, 'plan-week');
   await page.mouse.move(h2.x + 10, h2.y + 8);
   await page.mouse.down();
   await page.mouse.move(h2.x + 40, h2.y + 30, { steps: 4 });
-  await page.mouse.move(habits.x + 40, habits.y + habits.height + 20, { steps: 8 });
+  await page.mouse.move(week.x + 40, week.y + week.height + 20, { steps: 8 });
   await page.mouse.up();
   await page.waitForTimeout(500);
   ok(!(await api.get('/layout/today')).grids.today, `${name}: nothing reaches the server while offline`);
-  const placed = await box(page, 'todos');
+  const placed = await box(page, 'today-list');
   await ctx.setOffline(false);
   await page.evaluate(() => window.dispatchEvent(new Event('online')));
   await page.waitForTimeout(2500);
   const g = (await api.get('/layout/today')).grids.today;
-  ok(g && g.items.todos, `${name}: the move in the Today pill is sent when back online`);
-  const after = await box(page, 'todos');
+  ok(g && g.items['today-list'], `${name}: the move in the Today pill is sent when back online`);
+  const after = await box(page, 'today-list');
   ok(Math.abs(after.y - placed.y) < 4 && Math.abs(after.x - placed.x) < 4, `${name}: and the panel stays where it was put`);
   await ctx.close();
 
@@ -509,7 +510,7 @@ async function offlineAndFlags() {
     const { page: p1, ctx: c1 } = await open(browser, { width: 1280, height: 900 }, errors, { name: 'grid-off' });
     await p1.goto(`${B}/#/today`);
     await p1.waitForSelector('.pl-pill');
-    await p1.waitForSelector('#pl-panels .habits-panel');
+    await p1.waitForSelector('#pl-panels .today-list');
     ok(!(await p1.$('.lg-item')), 'grid off: pills show their panels without the grid');
     await shot(p1, 'grid-off');
     await c1.close();

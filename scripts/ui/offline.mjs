@@ -54,6 +54,17 @@ async function leaveEditor(page) {
   else await page.mouse.click(5, 300);
 }
 const badge = (page) => page.locator('.net').first();
+// The to-do on Today: in the Today list (flag today-panel; a ticked one folds away) or in To do today.
+const todayRow = (page) => page.locator('.today-list .tl-sec .tl-row', { hasText: 'Reply to landlord' });
+const todayShown = (page, opts) => page.waitForSelector('.today-list, .checks li:has-text("Reply to landlord")', opts);
+async function tickOnToday(page) {
+  if (await page.$('.today-list')) await todayRow(page).locator('.tl-tick').first().click();
+  else await page.locator('.checks li', { hasText: 'Reply to landlord' }).locator('input[type=checkbox]').first().check();
+}
+async function tickedOnToday(page) {
+  if (await page.$('.today-list')) return (await todayRow(page).count()) === 0 && (await page.textContent('.today-list')).includes('1 done');
+  return page.locator('.checks li', { hasText: 'Reply to landlord' }).locator('input').first().isChecked();
+}
 const shot = (page, n) => page.screenshot({ path: `${OUT}/offline-${n}.png` });
 
 // ---------- phone: first visit, then no signal ----------
@@ -79,7 +90,7 @@ const shot = (page, n) => page.screenshot({ path: `${OUT}/offline-${n}.png` });
   await shot(page, 'phone-today');
 
   // 1. tick a to-do on Today
-  await page.locator('.checks li', { hasText: 'Reply to landlord' }).locator('input[type=checkbox]').first().check();
+  await tickOnToday(page);
   await page.waitForFunction(() => /Offline · 1/.test(document.querySelector('.net')?.textContent ?? ''));
   ok(true, 'ticking a to-do waits: "Offline · 1"');
 
@@ -101,13 +112,14 @@ const shot = (page, n) => page.screenshot({ path: `${OUT}/offline-${n}.png` });
   ok(true, 'card and note wait too: "Offline · 3"');
   // 4. a change that needs a connection says so
   await page.goto(`${B}/#/today`);
-  await page.waitForSelector('text=Reply to landlord');
+  await todayShown(page);
   await shot(page, 'phone-waiting');
 
   // reload while offline: everything still shows, the queue is still there
   await page.reload();
-  await page.waitForSelector('text=Reply to landlord');
-  ok(await page.locator('.checks li', { hasText: 'Reply to landlord' }).locator('input').first().isChecked(), 'after a reload offline the to-do is still ticked');
+  await todayShown(page);
+  await page.waitForTimeout(300);
+  ok(await tickedOnToday(page), 'after a reload offline the to-do is still ticked');
   await page.waitForFunction(() => /Offline · 3/.test(document.querySelector('.net')?.textContent ?? ''));
   ok(true, 'after a reload offline 3 changes still wait');
   await page.goto(`${B}/#/p/${p1.id}`);
@@ -179,7 +191,7 @@ const shot = (page, n) => page.screenshot({ path: `${OUT}/offline-${n}.png` });
 
   // a change that cannot wait
   await page.goto(`${B}/#/today`);
-  await page.waitForSelector('text=Reply to landlord');
+  await todayShown(page);
   await ctx.setOffline(true);
   await page.locator('.top .undo').click();
   await page.waitForSelector('.toast.error >> text=this change needs a connection');
@@ -195,11 +207,11 @@ const shot = (page, n) => page.screenshot({ path: `${OUT}/offline-${n}.png` });
   await page.goto(`${B}/#/n/${shopping.id}`);
   await page.waitForSelector('text=Milk');
   await page.goto(`${B}/#/today`);
-  await page.waitForSelector('text=Reply to landlord');
+  await todayShown(page);
   await page.waitForTimeout(600);
   await ctx.setOffline(true);
   await page.reload();
-  await page.waitForSelector('text=Reply to landlord');
+  await todayShown(page);
   await page.goto(`${B}/#/n/${shopping.id}`);
   await page.waitForSelector('text=Milk');
   await page.locator('li', { hasText: 'Milk' }).locator('input[type=checkbox]').first().check();

@@ -52,8 +52,9 @@ for (const [vp, name] of [[{ width: 390, height: 844 }, 'phone'], [{ width: 1280
   await page.fill('input[placeholder="Add a to-do for today"]', 'Buy milk');
   await page.press('input[placeholder="Add a to-do for today"]', 'Enter');
   await page.waitForSelector('text=Buy milk');
-  // Today shows one pill's panels at a time: the habits are in the first pill, Today.
-  await page.click('.habits-panel .dot >> nth=0');
+  // Today shows one pill's panels at a time: the habits are in the first pill, Today, in the Today list
+  // (or in the Habits panel while the flag today-panel is off).
+  await page.locator('.today-list .tl-sec .tl-tick, .habits-panel .dot').first().click();
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${OUT}/${name}-today-session.png`, fullPage: true });
   // stop the session
