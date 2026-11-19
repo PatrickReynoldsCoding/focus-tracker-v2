@@ -9,7 +9,7 @@ import { useFileTypes, type FileItem, type FileTypeDef } from '../../core/regist
 import { go, Loading, plainPreview, useData } from '../../core/ui';
 import { DeleteFolderDialog, MoveDialog, NameDialog, type Count } from './dialogs';
 import { FolderIcon } from './icons';
-import { Menu, MenuItem } from './Menu';
+import { Menu, MenuItem } from '../../core/menu';
 import { canDrag, changed, DRAG_TYPE, entryKey, entryName, entryRef, FINISHED, folderHref, isPhone, usePref, type Entry, type Folder, type Listing } from './model';
 import './files.css';
 

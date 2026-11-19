@@ -268,3 +268,12 @@ dialog.sheet::backdrop { background: var(--backdrop); }
 .file-glyph[data-tint='teal'] { background: var(--c-teal); } .file-glyph[data-tint='blue'] { background: var(--c-blue); }
 .file-glyph[data-tint='purple'] { background: var(--c-purple); } .file-glyph[data-tint='pink'] { background: var(--c-pink); }
 html[data-theme='eink'] .file-glyph { border: 2px solid #000; background: #fff; }
+
+/* The pop-up menu (core/menu.tsx: Files' New and ⋯, a panel's ⋯) */
+.files-menu { position: fixed; z-index: 60; min-width: 210px; max-width: calc(100vw - 16px); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-pop); padding: 6px 0; display: flex; flex-direction: column; }
+.files-menu-item { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; border-radius: 0; background: transparent; text-align: left; padding: 8px 16px; min-height: 44px; color: var(--fg); font-size: 0.95rem; }
+.files-menu-item:hover, .files-menu-item:focus-visible { background: var(--surface-2); text-decoration: none; outline: none; }
+.files-menu-item.danger { color: var(--danger); }
+.files-menu-ico { width: 24px; display: inline-grid; place-items: center; flex: none; color: var(--muted); }
+.files-menu-line { height: 1px; background: var(--line); margin: 4px 0; }
+html[data-theme='eink'] .files-menu { border-width: 2px; border-color: #000; }

@@ -1,4 +1,4 @@
-// A small pop-up menu under a button (the New button, an item's ⋯). It opens upwards when there
+// A small pop-up menu under a button (Files: the New button, an item's ⋯; a panel's ⋯). It opens upwards when there
 // is no room below, closes on a tap outside or Escape, and adds no browser history entry.
 import type { ComponentChildren } from 'preact';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';

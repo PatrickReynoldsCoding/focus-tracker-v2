@@ -73,14 +73,6 @@
 .drop-on { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--accent-soft) !important; }
 [draggable='true'] { -webkit-user-drag: element; }
 
-/* the pop-up menu */
-.files-menu { position: fixed; z-index: 60; min-width: 210px; max-width: calc(100vw - 16px); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-pop); padding: 6px 0; display: flex; flex-direction: column; }
-.files-menu-item { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; border-radius: 0; background: transparent; text-align: left; padding: 8px 16px; min-height: 44px; color: var(--fg); font-size: 0.95rem; }
-.files-menu-item:hover, .files-menu-item:focus-visible { background: var(--surface-2); text-decoration: none; outline: none; }
-.files-menu-item.danger { color: var(--danger); }
-.files-menu-ico { width: 24px; display: inline-grid; place-items: center; flex: none; color: var(--muted); }
-.files-menu-line { height: 1px; background: var(--line); margin: 4px 0; }
-
 /* Move… */
 .files-move-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 10px; max-height: 50vh; overflow-y: auto; }
 .files-move-list li + li { border-top: 1px solid var(--line); }
@@ -90,7 +82,7 @@
 .files-move-empty { padding: 12px; }
 
 /* E-ink: black borders, no tints */
-html[data-theme='eink'] :is(.folder-tile, .file-card, .file-list, .files-menu, .files-move-list) { border-width: 2px; border-color: #000; }
+html[data-theme='eink'] :is(.folder-tile, .file-card, .file-list, .files-move-list) { border-width: 2px; border-color: #000; }
 html[data-theme='eink'] .files-search { border: 2px solid #000; background: #fff; }
 html[data-theme='eink'] .file-thumb { border-bottom: 2px solid #000; background: #fff; }
 html[data-theme='eink'] .folder-icon .folder-shape { fill: #000; }
