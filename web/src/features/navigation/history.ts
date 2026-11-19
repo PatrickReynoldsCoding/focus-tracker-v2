@@ -6,7 +6,7 @@
 
 import { get, HttpError, mode } from '../../core/api';
 import { signal } from '../../core/signal';
-import { route } from '../../core/ui';
+import { route, wasReplaced } from '../../core/ui';
 
 const MAX = 30;
 const key = () => `ft.nav.${mode.value}`;
@@ -35,13 +35,13 @@ function set(s: string[]) {
 }
 
 /** Routes that point at one row: `/p/<id>` is a project and so on. A 404 for the row means the page is gone. */
-const ROW_KINDS: Record<string, string> = { p: 'projects', n: 'lists', w: 'whiteboards' };
+const ROW_KINDS: Record<string, string> = { p: 'projects', n: 'lists', w: 'whiteboards', pn: 'projects', files: 'folders' };
 async function exists(path: string): Promise<boolean> {
-  const [, head, id] = path.split('/');
-  const kind = ROW_KINDS[head];
+  const [, head, id, sub] = path.split('?')[0].split('/');
+  const kind = head === 'files' && id === 'p' ? (sub ? 'projects' : undefined) : ROW_KINDS[head];
   if (!kind || !id) return true;
   try {
-    await get(`/${kind}/${id}`);
+    await get(`/${kind}/${head === 'files' && id === 'p' ? sub : id}`);
     return true;
   } catch (e) {
     return !(e instanceof HttpError && e.status === 404);
@@ -76,6 +76,8 @@ route.subscribe((r) => {
     return;
   }
   if (r === from) return;
+  // An old address that sent us on (#/notes → Files) is not a page to go back to.
+  if (from && wasReplaced(from)) return;
   const s = stack.value;
   // Back by another way (the phone's back button, a "← Projects" link): the page is the one we came from.
   if (s[s.length - 1] === r) set(s.slice(0, -1));

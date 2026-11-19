@@ -138,7 +138,7 @@ export interface Copy {
 
 /** Answers that are not worth keeping: live state (a stale timer would mislead), secrets' lists, searches. */
 const NO_COPY = /^\/(session|status|notifications|today-panels\/banners|swiftbar|tokens|connections|search|links\/search|resources\/picker|schema|undo|redo)(\/|\?|$)/;
-export const savable = (path: string) => on && !NO_COPY.test(path);
+export const savable = (path: string) => on && !NO_COPY.test(path) && !/^\/files\?.*\bq=/.test(path);
 
 const copies = new Map<string, Copy>();
 const ckey = (mode: string, path: string) => `copy:${mode}:${path}`;
@@ -206,7 +206,7 @@ export function learn(data: unknown, depth = 0) {
 // ---------- which changes may wait ----------
 
 /** Kinds whose rows can be changed offline with the generic routes. */
-const KINDS = 'tasks|todos|columns|lists|criteria|stickies|habits|resources|projects|whiteboards|categories|backlog|log|links';
+const KINDS = 'tasks|todos|columns|lists|criteria|stickies|habits|resources|projects|whiteboards|categories|backlog|log|links|folders';
 const QUEUE_RULES: [method: string, path: RegExp][] = [
   // field edits (sent with base_updated_at)
   ['PATCH', new RegExp(`^/(${KINDS})/[\\w-]+$`)],
@@ -214,6 +214,8 @@ const QUEUE_RULES: [method: string, path: RegExp][] = [
   ['POST', new RegExp(`^/(${KINDS})/[\\w-]+/move$`)],
   ['POST', /^\/(todos|tasks)\/[\w-]+\/tick$/],
   ['POST', /^\/habits\/[\w-]+\/(check|not-today)$/],
+  // moving files between folders (Files tab)
+  ['POST', /^\/files\/move$/],
   // note saves (the editor sends its base)
   ['PUT', /^\/notes\/of\/(project|list)\/[\w-]+$/],
   // page layouts (the whole layout each time, so the last one wins)

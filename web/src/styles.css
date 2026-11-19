@@ -260,3 +260,11 @@ dialog.sheet::backdrop { background: var(--backdrop); }
 .more-sheet a.on { background: var(--accent-soft); font-weight: 600; }
 .more-sheet .ico { font-size: 1.3rem; position: relative; }
 @media (min-width: 900px) { .more-sheet-backdrop { display: none; } }
+
+/* A file type's icon (FileGlyph in core/ui.tsx): a glyph in a tinted square. */
+.file-glyph { display: inline-grid; place-items: center; flex: none; border-radius: 6px; color: var(--fg); line-height: 1; background: var(--surface-2); }
+.file-glyph[data-tint='red'] { background: var(--c-red); } .file-glyph[data-tint='orange'] { background: var(--c-orange); }
+.file-glyph[data-tint='yellow'] { background: var(--c-yellow); } .file-glyph[data-tint='green'] { background: var(--c-green); }
+.file-glyph[data-tint='teal'] { background: var(--c-teal); } .file-glyph[data-tint='blue'] { background: var(--c-blue); }
+.file-glyph[data-tint='purple'] { background: var(--c-purple); } .file-glyph[data-tint='pink'] { background: var(--c-pink); }
+html[data-theme='eink'] .file-glyph { border: 2px solid #000; background: #fff; }

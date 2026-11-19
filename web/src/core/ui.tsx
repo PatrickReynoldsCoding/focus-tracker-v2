@@ -14,6 +14,35 @@ export const route = signal(location.hash.slice(1) || '/today');
 window.addEventListener('hashchange', () => (route.value = location.hash.slice(1) || '/today'));
 export const go = (path: string) => (location.hash = path);
 
+/** The page a redirect left (replaceRoute), so the Back history does not count it as a step. */
+let replacedFrom: string | null = null;
+/** Go to another page in place of this one (an old address that now lives elsewhere): no new
+ *  browser history entry, and the in-app Back button skips the page left. */
+export function replaceRoute(path: string) {
+  replacedFrom = route.value;
+  location.replace(`#${path}`);
+}
+/** Whether `from` was left by replaceRoute (asked once, by the Back history). */
+export function wasReplaced(from: string): boolean {
+  const yes = replacedFrom === from;
+  replacedFrom = null;
+  return yes;
+}
+
+/** Run `fn` once a closing dialog has taken its history entry back (see Dialog), so a dialog or page
+ *  opened straight after another dialog closes is not undone by that step back. */
+export function afterDialog(fn: () => void) {
+  let done = false;
+  const run = () => {
+    if (done) return;
+    done = true;
+    window.removeEventListener('popstate', run);
+    fn();
+  };
+  window.addEventListener('popstate', run);
+  setTimeout(run, 400);
+}
+
 // ---------- loading ----------
 
 /** Load a path, again whenever the mode changes or a change lands. The saved copy on this device
@@ -300,4 +329,14 @@ export function plainPreview(md: string | null | undefined, maxLines = 2, maxCha
     .slice(0, maxLines);
   const text = lines.join(' · ');
   return text.length > maxChars ? text.slice(0, maxChars - 1).trimEnd() + '…' : text;
+}
+
+/** A file type's icon: a glyph in a small square tinted with a colour token ('yellow', 'green' ...),
+ *  as the Files tab and file pickers show it (styles in styles.css). */
+export function FileGlyph({ tint, children, size = 24 }: { tint: string; children: ComponentChildren; size?: number }) {
+  return (
+    <span class="file-glyph" data-tint={tint} style={{ width: `${size}px`, height: `${size}px`, fontSize: `${Math.round(size * 0.58)}px` }} aria-hidden="true">
+      {children}
+    </span>
+  );
 }
