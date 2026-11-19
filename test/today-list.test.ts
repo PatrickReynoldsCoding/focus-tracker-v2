@@ -80,14 +80,14 @@ describe('GET /api/today/list', () => {
     expect(byId[daily.id]).toMatchObject({ kind: 'habit', progress: '0/2', per: 'day' });
     expect(byId[weekly.id]).toMatchObject({ kind: 'habit', progress: '0/2 wk', can_skip: true });
     expect(byId[late.id]).toMatchObject({ kind: 'todo', late: addDays(day, -2), from: 'Shopping', list_id: other.id });
-    expect(byId[first.id].from).toBe('To-dos'); // two to-do lists: each to-do says which
+    expect(byId[first.id].from).toBeNull(); // the usual (first) to-do list is not named; others are
     expect(byId[card.id]).toMatchObject({ kind: 'card', from: 'Website', project_id: p.id, late: null });
     expect(byId[item.id]).toMatchObject({ kind: 'card', from: 'Ideas', late: addDays(day, -1) });
 
     // /today carries the cards for the web panel; /status a short copy for the widget and the menu bar.
     const t = await call('GET', '/today', undefined, m);
     expect(t.cards.map((c: any) => c.id).sort()).toEqual([card.id, item.id].sort());
-    expect(Object.values(t.todo_lists).sort()).toEqual(['Shopping', 'To-dos']);
+    expect(t.todo_lists).toEqual({ [other.id]: 'Shopping' });
     const s = await call('GET', '/status', undefined, m);
     expect(s.today_list.left).toBe(6);
     expect(s.today_list.items[0]).toEqual({ kind: 'habit', id: daily.id, title: 'Stretch', progress: '0/2', late: null });

@@ -189,7 +189,9 @@ describe('Claude and the pills', () => {
     const list = await call('POST', '/lists', { name: 'Pill test list', kind: 'todo' });
     const out = await tool('get_today_pills');
     expect(out.pills === null || Array.isArray(out.pills)).toBe(true);
-    expect(out.panels.map((p: any) => p.id)).toEqual(expect.arrayContaining(['todos', 'habits', `list-${list.id}`]));
+    // The Today list (flag today-panel, on) takes To do today's place; Habits can still be put in a pill.
+    expect(out.panels.map((p: any) => p.id)).toEqual(expect.arrayContaining(['today-list', 'habits', `list-${list.id}`]));
+    expect(out.panels.map((p: any) => p.id)).not.toContain('todos');
     expect(out.icons).toContain('🏠');
   });
 

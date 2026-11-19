@@ -35,10 +35,10 @@ export async function cardsForDay(ctx: Ctx, day: string): Promise<TodayCardIn[]>
   return rows.results.map((r) => ({ id: r.id, title: r.title, day: r.day, done: r.done, project_id: r.project_id, list_id: r.list_id, from: r.owner, in_last: !!r.in_last }));
 }
 
-/** The names of the to-do lists, when there are two or more (a to-do then says which list it is on). */
+/** The names of the to-do lists after the first (the usual one): a to-do on one of those says which list it is on. */
 export async function todoListNames(ctx: Ctx): Promise<Record<string, string>> {
-  const r = await ctx.db.prepare("SELECT id, name FROM lists WHERE mode = ? AND kind = 'todo' ORDER BY ord").bind(ctx.mode).all<{ id: string; name: string }>();
-  return r.results.length > 1 ? Object.fromEntries(r.results.map((l) => [l.id, l.name])) : {};
+  const r = await ctx.db.prepare("SELECT id, name FROM lists WHERE mode = ? AND kind = 'todo' ORDER BY ord, created").bind(ctx.mode).all<{ id: string; name: string }>();
+  return Object.fromEntries(r.results.slice(1).map((l) => [l.id, l.name]));
 }
 
 /** To-do rows as the builder reads them, with their list's name when there are several lists. */

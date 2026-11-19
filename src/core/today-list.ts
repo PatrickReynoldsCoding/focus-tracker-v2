@@ -32,7 +32,7 @@ export interface TodayItem {
   late?: string | null;
   /** To-dos and cards: the day they are for. */
   day?: string | null;
-  /** Where it lives: the list's or project's name (cards; to-dos not on the first to-do list). */
+  /** Where it lives: the project's or list's name (cards; to-dos on a to-do list other than the first). */
   from?: string | null;
   list_id?: string | null;
   project_id?: string | null;
