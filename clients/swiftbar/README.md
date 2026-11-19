@@ -1,6 +1,6 @@
 # Focus Tracker in the Mac menu bar (SwiftBar)
 
-Shows today's focus project and the session timer (with pomodoro) in the menu bar. The menu lists to-dos due today, habits left and reminders. Click a to-do to tick it, a habit to count a session, a reminder to dismiss it, or Start / Stop session. New reminders, habit prompts and pomodoro breaks arrive as macOS notifications, each once.
+Shows today's focus project and the session timer (with pomodoro) in the menu bar. The menu lists the Today list (habits left, then to-dos and cards for today or from earlier, as on Today; with the flag `today-panel` off, to-dos due today and habits left) and reminders. Click a to-do or card to tick it, a habit to count a session, a reminder to dismiss it, or Start / Stop session. New reminders, habit prompts and pomodoro breaks arrive as macOS notifications, each once.
 
 ## Set up
 
