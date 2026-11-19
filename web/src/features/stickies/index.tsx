@@ -4,4 +4,4 @@ import { registerPanel } from '../../core/registry';
 import { StickyLayer } from './Stickies';
 import './stickies.css';
 
-registerPanel('project', { id: 'stickies', order: 0, feature: 'stickies', render: ({ project }) => <StickyLayer key={project.id} projectId={project.id} /> });
+registerPanel('project', { id: 'stickies', title: 'Sticky notes', fixed: 'top', order: 0, feature: 'stickies', render: ({ project }) => <StickyLayer key={project.id} projectId={project.id} /> });

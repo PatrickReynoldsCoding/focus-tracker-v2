@@ -156,10 +156,11 @@ export function Today() {
 
 registerTab({ id: 'today', path: '/today', label: 'Today', icon: '◎', order: 10, phone: true, render: () => <Today /> });
 
-registerPanel('today', { id: 'focus', order: 10, wide: true, render: ({ today }) => <FocusCard data={today} /> });
-registerPanel('today', { id: 'todos', order: 20, render: ({ today, setToday }) => <TodoPanel data={today} setData={setToday} /> });
+registerPanel('today', { id: 'focus', title: 'Focus', description: 'Today’s focus project and its session.', alwaysShown: true, order: 10, wide: true, render: ({ today }) => <FocusCard data={today} /> });
+registerPanel('today', { id: 'todos', title: 'To do today', description: 'To-dos for today, with tick and add.', order: 20, render: ({ today, setToday }) => <TodoPanel data={today} setData={setToday} /> });
 registerPanel('today', {
   id: 'on-today',
+  title: 'On Today',
   order: 60,
   render: ({ today }) =>
     today.lists.length ? (
@@ -178,6 +179,8 @@ registerPanel('today', {
 });
 registerPanel('today', {
   id: 'neglected',
+  title: 'Waiting for you',
+  description: 'Active projects not touched for a while. Shown only when there are some.',
   order: 80,
   render: ({ today }) =>
     today.neglected.length ? (

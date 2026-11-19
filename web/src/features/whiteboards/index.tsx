@@ -2,9 +2,10 @@
 // a project's boards, boards on Today, a link on the Projects tab for phones, and the favourite
 // tool in Settings. Flag 'whiteboards'. The editor (Excalidraw on React) is a separate chunk
 // loaded only when a board opens; see ./Editor.tsx and ./host.ts.
+import type { VNode } from 'preact';
 import { useState } from 'preact/hooks';
-import { optimistic, patch } from '../../core/api';
-import { registerPanel, registerRoute, registerTab } from '../../core/registry';
+import { change, get, optimistic, patch } from '../../core/api';
+import { registerPanel, registerPanelSource, registerRoute, registerTab, type Addable, type PanelDef, type TodayPanelProps } from '../../core/registry';
 import { useSignal } from '../../core/signal';
 import { Loading, useData } from '../../core/ui';
 import { BoardGrid, NewBoardDialog, Preview } from './Boards';
@@ -108,49 +109,65 @@ function ProjectBoards({ project, setProject }: { project: any; setProject: (fn:
   );
 }
 
-function TodayBoards() {
-  const { data, setData } = useData<Board[]>('/whiteboards?show_today=true');
-  if (!data?.length) return null;
+/** One board on Today: its preview, its name and Remove from Today. */
+function TodayBoard({ b, onRemove }: { b: Board; onRemove?: () => void }) {
   return (
     <section class="card wb-panel">
-      <h2>{data.length === 1 ? data[0].name : 'Whiteboards'}</h2>
-      <ul class="wb-today">
-        {data.map((b) => (
-          <li key={b.id}>
-            <button class="wb-open" onClick={() => openBoard(b.id)} aria-label={`Open ${b.name}`}>
-              <Preview board={b} />
-            </button>
-            <div class="row spread">
-              {data.length > 1 ? (
-                <button class="wb-name" onClick={() => openBoard(b.id)}>
-                  {b.name}
-                </button>
-              ) : (
-                <span />
-              )}
-              <button
-                class="icon small"
-                aria-label={`Remove ${b.name} from Today`}
-                title="Remove from Today"
-                onClick={() =>
-                  optimistic(
-                    () => {
-                      setData((d) => d.filter((x) => x.id !== b.id));
-                      return () => setData((d) => [...d, b]);
-                    },
-                    () => patch(`/whiteboards/${b.id}`, { show_today: false }),
-                    `${b.name} is off Today`,
-                  )
-                }
-              >
-                ✕
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
+      <div class="card-head">
+        <h2>
+          <button class="wb-name" onClick={() => openBoard(b.id)}>
+            ✐ {b.name}
+          </button>
+        </h2>
+        {onRemove && (
+          <button class="icon small" aria-label={`Remove ${b.name} from Today`} title="Remove from Today" onClick={onRemove}>
+            ✕
+          </button>
+        )}
+      </div>
+      <button class="wb-open" onClick={() => openBoard(b.id)} aria-label={`Open ${b.name}`}>
+        <Preview board={b} />
+      </button>
     </section>
   );
+}
+
+function boardPanel(b: Board, setData: (fn: (d: Board[]) => Board[]) => void): PanelDef<TodayPanelProps> {
+  const remove = () =>
+    optimistic(
+      () => {
+        setData((d) => d.filter((x) => x.id !== b.id));
+        return () => setData((d) => [...d, b]);
+      },
+      () => patch(`/whiteboards/${b.id}`, { show_today: false }),
+      `${b.name} is off Today`,
+    );
+  return { id: `wb-${b.id}`, title: b.name, description: 'Whiteboard', kind: 'whiteboard', order: 0, onRemove: remove, render: () => <TodayBoard b={b} onRemove={remove} /> };
+}
+
+/** Each board shown on Today is its own panel (a panel source). */
+function TodayBoardsSource({ children }: { props: TodayPanelProps; children: (panels: PanelDef<TodayPanelProps>[]) => VNode | null }) {
+  const { data, setData } = useData<Board[]>('/whiteboards?show_today=true');
+  return children((data ?? []).map((b) => boardPanel(b, setData)));
+}
+
+/** A board drawn off Today's page (a phone pill, a window): it loads itself. */
+function LoadedBoard({ id }: { id: string }) {
+  const { data, error } = useData<Board>(`/whiteboards/${id}`);
+  if (!data) return <Loading error={error} />;
+  return <TodayBoard b={data} />;
+}
+
+const resolveBoard = (id: string): PanelDef<any> | null => {
+  const m = /^wb-([A-Za-z0-9_-]+)$/.exec(id);
+  return m ? { id, title: 'Whiteboard', kind: 'whiteboard', order: 0, render: () => <LoadedBoard key={id} id={m[1]} /> } : null;
+};
+
+async function addableBoards(): Promise<Addable[]> {
+  const all = await get<Board[]>('/whiteboards');
+  return all
+    .filter((b) => !b.show_today)
+    .map((b) => ({ id: `wb-${b.id}`, title: b.name, description: 'Whiteboard', kind: 'whiteboard', add: () => change(() => patch(`/whiteboards/${b.id}`, { show_today: true }), `${b.name} is on Today`) }));
 }
 
 /** On a phone the Whiteboards tab is not in the bottom bar: the Projects tab links to it. */
@@ -188,7 +205,7 @@ function Settings() {
 
 registerTab({ id: 'whiteboards', path: '/whiteboards', label: 'Whiteboards', icon: '✐', order: 45, feature: FLAG, render: () => <WhiteboardsTab /> });
 registerRoute({ id: 'whiteboard', prefix: '/w', tab: 'whiteboards', feature: FLAG, render: ({ params }) => <BoardEditor key={params[0]} id={params[0]} /> });
-registerPanel('project', { id: 'whiteboards', order: 45, feature: FLAG, render: (p) => <ProjectBoards {...p} /> });
-registerPanel('today', { id: 'whiteboards', order: 65, feature: FLAG, render: () => <TodayBoards /> });
+registerPanel('project', { id: 'whiteboards', title: 'Whiteboards', description: 'The project’s whiteboards.', order: 45, feature: FLAG, render: (p) => <ProjectBoards {...p} /> });
+registerPanelSource('today', { id: 'whiteboards', order: 65, feature: FLAG, Provide: TodayBoardsSource, resolve: resolveBoard, addable: addableBoards });
 registerPanel('projects', { id: 'whiteboards-link', order: 90, feature: FLAG, render: () => <ProjectsLink /> });
 registerPanel('settings', { id: 'whiteboards', order: 60, feature: FLAG, render: () => <Settings /> });

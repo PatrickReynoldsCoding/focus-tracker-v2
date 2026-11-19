@@ -68,5 +68,5 @@ function SharedPanel({ category }: ProjectsPanelProps) {
   );
 }
 
-registerPanel('project', { id: 'resources', order: 40, render: (p) => <ProjectResources {...p} /> });
+registerPanel('project', { id: 'resources', title: 'Resources', description: 'Links and files for this project.', order: 40, render: (p) => <ProjectResources {...p} /> });
 registerPanel('projects', { id: 'shared-resources', order: 10, render: (p) => <SharedPanel {...p} /> });

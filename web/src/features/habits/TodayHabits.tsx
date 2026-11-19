@@ -34,6 +34,7 @@ export function HabitPanel({ data, setData }: { data: TodayData; setData: (fn: (
 registerPanel('today', {
   id: 'habits',
   title: 'Habits',
+  description: 'Each habit with its sessions this week; tap to check in.',
   order: 30,
   render: ({ today, setToday }) => <HabitPanel data={today} setData={setToday} />,
 });

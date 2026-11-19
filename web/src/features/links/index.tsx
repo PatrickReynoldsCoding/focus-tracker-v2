@@ -82,12 +82,16 @@ function LinkTypes() {
 
 registerPanel('project', {
   id: 'blocked-by',
+  title: 'Blocked by',
+  description: 'Projects this one waits for. Shown only while it is blocked.',
   order: 5,
   feature: FLAG,
   render: ({ project }) => (project.blocked_by?.length ? <ProjectBlocked items={project.blocked_by} /> : null),
 });
 registerPanel('project', {
   id: 'links',
+  title: 'Linked items',
+  description: 'Projects, cards and lists linked to this project.',
   order: 35,
   feature: FLAG,
   render: ({ project }) => (

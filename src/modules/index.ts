@@ -3,6 +3,7 @@ import type { Module } from '../core/registry';
 import { basicsModule } from './basics';
 import { habitsModule } from './habits';
 import { insightsModule } from './insights';
+import { layoutModule } from './layout';
 import { listsModule } from './lists';
 import { navigationModule } from './navigation';
 import { notesModule } from './notes';
@@ -38,6 +39,7 @@ export const MODULES: Module[] = [
   notifyPrefsModule,
   whiteboardsModule,
   offlineModule,
+  layoutModule,
   stickiesModule,
   insightsModule,
   swiftbarModule,

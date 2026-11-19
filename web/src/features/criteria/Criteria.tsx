@@ -134,4 +134,4 @@ function Criteria({ p, setData }: { p: Proj; setData: (fn: (d: any) => any) => v
   );
 }
 
-registerPanel('project', { id: 'criteria', order: 30, render: ({ project, setProject }) => <Criteria p={project} setData={setProject} /> });
+registerPanel('project', { id: 'criteria', title: 'Done when', description: 'What has to be true for the project to be done.', order: 30, render: ({ project, setProject }) => <Criteria p={project} setData={setProject} /> });

@@ -216,6 +216,8 @@ const QUEUE_RULES: [method: string, path: RegExp][] = [
   ['POST', /^\/habits\/[\w-]+\/check$/],
   // note saves (the editor sends its base)
   ['PUT', /^\/notes\/of\/(project|list)\/[\w-]+$/],
+  // page layouts (the whole layout each time, so the last one wins)
+  ['PUT', /^\/layout\/[\w-]+\/(grid|pills|view)$/],
   // deletes of small rows (not projects, lists, columns, boards or habits: big cascades)
   ['DELETE', /^\/(tasks|todos|criteria|stickies|resources|links|log|backlog)\/[\w-]+$/],
 ];

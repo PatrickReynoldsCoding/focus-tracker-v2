@@ -24,3 +24,4 @@ import './theme';
 import './navigation';
 import './plan';
 import './offline';
+import './layout';
