@@ -19,7 +19,7 @@ function NotePanel({ n, setBody, onRemove }: { n: NoteItem; setBody: (body: stri
   const href = n.kind === 'project' ? `#/p/${n.project_id}` : `#/n/${n.key.slice(5)}`;
   const owner = n.kind === 'project' ? `project/${n.project_id}` : `list/${n.key.slice(5)}`;
   return (
-    <section class="card tp-note" style={n.color ? { borderTop: `4px solid var(--c-${n.color})` } : undefined}>
+    <section class="card tp-note" data-pat-top={n.color || undefined} style={n.color ? { borderTop: `4px solid var(--c-${n.color})` } : undefined}>
       <div class="card-head">
         <h2>
           <a href={href}>

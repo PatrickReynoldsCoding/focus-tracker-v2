@@ -6,9 +6,10 @@
 import { useState } from 'preact/hooks';
 import { change, post } from '../../core/api';
 import { Dialog } from '../../core/ui';
-import { clock, keepGoing, nextPeriod, pause, resume, setPomodoro, start, useSession, type Defaults, type Live } from './session';
+import { clock as clockSeconds, clockMinutes, keepGoing, nextPeriod, pause, resume, setPomodoro, start, useSession, type Defaults, type Live } from './session';
 import { setCornerHidden, useCornerHidden } from './CornerTimer';
 import { useFlag } from '../../core/features';
+import { useEink } from '../../core/theme';
 
 const MAX = 600;
 
@@ -93,6 +94,7 @@ export function StartControls({ defaults, extra }: { defaults: Defaults | undefi
 }
 
 function Timer({ l }: { l: Live }) {
+  const clock = useEink() ? clockMinutes : clockSeconds; // E-ink redraws once a minute
   const p = l.pomodoro;
   let big: string, label: string, cls: string;
   if (p) {

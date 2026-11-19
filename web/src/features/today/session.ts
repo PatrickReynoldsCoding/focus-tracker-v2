@@ -7,6 +7,7 @@
 import { get, mode, optimistic, post, version } from '../../core/api';
 import { flags } from '../../core/features';
 import { signal, useSignal } from '../../core/signal';
+import { isEink } from '../../core/theme';
 import { play, type SoundName } from './sounds';
 
 export type Phase = 'work' | 'break';
@@ -92,6 +93,12 @@ export function useSession(): { data: SessionState | null; live: Live | null } {
   useSignal(flags);
   return { data: s.data, live: live(s.data?.session, s.at, now) };
 }
+
+/** Whole minutes, for E-ink (it redraws once a minute): 25 min, 1 h 05. */
+export const clockMinutes = (sec: number) => {
+  const m = Math.floor(Math.max(0, sec) / 60);
+  return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}` : `${m} min`;
+};
 
 export const clock = (sec: number) => {
   const s = Math.max(0, Math.floor(sec));
@@ -194,9 +201,14 @@ export function startRuntime(): () => void {
   void refresh();
   let lastPoll = Date.now();
   let prev: Live | null = null;
+  let lastPaint = 0;
   const timer = setInterval(() => {
     const t = Date.now();
-    tick.value = t;
+    // E-ink: the clock redraws once a minute (every second would flash the screen); the loop itself stays cheap.
+    if (!isEink() || t - lastPaint >= 60_000) {
+      lastPaint = t;
+      tick.value = t;
+    }
     const visible = document.visibilityState === 'visible';
     if (t - lastPoll > (visible ? 30_000 : 120_000)) {
       lastPoll = t;
@@ -209,6 +221,8 @@ export function startRuntime(): () => void {
       remember(l.alert!.key);
       const sound: SoundName = l.alert!.kind === 'work' ? 'break-ends' : 'work-ends';
       if (prev) play(sound); // only when it happened while the page was open, not on opening hours later
+      lastPaint = t;
+      tick.value = t; // an alert always shows at once, even in E-ink
       setTimeout(() => void refresh(), 1500);
     }
     if (l && !l.paused && l.pomodoro && !l.pomodoro.waiting && l.pomodoro.left === 0) void refresh(); // cycling model moved on

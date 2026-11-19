@@ -5,6 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#151514" media="(prefers-color-scheme: dark)" />
+    <script>
+      // The theme chosen on this device (Settings → Appearance), applied before the first paint so there is no flash.
+      // Same as computer = no attribute. Keep in step with web/src/core/theme.ts.
+      try {
+        var t = localStorage.getItem('ft.theme');
+        if (t === 'light' || t === 'dark' || t === 'eink') {
+          document.documentElement.setAttribute('data-theme', t);
+          var bar = { light: '#f6f5f1', dark: '#151514', eink: '#ffffff' }[t];
+          var m = document.querySelectorAll('meta[name="theme-color"]');
+          for (var i = 0; i < m.length; i++) m[i].setAttribute('content', bar);
+        }
+      } catch (e) {}
+    </script>
     <title>Focus Tracker</title>
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
