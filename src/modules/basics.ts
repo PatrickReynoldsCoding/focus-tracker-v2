@@ -106,29 +106,6 @@ export const criteriaEntity: Entity = {
   },
 };
 
-export const resourcesEntity: Entity = {
-  name: 'resources',
-  table: 'resources',
-  singular: 'resource',
-  desc: 'Links and contact details kept with a project, or shared by a category. Never store anything sensitive (bank details, passwords, ID numbers).',
-  modeScoped: true,
-  orderGroup: ['project_id', 'category_id'],
-  filters: ['project_id', 'category_id', 'type', 'grp'],
-  fields: {
-    title: { type: 'text', required: true },
-    type: { type: 'text', enum: ['link', 'drive', 'phone', 'email', 'text'], default: 'link' },
-    value: { type: 'text', required: true, desc: 'The address, number or text' },
-    grp: { type: 'text', desc: 'Free-text group such as "Code" or "Suppliers"' },
-    note: { type: 'text' },
-    project_id: { type: 'text', ref: 'projects', cascade: true, desc: 'Empty means shared by the category' },
-    category_id: { type: 'text', ref: 'categories', cascade: true },
-  },
-  beforeCreate(_ctx, row) {
-    if (!row.project_id && !row.category_id) throw bad('A resource needs project_id or category_id');
-    if (row.type === 'link' && typeof row.value === 'string' && /^https:\/\/(docs|drive)\.google\.com\//.test(row.value)) row.type = 'drive';
-  },
-};
-
 export const stickiesEntity: Entity = {
   name: 'stickies',
   table: 'stickies',
@@ -150,8 +127,8 @@ export const stickiesEntity: Entity = {
 
 export const basicsModule: Module = {
   id: 'basics',
-  description: 'Modes, categories, backlog, done criteria, resources and stickies.',
-  entities: [modesEntity, categoriesEntity, backlogEntity, criteriaEntity, resourcesEntity, stickiesEntity],
+  description: 'Modes, categories, backlog, done criteria and stickies.',
+  entities: [modesEntity, categoriesEntity, backlogEntity, criteriaEntity, stickiesEntity],
   routes(api) {
     // Start a backlog item: it becomes an active project.
     api.post('/backlog/:id/start', async (c) => {

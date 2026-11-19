@@ -6,6 +6,7 @@ import m0001 from '../../migrations/0001_init.sql';
 import m0003 from '../../migrations/0003_issue_links.sql';
 import m0006 from '../../migrations/0006_mode_colour.sql';
 import m0008 from '../../migrations/0008_today_panels.sql';
+import m0010 from '../../migrations/0010_resource_kind.sql';
 
 /** Every migration, in order. A new file in migrations/ needs a line here (a test checks). */
 export const MIGRATIONS: [name: string, sql: string][] = [
@@ -13,6 +14,7 @@ export const MIGRATIONS: [name: string, sql: string][] = [
   ['0003_issue_links.sql', m0003],
   ['0006_mode_colour.sql', m0006],
   ['0008_today_panels.sql', m0008],
+  ['0010_resource_kind.sql', m0010],
 ];
 
 let done = false;

@@ -58,6 +58,10 @@ export interface ProjectPanelProps {
   project: any;
   setProject: (fn: (p: any) => any) => void;
 }
+export interface ProjectsPanelProps {
+  /** The category chosen in the Projects tab's filter ('' = all categories). */
+  category: string;
+}
 export interface CardSectionProps {
   card: any;
   columns: { id: string; name: string }[];
@@ -123,9 +127,10 @@ const editors: EditorDef[] = [];
 export const registerMarkdownEditor = (e: EditorDef) => add(editors, e);
 export const useMarkdownEditor = (): EditorDef | undefined => visible(editors, useFlags())[0];
 
-/** Panels by place: 'today', 'project', 'card' (sections of the card dialog), 'card-tile' (marks on a board card), 'settings'. */
+/** Panels by place: 'today', 'project', 'projects' (the Projects tab), 'card' (sections of the card dialog), 'card-tile' (marks on a board card), 'settings'. */
 export function registerPanel(place: 'today', p: PanelDef<TodayPanelProps>): void;
 export function registerPanel(place: 'project', p: PanelDef<ProjectPanelProps>): void;
+export function registerPanel(place: 'projects', p: PanelDef<ProjectsPanelProps>): void;
 export function registerPanel(place: 'card', p: PanelDef<CardSectionProps>): void;
 export function registerPanel(place: 'card-tile', p: PanelDef<CardTileProps>): void;
 export function registerPanel(place: 'settings', p: PanelDef<SettingsSectionProps>): void;

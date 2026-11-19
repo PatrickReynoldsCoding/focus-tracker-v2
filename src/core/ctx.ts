@@ -12,6 +12,10 @@ export interface Env {
   SESSION_SECRET: string;
   /** Set when the instance should use a fixed public URL (otherwise the request's origin). */
   PUBLIC_URL?: string;
+  /** Google Picker (docs/google-picker.md). Public values, sent to the signed-in browser. */
+  GOOGLE_PICKER_CLIENT_ID?: string;
+  GOOGLE_PICKER_API_KEY?: string;
+  GOOGLE_PICKER_APP_ID?: string;
 }
 
 export interface Change {

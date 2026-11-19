@@ -147,3 +147,13 @@ Notes are still Markdown (D5); the editor only changes how they are edited. Code
 - **Paper themes** (per device, ⋯ menu): Plain, Legal pad, Grid, Dot, in light and dark. Rules line up with the text's line height.
 - **Flag off** (`rich-editor`): the plain Markdown text box from before, unchanged.
 
+
+## D21. Resources: icons, Drive pop-up, shared per category (V1-GAPS items 23 and 24; owner, 2026-11-18)
+
+Code: `src/modules/resources.ts` (the table moved here from `basics.ts`), `src/core/resource-kinds.ts` (detection, shared with the browser), `web/src/features/resources/`. Setup for the optional picker: `docs/google-picker.md`.
+
+- **Kind is stored and worked out from the address.** Migration 0010 adds `resources.kind` (doc, sheet, slides, form, drawing, folder, file, pdf, image, link, phone, email, text). The server sets it on create and again whenever the value or type changes, so Claude (`create_item`, the new `add_resource` and `add_resources`) and the app always agree. A Google address makes the type `drive`; `docs.google.com/...` without `https://` is accepted; `/u/1/`, `/a/domain/`, `open?id=` and `uc?id=` shapes are understood. A "link" that is really an email or phone number is stored as such. A `kind` sent with a Drive file address is only a hint (file, pdf, image, folder) and never overrides a Doc, Sheet, Slides, Form or Drawing. Rows made before the migration show the right icon too (the browser works the kind out when it is empty).
+- **Titles cannot come from Drive** (we never read Drive, D11). A pasted address gets "Google Sheet", "Drive folder" and so on, editable before adding; a title written next to the address ("Budget - https://…", Markdown links, a line above) is used.
+- **Add from Drive always works by pasting; Google's Picker is an extra** behind flag `google-picker` (off). It needs `GOOGLE_PICKER_CLIENT_ID` and `GOOGLE_PICKER_API_KEY` on the Worker (and optionally `GOOGLE_PICKER_APP_ID`); `GET /api/resources/picker` hands them to the signed-in browser only when both exist and the flag is on. The browser gets its own `drive.file` token (never sent to the server) and Google's scripts load only when the button is pressed. Not tested against real Google (no credentials).
+- **Shared resources** are rows with a `category_id` and no `project_id`. They show in a "Shared resources" panel on the Projects tab (new plug-in point `registerPanel('projects', …)`, gets `{ category }`) and under the project's own list on each project page of that category.
+- **Bulk add** (`POST /api/resources/bulk`) skips addresses already on the project (same Drive id counts as the same file) and is one undo step.

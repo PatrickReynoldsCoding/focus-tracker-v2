@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect } from 'preact/hooks';
 import { change, del, newId, optimistic, patch, post, put } from '../../core/api';
 import { Panels, registerPanel, registerRoute, type ProjectPanelProps } from '../../core/registry';
 import { AddInput, daysAgo, fmtDay, fmtMinutes, go, InlineEdit, Linkify, Loading, MarkdownEditor, todayLocal, useData } from '../../core/ui';
@@ -7,7 +7,6 @@ import { CategorySelect } from './CategorySelect';
 import { lastProject } from './last-project';
 
 type Criterion = { id: string; text: string; done: boolean };
-type Resource = { id: string; title: string; type: string; value: string; grp: string | null; note: string | null };
 type LogEntry = { id: string; date: string; minutes: number | null; where_stopped: string | null };
 type Full = {
   id: string;
@@ -18,72 +17,11 @@ type Full = {
   locked_until: string | null;
   columns: Column[];
   criteria: Criterion[];
-  resources: Resource[];
+  resources: unknown[];
   notes: string;
   lists: { id: string; name: string; kind: string }[];
   recent_log: LogEntry[];
 };
-
-function href(r: Resource): string | undefined {
-  if (r.type === 'link' || r.type === 'drive') return /^https?:\/\//.test(r.value) ? r.value : undefined;
-  if (r.type === 'email') return `mailto:${r.value}`;
-  if (r.type === 'phone') return `tel:${r.value}`;
-  return undefined;
-}
-
-function Resources({ p }: { p: Full }) {
-  const [adding, setAdding] = useState(false);
-  const [title, setTitle] = useState('');
-  const [value, setValue] = useState('');
-  return (
-    <section class="card">
-      <div class="card-head">
-        <h2>Resources</h2>
-        <button class="ghost small" onClick={() => setAdding(!adding)}>
-          {adding ? 'Cancel' : '+ Add'}
-        </button>
-      </div>
-      <ul class="plain resources">
-        {p.resources.map((r) => (
-          <li key={r.id}>
-            {href(r) ? (
-              <a href={href(r)} target="_blank" rel="noopener noreferrer">
-                {r.title}
-              </a>
-            ) : (
-              <span>
-                {r.title}: {r.value}
-              </span>
-            )}
-            {r.grp && <span class="tag">{r.grp}</span>}
-            <button class="icon small" aria-label="Delete" onClick={() => change(() => del(`/resources/${r.id}`), 'Removed')}>
-              ✕
-            </button>
-          </li>
-        ))}
-      </ul>
-      {adding && (
-        <form
-          class="stack"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const v = value.trim();
-            const type = /^https?:\/\//.test(v) ? 'link' : /^[^@\s]+@[^@\s]+$/.test(v) ? 'email' : /^[+\d][\d\s-]{5,}$/.test(v) ? 'phone' : 'text';
-            change(() => post('/resources', { project_id: p.id, title: title.trim() || v, value: v, type }));
-            setTitle('');
-            setValue('');
-            setAdding(false);
-          }}
-        >
-          <input placeholder="Title" value={title} onInput={(e) => setTitle((e.target as HTMLInputElement).value)} />
-          <input placeholder="Link, email, phone or text" required value={value} onInput={(e) => setValue((e.target as HTMLInputElement).value)} />
-          <p class="muted small">Never add bank details, passwords or ID numbers.</p>
-          <button class="primary">Add</button>
-        </form>
-      )}
-    </section>
-  );
-}
 
 export function ProjectPage({ id }: { id: string }) {
   const { data: p, error, setData } = useData<Full>(`/projects/${id}/full`);
@@ -138,7 +76,7 @@ registerPanel('project', {
     </section>
   ),
 });
-registerPanel('project', { id: 'resources', order: 40, render: ({ project }) => <Resources p={project} /> });
+// The 'resources' panel (order 40) is registered by features/resources.
 registerPanel('project', {
   id: 'sessions',
   order: 50,
