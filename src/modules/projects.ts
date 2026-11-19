@@ -75,6 +75,8 @@ export const tasksEntity: Entity = {
     list_id: { type: 'text', ref: 'lists', cascade: true },
     note: { type: 'markdown' },
     color: { type: 'text' },
+    day: { type: 'day', desc: 'The day it is for: it shows in the Today list from that day until done (empty: no day)' },
+    done: { type: 'day', desc: 'The day it was ticked off in the Today list; a project card in its board’s last column counts as done' },
   },
   async beforeCreate(ctx, row) {
     if (!row.column_id) {
@@ -83,11 +85,22 @@ export const tasksEntity: Entity = {
     }
     Object.assign(row, await ownerOfColumn(ctx, String(row.column_id)));
   },
-  async beforeUpdate(ctx, _before, patch) {
+  async beforeUpdate(ctx, before, patch) {
     if ('project_id' in patch || 'list_id' in patch) throw bad('Move a card by changing its column_id');
     if (patch.column_id) Object.assign(patch, await ownerOfColumn(ctx, String(patch.column_id)));
+    // A project card with a day is done while it is in its board's last column (D30).
+    if (patch.column_id && patch.column_id !== before.column_id && before.project_id && (patch.day ?? before.day) && !('done' in patch)) {
+      const last = await doneColumn(ctx, String(before.project_id));
+      if (last) patch.done = patch.column_id === last.id ? (before.done ?? (await ctx.today())) : null;
+    }
   },
 };
+
+/** The column that means done on a project's board: its last, when it has two or more. */
+export async function doneColumn(ctx: Ctx, projectId: string): Promise<Row | null> {
+  const cols = await list(ctx, columnsEntity, { where: { project_id: projectId } });
+  return cols.length > 1 ? cols[cols.length - 1] : null;
+}
 
 /** The first column of a board, making To do / Doing / Done if it has none. */
 export async function firstColumn(ctx: Ctx, projectId: string | null, listId: string | null): Promise<Row> {

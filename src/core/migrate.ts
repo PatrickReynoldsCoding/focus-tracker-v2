@@ -9,6 +9,7 @@ import m0008 from '../../migrations/0008_today_panels.sql';
 import m0010 from '../../migrations/0010_resource_kind.sql';
 import m0012 from '../../migrations/0012_whiteboard_scenes.sql';
 import m0016 from '../../migrations/0016_drop_unused.sql';
+import m0017 from '../../migrations/0017_card_day.sql';
 
 /** Every migration, in order. A new file in migrations/ needs a line here (a test checks). */
 export const MIGRATIONS: [name: string, sql: string][] = [
@@ -19,6 +20,7 @@ export const MIGRATIONS: [name: string, sql: string][] = [
   ['0010_resource_kind.sql', m0010],
   ['0012_whiteboard_scenes.sql', m0012],
   ['0016_drop_unused.sql', m0016],
+  ['0017_card_day.sql', m0017],
 ];
 
 let done = false;

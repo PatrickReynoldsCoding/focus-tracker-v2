@@ -174,6 +174,15 @@ export async function checkHabit(ctx: Ctx, habitId: string, day?: string, add = 
   return setHabitCount(ctx, habitId, d, Math.max(0, Number(existing?.count ?? 0) + add));
 }
 
+/** "Not today" (on) or back on today's list (off): a skip row for the day. A skipped habit asks nothing that day. */
+export async function skipHabit(ctx: Ctx, habitId: string, on: boolean, day?: string) {
+  const d = await checkRecordDay(ctx, day ?? (await ctx.today()));
+  await get(ctx, habitsEntity, habitId);
+  if (on) await upsertLog(ctx, habitId, d, 'skip', 1, null);
+  else await removeWhere(ctx, habitLogEntity, { habit_id: habitId, day: d, kind: 'skip' });
+  return { habit_id: habitId, day: d, skipped: on };
+}
+
 // ---------- level history ----------
 
 export interface LevelRow {
@@ -599,6 +608,13 @@ export const habitsModule: Module = {
       const id = c.req.param('id');
       if (typeof b.count === 'number') return c.json(await setHabitCount(ctx, id, b.day ?? (await ctx.today()), b.count));
       return c.json(await checkHabit(ctx, id, b.day, b.add ?? 1));
+    });
+    api.post('/habits/:id/not-today', async (c) => {
+      const ctx = c.get('ctx');
+      const b = await c.req.json<{ on?: unknown; day?: string }>().catch(() => ({}) as { on?: unknown; day?: string });
+      if (typeof b.on !== 'boolean') throw bad('Send {"on": true} (not today) or {"on": false} (back on today’s list)');
+      ctx.label = b.on ? 'habit not today' : 'habit back on today';
+      return c.json(await skipHabit(ctx, c.req.param('id'), b.on, b.day));
     });
     api.post('/habits/:id/step-up', async (c) => {
       const ctx = c.get('ctx');
