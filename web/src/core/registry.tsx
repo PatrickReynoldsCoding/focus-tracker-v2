@@ -65,7 +65,26 @@ export interface PanelDef<P> {
   count?: (props: P) => string | number | null | undefined;
   /** A short version, for the top of a phone's Today (the focus card). */
   compact?: Render<P>;
+  /** What it edits that may be on screen only once (a note: 'note:project:<id>'); while it is in a
+   *  window, every other panel with the same key shows a placeholder. */
+  oneCopy?: (props: P) => string | null;
 }
+
+/** A page whose panels can be drawn away from it (a pop-out window): how to load the props its
+ *  panels get, from a key (a project's id; '' for Today). */
+export interface PlaceDef<P = any> {
+  place: string;
+  /** A hook: the props for this key, null while loading. */
+  useProps: (key: string) => { props: P | null; error?: string | null };
+  keyOf: (props: P) => string;
+  /** The page's name for people ('Today', the project's name). */
+  label: (props: P) => string;
+}
+const placeDefs = new Map<string, PlaceDef>();
+export function registerPlace<P>(p: PlaceDef<P>) {
+  placeDefs.set(p.place, p as PlaceDef);
+}
+export const placeDef = (place: string): PlaceDef | undefined => placeDefs.get(place);
 
 export interface TodayPanelProps {
   /** GET /api/today, shared by every Today panel; panels with other data fetch it themselves. */
