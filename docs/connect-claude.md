@@ -20,7 +20,7 @@ claude mcp add --transport http focus-tracker https://<your-tracker>/mcp --heade
 
 ## What to ask
 
-- "What's on today?" (`get_today`)
+- "What's on today?" (`get_today`, or `get_today_list` for the Today list: habits, to-dos and cards for today)
 - "Add a card 'Fix login' to the Website project, in Doing."
 - "Move everything in Done on the Garden board to a new column called Archive."
 - "Write up these meeting notes into the notes of project X."
