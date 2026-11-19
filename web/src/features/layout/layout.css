@@ -1,0 +1,178 @@
+/* The desktop grid (grid.tsx). Places are set on the elements by the code; this is the look. */
+.grid.today > .lg-page, .grid.today > .pl-page { grid-column: 1 / -1; }
+.lg-page { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.lg-grid { position: relative; min-height: 40px; }
+.lg-item { position: absolute; top: 0; left: 0; width: 50%; min-width: 0; }
+.lg-anim > .lg-item:not(.lg-moving), .lg-anim > .lg-shadow { transition: top 0.15s ease, left 0.15s ease, width 0.15s ease; }
+.lg-body { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.lg-body:empty { display: none; }
+.lg-fixed-h > .lg-body { overflow: auto; }
+.lg-fixed-h > .lg-body > .card { flex: 1 0 auto; }
+
+/* The grip: a handle on the top edge, shown on hover and focus (always on touch screens). */
+.lg-grip {
+  position: absolute; top: -11px; left: 50%; transform: translateX(-50%); z-index: 3;
+  min-height: 0; height: 22px; padding: 0 10px; font-size: 0.8rem; line-height: 1; border-radius: 999px;
+  background: var(--surface); color: var(--muted); cursor: grab; opacity: 0; touch-action: none;
+}
+.lg-item:hover > .lg-grip, .lg-grip:focus-visible, .lg-editing .lg-grip { opacity: 1; }
+@media (hover: none) { .lg-grip { opacity: 1; } }
+.lg-item h2 { cursor: grab; }
+.lg-item h2 :is(a, button) { cursor: pointer; }
+body.lg-dragging, body.lg-dragging * { user-select: none !important; cursor: grabbing !important; }
+
+.lg-moving { z-index: 20; box-shadow: var(--shadow-pop); border-radius: var(--radius); }
+.lg-resizing { z-index: 20; }
+.lg-shadow { position: absolute; display: none; border: 2px dashed var(--accent); border-radius: var(--radius); background: var(--accent-soft); opacity: 0.6; pointer-events: none; }
+.lg-busy > .lg-shadow { display: block; }
+
+/* Edit layout */
+.lg-bar { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; position: sticky; top: 64px; z-index: 6; }
+.lg-bar p { margin: 0; }
+.lg-edit { position: absolute; inset: 0; z-index: 2; border: 2px dashed var(--accent); border-radius: var(--radius); cursor: grab; background: transparent; }
+.lg-editing .lg-body { pointer-events: none; user-select: none; }
+.lg-editing .lg-body:empty { display: block; min-height: 0; }
+/* On the panel's top border, so it covers none of the panel (the grip sits in the middle). */
+.lg-edit-bar { position: absolute; top: -14px; right: 12px; left: 12px; display: flex; justify-content: space-between; align-items: center; gap: 6px; pointer-events: none; }
+.lg-edit-bar > * { pointer-events: auto; }
+.lg-edit-name { background: var(--accent); color: var(--accent-fg); font-size: 0.8rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lg-edit-bar .lg-edit-acts { display: flex; gap: 6px; }
+.lg-edit-bar button { background: var(--surface); cursor: pointer; min-height: 28px; padding: 2px 10px; }
+.lg-resize { position: absolute; right: -2px; bottom: -2px; width: 22px; height: 22px; cursor: nwse-resize; touch-action: none; border-right: 4px solid var(--accent); border-bottom: 4px solid var(--accent); border-bottom-right-radius: var(--radius); }
+
+/* Edit layout in the header */
+.lg-edit-btn { flex: none; }
+
+/* + Add feature */
+.lg-add h3 { margin: 6px 0 6px; font-size: 0.9rem; color: var(--muted); }
+.lg-add-list { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.lg-add-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; }
+.lg-add-list li.lg-on { opacity: 0.6; }
+.lg-tick { white-space: nowrap; }
+
+html[data-theme='eink'] .lg-grip { opacity: 1; border: 2px solid #000; min-height: 0; }
+html[data-theme='eink'] .lg-edit { border: 3px solid #000; }
+html[data-theme='eink'] .lg-shadow { border: 3px dashed #000; background: #fff; opacity: 1; }
+html[data-theme='eink'] .lg-edit-name { background: #000; color: #fff; }
+html[data-theme='eink'] .lg-edit-bar button, html[data-theme='eink'] .lg-add-list button { min-height: 44px; }
+html[data-theme='eink'] .lg-edit-bar { top: -22px; }
+html[data-theme='eink'] .lg-grip { top: -22px; min-width: 44px; }
+html[data-theme='eink'] .lg-resize { width: 30px; height: 30px; border-color: #000; }
+html[data-theme='eink'] .lg-add-list li { border: 2px solid #000; }
+html[data-theme='eink'] .lg-add-list li.lg-on { opacity: 1; border-style: dashed; }
+html[data-theme='eink'] .lg-moving { outline: 3px solid #000; opacity: 1; }
+.lg-editing .sticky-layer { display: none; } /* sticky notes step aside while the layout is edited */
+
+/* ---------- the phone's Today: pinned focus, pills, Today settings (pills.tsx) ---------- */
+.pl-page { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.focus.compact { gap: 8px; }
+.focus.compact .card-head { align-items: center; }
+.focus.compact .focus-name { font-size: 1.1rem; min-width: 0; overflow-wrap: anywhere; }
+.pl-bar { display: flex; align-items: center; gap: 4px; position: sticky; top: 58px; z-index: 4; background: var(--bg); padding: 4px 0; margin: 0 -4px; }
+.pl-row { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex: 1; padding: 2px 4px; min-width: 0; }
+.pl-row::-webkit-scrollbar { display: none; }
+.pl-pill { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 6px 14px; border-radius: 999px; background: var(--surface); color: var(--fg); white-space: nowrap; }
+.pl-pill.on { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+.pl-count { font-size: 0.78rem; font-variant-numeric: tabular-nums; opacity: 0.85; }
+.pl-pill:not(.on) .pl-count { color: var(--muted); }
+.pl-gear { flex: none; min-width: 44px; min-height: 44px; font-size: 1.25rem; }
+.pl-panels { display: flex; flex-direction: column; gap: 12px; min-height: 40vh; touch-action: pan-y; }
+.pl-empty { align-items: flex-start; }
+
+.pl-settings { display: flex; flex-direction: column; gap: 18px; }
+.pl-settings section { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.pl-settings section > * { align-self: stretch; }
+.pl-settings section > button { align-self: flex-start; }
+.pl-settings h3, .pl-editor h3 { margin: 0; font-size: 0.95rem; }
+.pl-settings p { margin: 0; }
+.pl-cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pl-card { display: flex; gap: 8px; align-items: center; justify-content: space-between; border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; }
+.pl-card-main { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.pl-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.pl-card-acts { display: flex; align-items: center; gap: 2px; flex: none; }
+.pl-card-acts .icon, .pl-in .icon { min-width: 44px; min-height: 44px; }
+.pl-seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); align-self: flex-start !important; }
+.pl-seg button { border: 0; border-radius: 0; min-height: 44px; padding: 4px 16px; background: transparent; color: var(--muted); }
+.pl-seg button + button { border-left: 1px solid var(--line); }
+.pl-seg button.on { background: var(--accent-soft); color: var(--fg); font-weight: 600; box-shadow: inset 0 -3px 0 var(--accent); }
+.pl-switch { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; color: var(--fg); font-size: 1rem; min-height: 44px; }
+.pl-switch input { appearance: none; width: 46px; height: 28px; min-height: 0; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); position: relative; flex: none; cursor: pointer; padding: 0; }
+.pl-switch input::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--muted); transition: left 0.15s; }
+.pl-switch input:checked { background: var(--accent); border-color: var(--accent); }
+.pl-switch input:checked::after { left: 21px; background: var(--accent-fg); }
+.pl-editor { display: flex; flex-direction: column; gap: 12px; }
+.pl-icons { border: 0; padding: 0; margin: 0; }
+.pl-icons legend { font-size: 0.9rem; color: var(--muted); margin-bottom: 4px; }
+.pl-icons [role='radiogroup'] { display: flex; flex-wrap: wrap; gap: 6px; }
+.pl-icons button { min-width: 44px; min-height: 44px; padding: 0; font-size: 1.2rem; }
+.pl-icons button.on { border: 2px solid var(--accent); background: var(--accent-soft); }
+.pl-in { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.pl-in li { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid var(--line); border-radius: 10px; padding: 2px 4px 2px 12px; }
+.pl-add-group h4 { margin: 4px 0; font-size: 0.85rem; color: var(--muted); }
+.pl-add-group .chip { min-height: 44px; }
+.pl-editor-foot { margin-top: 4px; }
+
+html[data-theme='eink'] .pl-pill { border: 2px solid #000; min-height: 44px; }
+html[data-theme='eink'] .pl-pill.on { background: #000; color: #fff; border-width: 3px; }
+html[data-theme='eink'] .pl-pill.on .pl-count { color: #fff; }
+html[data-theme='eink'] .pl-card, html[data-theme='eink'] .pl-in li { border: 2px solid #000; }
+html[data-theme='eink'] .pl-seg { border: 3px solid #000; }
+html[data-theme='eink'] .pl-seg button + button { border-left: 2px solid #000; }
+html[data-theme='eink'] .pl-seg button.on { background: #000; color: #fff; box-shadow: none; }
+html[data-theme='eink'] .pl-seg button.on::before { content: '✓ '; }
+html[data-theme='eink'] .pl-switch input { border: 3px solid #000; background: #fff; }
+html[data-theme='eink'] .pl-switch input::after { background: #000; }
+html[data-theme='eink'] .pl-switch input:checked { background: #000; }
+html[data-theme='eink'] .pl-switch input:checked::after { background: #fff; }
+html[data-theme='eink'] .pl-icons button.on { border: 3px solid #000; background: #fff; }
+html[data-theme='eink'] .pl-bar { border-bottom: 2px solid #000; }
+.pl-notice { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--fg); color: var(--bg); border-radius: 10px; padding: 6px 6px 6px 12px; }
+.pl-notice button { background: transparent; color: inherit; border-color: currentColor; }
+html[data-theme='eink'] .pl-notice { background: #000; color: #fff; border: 3px solid #000; }
+html[data-theme='eink'] .pl-notice button { min-height: 44px; background: #000; color: #fff; border: 2px solid #fff; }
+
+/* ---------- pop-out windows (popout.tsx) ---------- */
+.po-slot { position: relative; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.grid.today > .po-slot.wide { grid-column: 1 / -1; }
+@media (min-width: 900px) { .grid.today > .po-slot.wide { grid-column: span 2; } }
+.po-btn {
+  position: absolute; top: -11px; right: 14px; z-index: 3; min-height: 0; height: 22px; padding: 0 9px; font-size: 0.8rem; line-height: 1;
+  border-radius: 999px; background: var(--surface); color: var(--muted); opacity: 0;
+}
+.po-slot:hover > .po-btn, .po-btn:focus-visible { opacity: 1; }
+@media (hover: none) { .po-btn { opacity: 1; } }
+.lg-editing .po-btn { display: none; }
+.po-placeholder { border-style: dashed; background: transparent; box-shadow: none; }
+.po-placeholder p { margin: 0; }
+
+.po-win { position: fixed; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-pop); overflow: hidden; min-width: 0; }
+.po-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 4px 4px 4px 12px; background: var(--surface-2); border-bottom: 1px solid var(--line); cursor: grab; user-select: none; touch-action: none; flex: none; }
+.po-title { font-weight: 600; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.po-tools { display: flex; flex: none; }
+.po-tools .icon { cursor: pointer; }
+.po-body { flex: 1; overflow: auto; padding: 10px; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+.po-body > .card, .po-body > .po-slot > .card { border: 0; box-shadow: none; padding: 4px; }
+.po-size { position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; cursor: nwse-resize; touch-action: none; background: linear-gradient(135deg, transparent 50%, var(--line) 50%); }
+body.po-grabbing, body.po-grabbing * { user-select: none !important; }
+.po-gone { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+
+html.po-docked .shell { padding-right: var(--po-pane); }
+.po-pane { position: fixed; top: 0; right: 0; bottom: 0; z-index: 8; background: var(--surface); border-left: 1px solid var(--line); display: flex; flex-direction: column; min-width: 0; }
+.po-pane .po-head { cursor: default; }
+.po-divider { position: absolute; left: -5px; top: 0; bottom: 0; width: 10px; cursor: ew-resize; touch-action: none; z-index: 2; }
+.po-divider:hover, .po-divider:focus-visible { background: var(--accent-soft); }
+.po-tabs { display: flex; gap: 2px; overflow-x: auto; padding: 6px 6px 0; flex: none; }
+.po-tabs button { min-height: 34px; padding: 4px 10px; border-radius: 8px 8px 0 0; font-size: 0.85rem; white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+.po-tabs button.on { background: var(--accent-soft); border-color: var(--accent); font-weight: 600; }
+
+.po-dock { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 40; display: flex; gap: 6px; max-width: calc(100vw - 32px); overflow-x: auto; padding: 4px; }
+.po-chip { white-space: nowrap; border-radius: 999px; box-shadow: var(--shadow-pop); background: var(--surface); max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
+
+html[data-theme='eink'] .po-btn { opacity: 1; border: 2px solid #000; top: -22px; min-width: 44px; }
+html[data-theme='eink'] .po-win, html[data-theme='eink'] .po-pane { border: 3px solid #000; }
+html[data-theme='eink'] .po-head { background: #fff; border-bottom: 3px solid #000; }
+html[data-theme='eink'] .po-tools .icon, html[data-theme='eink'] .po-chip, html[data-theme='eink'] .po-tabs button { min-width: 44px; min-height: 44px; }
+html[data-theme='eink'] .po-chip { border: 3px solid #000; }
+html[data-theme='eink'] .po-tabs button.on { background: #000; color: #fff; }
+html[data-theme='eink'] .po-placeholder { border: 3px dashed #000; }
+html[data-theme='eink'] .po-size { width: 26px; height: 26px; background: linear-gradient(135deg, transparent 50%, #000 50%); }

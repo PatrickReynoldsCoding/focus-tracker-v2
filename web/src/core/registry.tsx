@@ -48,7 +48,43 @@ export interface PanelDef<P> {
   /** Replaces another feature's panel with the same id, whichever is registered first. */
   override?: boolean;
   render: Render<P>;
+  /** One line about what it shows, for "+ Add feature" and Today settings. */
+  description?: string;
+  /** Cannot be removed from its page (the focus card, a project's board). */
+  alwaysShown?: boolean;
+  /** Not part of the layout: always drawn above ('top') or below ('bottom') the panels that move,
+   *  never moved, removed or popped out (reminder banners, the sticky-note layer, Delete project). */
+  fixed?: 'top' | 'bottom';
+  /** Drawn in another panel's place, straight after it (a switch that belongs under the notes). */
+  attachTo?: string;
+  /** What it is, for grouping in pickers: 'list', 'todo', 'note', 'whiteboard'; none = a panel. */
+  kind?: string;
+  /** For a panel a source made (a list on Today): what Remove does instead of hiding it. */
+  onRemove?: () => void;
+  /** A short count for the phone's Today pills (to-dos open, habits done of all); nothing = no count. */
+  count?: (props: P) => string | number | null | undefined;
+  /** A short version, for the top of a phone's Today (the focus card). */
+  compact?: Render<P>;
+  /** What it edits that may be on screen only once (a note: 'note:project:<id>'); while it is in a
+   *  window, every other panel with the same key shows a placeholder. */
+  oneCopy?: (props: P) => string | null;
 }
+
+/** A page whose panels can be drawn away from it (a pop-out window): how to load the props its
+ *  panels get, from a key (a project's id; '' for Today). */
+export interface PlaceDef<P = any> {
+  place: string;
+  /** A hook: the props for this key, null while loading. */
+  useProps: (key: string) => { props: P | null; error?: string | null };
+  keyOf: (props: P) => string;
+  /** The page's name for people ('Today', the project's name). */
+  label: (props: P) => string;
+}
+const placeDefs = new Map<string, PlaceDef>();
+export function registerPlace<P>(p: PlaceDef<P>) {
+  placeDefs.set(p.place, p as PlaceDef);
+}
+export const placeDef = (place: string): PlaceDef | undefined => placeDefs.get(place);
 
 export interface TodayPanelProps {
   /** GET /api/today, shared by every Today panel; panels with other data fetch it themselves. */
@@ -98,11 +134,54 @@ export interface HeaderItemDef {
 /** A small count shown beside a tab's name (side bar and phone bar): set `tabBadges.value = { ...tabBadges.value, today: 2 }`. 0 or missing = none. */
 export const tabBadges = signal<Record<string, number>>({});
 
+/** Panels that come from data (each note or list on Today is its own panel). `Provide` works them out,
+ *  loading what it needs, and returns `children(panels)` (an empty list while loading). */
+export interface PanelSourceDef<P> {
+  id: string;
+  order: number;
+  feature?: string;
+  Provide: ComponentType<{ props: P; children: (panels: PanelDef<P>[]) => VNode | null }>;
+  /** One of this source's panels by id, drawn anywhere (a phone pill, a window), loading its own
+   *  data; also for something not on the page now. null when the id is not this source's. */
+  resolve?: (id: string) => PanelDef<any> | null;
+  /** What could be put on the page (not on it now), for "+ Add feature" and the pills. */
+  addable?: () => Promise<Addable[]>;
+}
+export interface Addable {
+  /** The panel id it will have once added (also what a pill stores). */
+  id: string;
+  title: string;
+  description?: string;
+  kind?: string;
+  /** Put it on the page. */
+  add: () => unknown;
+}
+
+/** Arranges a place's panels (the desktop grid, the phone's Today pills, pop-out windows). Layouts
+ *  are chained by `order`: each gets the panels and calls `next(panels)` for the rest of the chain,
+ *  so one can change what the next one draws (a placeholder, a filter) or draw everything itself. */
+export interface PanelLayoutProps<P = any> {
+  place: string;
+  props: P;
+  panels: PanelDef<P>[];
+  next: (panels: PanelDef<P>[]) => VNode;
+}
+export interface PanelLayoutDef {
+  id: string;
+  order: number;
+  feature?: string;
+  /** The places it arranges, e.g. ['today', 'project']. */
+  places: string[];
+  component: ComponentType<PanelLayoutProps>;
+}
+
 const tabs: TabDef[] = [];
 const routes: RouteDef[] = [];
 const panels: Record<string, PanelDef<any>[]> = {};
 const overlays: OverlayDef[] = [];
 const headerItems: HeaderItemDef[] = [];
+const sources: Record<string, PanelSourceDef<any>[]> = {};
+const layouts: PanelLayoutDef[] = [];
 
 const add = <T extends { id: string; override?: boolean }>(list: T[], item: T) => {
   const i = list.findIndex((x) => x.id === item.id);
@@ -115,6 +194,13 @@ export const registerTab = (t: TabDef) => add(tabs, t);
 export const registerRoute = (r: RouteDef) => add(routes, r);
 export const registerOverlay = (o: OverlayDef) => add(overlays, o);
 export const registerHeaderItem = (h: HeaderItemDef) => add(headerItems, h);
+export const registerPanelLayout = (l: PanelLayoutDef) => add(layouts, l);
+export function registerPanelSource(place: 'today', s: PanelSourceDef<TodayPanelProps>): void;
+export function registerPanelSource(place: 'project', s: PanelSourceDef<ProjectPanelProps>): void;
+export function registerPanelSource(place: string, s: PanelSourceDef<any>): void;
+export function registerPanelSource(place: string, s: PanelSourceDef<any>) {
+  add((sources[place] ??= []), s);
+}
 
 /** What `MarkdownEditor` (core/ui.tsx) takes. Features may pass the optional ones. */
 export interface MarkdownEditorProps {
@@ -168,6 +254,41 @@ export function usePanels<P>(place: string): PanelDef<P>[] {
   const flags = useFlags();
   return visible(panels[place] ?? [], flags).sort((a, b) => a.order - b.order) as PanelDef<P>[];
 }
+/** The sources of a place whose flag is on (for "+ Add feature" and the pills). */
+export function useSources(place: string): PanelSourceDef<any>[] {
+  return visible(sources[place] ?? [], useFlags()).sort((a, b) => a.order - b.order);
+}
+/** A panel of a place by id, outside its page: a registered one, else one a source can draw. */
+export function lookupPanel(place: string, id: string, flags: Record<string, boolean>): PanelDef<any> | null {
+  const own = visible(panels[place] ?? [], flags).find((p) => p.id === id && !p.attachTo);
+  if (own) return withAttached(own, visible(panels[place] ?? [], flags));
+  for (const s of visible(sources[place] ?? [], flags)) {
+    const p = s.resolve?.(id);
+    if (p) return p;
+  }
+  return null;
+}
+
+/** A panel with the panels attached to it drawn straight after it. */
+function withAttached<P>(host: PanelDef<P>, all: PanelDef<P>[]): PanelDef<P> {
+  const att = all.filter((p) => p.attachTo === host.id);
+  if (!att.length) return host;
+  return {
+    ...host,
+    render: (props) => {
+      const node = host.render(props);
+      if (!node) return null;
+      return (
+        <>
+          {node}
+          {att.map((a) => (
+            <PanelSlot key={a.id}>{a.render(props)}</PanelSlot>
+          ))}
+        </>
+      );
+    },
+  };
+}
 
 /** Draw every overlay (main.tsx puts this in the signed-in shell). */
 export function Overlays({ route }: { route: string }) {
@@ -183,9 +304,53 @@ function OverlaySlot({ render }: { render: () => VNode | null }) {
   return render();
 }
 
-/** Draw every panel registered for a place, in order. */
-export function Panels<P extends object>({ place, props, wrap }: { place: string; props: P; wrap?: (p: PanelDef<P>, node: VNode) => ComponentChildren }) {
-  const list = usePanels<P>(place);
+type Wrap<P> = (p: PanelDef<P>, node: VNode) => ComponentChildren;
+
+/** Draw every panel registered for a place, in order, with the panels its sources add; a place
+ *  that has layouts (registerPanelLayout) is arranged by them. */
+export function Panels<P extends object>({ place, props, wrap }: { place: string; props: P; wrap?: Wrap<P> }) {
+  const flags = useFlags();
+  const list = visible(panels[place] ?? [], flags).sort((a, b) => a.order - b.order) as PanelDef<P>[];
+  const srcs = visible(sources[place] ?? [], flags).sort((a, b) => a.order - b.order);
+  const lays = visible(layouts, flags)
+    .filter((l) => l.places.includes(place))
+    .sort((a, b) => a.order - b.order);
+  if (!srcs.length && !lays.length) return <PlainPanels list={list} props={props} wrap={wrap} />;
+  return (
+    <Collect sources={srcs} i={0} props={props} found={[]}>
+      {(more) => <Chain place={place} props={props} panels={merge(list, more as PanelDef<P>[])} layouts={lays} i={0} wrap={wrap} />}
+    </Collect>
+  );
+}
+
+/** Registered panels and the sources' panels in order, each attached panel folded into its host. */
+function merge<P>(list: PanelDef<P>[], more: PanelDef<P>[]): PanelDef<P>[] {
+  const all = [...list, ...more].sort((a, b) => a.order - b.order);
+  return all.filter((p) => !p.attachTo || !all.some((h) => h.id === p.attachTo)).map((p) => withAttached(p, all));
+}
+
+/** Ask each source in turn for its panels (each is a component, so it may load data). */
+function Collect({ sources: srcs, i, props, found, children }: { sources: PanelSourceDef<any>[]; i: number; props: any; found: PanelDef<any>[]; children: (more: PanelDef<any>[]) => VNode }) {
+  if (i >= srcs.length) return children(found);
+  const S = srcs[i];
+  return (
+    <S.Provide props={props}>
+      {(ps) => (
+        <Collect sources={srcs} i={i + 1} props={props} found={[...found, ...ps.map((p, k) => ({ ...p, order: S.order + k / 1000 }))]}>
+          {children}
+        </Collect>
+      )}
+    </S.Provide>
+  );
+}
+
+function Chain<P>({ place, props, panels: list, layouts: lays, i, wrap }: { place: string; props: P; panels: PanelDef<P>[]; layouts: PanelLayoutDef[]; i: number; wrap?: Wrap<P> }) {
+  if (i >= lays.length) return <PlainPanels list={list} props={props} wrap={wrap} />;
+  const L = lays[i].component;
+  return <L place={place} props={props} panels={list} next={(ps) => <Chain place={place} props={props} panels={ps as PanelDef<P>[]} layouts={lays} i={i + 1} wrap={wrap} />} />;
+}
+
+function PlainPanels<P>({ list, props, wrap }: { list: PanelDef<P>[]; props: P; wrap?: Wrap<P> }) {
   return (
     <>
       {list.map((p) => {

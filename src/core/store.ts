@@ -381,6 +381,25 @@ export async function move(ctx: Ctx, e: Entity, id: string, target: MoveTarget):
 
 // ---------- undo ----------
 
+/** Undo rows of a settings row (which has no id): `row_id` is the key, before/after hold `{ value }`. */
+const SETTING = 'setting';
+
+function settingWrite(ctx: Ctx, key: string, raw: string | null): D1PreparedStatement {
+  const value = raw == null ? null : ((JSON.parse(raw) as { value?: string | null }).value ?? null);
+  if (value == null) return ctx.db.prepare('DELETE FROM settings WHERE mode = ? AND key = ?').bind(ctx.mode, key);
+  return ctx.db
+    .prepare('INSERT INTO settings (mode, key, value, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT (mode, key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at')
+    .bind(ctx.mode, key, value, ctx.now());
+}
+
+/** Change a setting of this mode so that Undo and Redo cover it (most settings are not undoable). */
+export async function setSettingWithUndo(ctx: Ctx, key: string, value: string | null): Promise<void> {
+  const before = await ctx.setting(key);
+  if (before === value) return;
+  await ctx.setSetting(key, value);
+  ctx.changes.push({ entity: SETTING, table: 'settings', rowId: key, before: before == null ? null : { value: before }, after: value == null ? null : { value } });
+}
+
 /** Undo the latest change batch in this mode that is not undone yet. */
 export async function undoLast(ctx: Ctx): Promise<{ label: string; changes: number } | null> {
   const last = await ctx.db
@@ -396,6 +415,10 @@ export async function undoLast(ctx: Ctx): Promise<{ label: string; changes: numb
   ).results;
   const stmts: D1PreparedStatement[] = [];
   for (const r of rows) {
+    if (r.entity === SETTING) {
+      stmts.push(settingWrite(ctx, r.row_id, r.before));
+      continue;
+    }
     const e = getEntity(r.entity);
     if (r.before == null) {
       stmts.push(ctx.db.prepare(`DELETE FROM ${e.table} WHERE id = ?`).bind(r.row_id));
@@ -429,6 +452,10 @@ export async function redoLast(ctx: Ctx): Promise<{ label: string; changes: numb
   ).results;
   const stmts: D1PreparedStatement[] = [];
   for (const r of rows) {
+    if (r.entity === SETTING) {
+      stmts.push(settingWrite(ctx, r.row_id, r.after));
+      continue;
+    }
     const e = getEntity(r.entity);
     if (r.after == null) {
       stmts.push(ctx.db.prepare(`DELETE FROM ${e.table} WHERE id = ?`).bind(r.row_id));

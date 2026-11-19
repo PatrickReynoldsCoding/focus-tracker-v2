@@ -27,6 +27,12 @@ export function signal<T>(initial: T): Signal<T> {
 
 export function useSignal<T>(s: Signal<T>): T {
   const [, set] = useState(0);
-  useEffect(() => s.subscribe(() => set((n) => n + 1)), [s]);
-  return s.value;
+  const seen = s.value;
+  useEffect(() => {
+    const off = s.subscribe(() => set((n) => n + 1));
+    // It may have changed between this render and now (another component's effect set it).
+    if (!Object.is(s.value, seen)) set((n) => n + 1);
+    return off;
+  }, [s]);
+  return seen;
 }

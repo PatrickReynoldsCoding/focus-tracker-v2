@@ -1,10 +1,12 @@
-// Notes and lists on Today as full panels, in the order they were added, and the
-// "+ Add to Today" picker. Replaces the link chips of the first Today.
+// Notes and lists on Today, each its own panel (a panel source), in the order they were added,
+// and the "+ Add to Today" picker. Replaces the link chips of the first Today.
 
+import type { VNode } from 'preact';
 import { useState } from 'preact/hooks';
-import { change, optimistic, put } from '../../core/api';
+import { change, get, optimistic, put } from '../../core/api';
+import type { Addable, PanelDef, TodayPanelProps } from '../../core/registry';
 import { Dialog, Loading, MarkdownEditor, useData } from '../../core/ui';
-import { ListPanel, type FullList, type SetList } from './ListBody';
+import { cardsOf, ListPanel, todosOf, type FullList, type SetList } from './ListBody';
 
 type NoteItem = { type: 'note'; key: string; name: string; kind: 'note' | 'project'; id?: string; project_id?: string; color: string | null; body: string };
 type ListItem = FullList & { type: 'list'; key: string };
@@ -15,7 +17,7 @@ type Option = { key: string; list_id: string | null; project_id: string | null; 
 const target = (i: { key: string }) => (i.key.startsWith('project:') ? { project_id: i.key.slice(8) } : { list_id: i.key.slice(5) });
 const ICON: Record<string, string> = { note: '✎', project: '✎', todo: '☐', list: '≡' };
 
-function NotePanel({ n, setBody, onRemove }: { n: NoteItem; setBody: (body: string) => void; onRemove: () => void }) {
+function NotePanel({ n, setBody, onRemove }: { n: NoteItem; setBody: (body: string) => void; onRemove?: () => void }) {
   const href = n.kind === 'project' ? `#/p/${n.project_id}` : `#/n/${n.key.slice(5)}`;
   const owner = n.kind === 'project' ? `project/${n.project_id}` : `list/${n.key.slice(5)}`;
   return (
@@ -27,9 +29,11 @@ function NotePanel({ n, setBody, onRemove }: { n: NoteItem; setBody: (body: stri
             {n.kind === 'project' ? ' · notes' : ''}
           </a>
         </h2>
-        <button class="icon small" aria-label={`Remove ${n.name} from Today`} title="Remove from Today" onClick={onRemove}>
-          ✕
-        </button>
+        {onRemove && (
+          <button class="icon small" aria-label={`Remove ${n.name} from Today`} title="Remove from Today" onClick={onRemove}>
+            ✕
+          </button>
+        )}
       </div>
       <MarkdownEditor
         value={n.body}
@@ -76,12 +80,13 @@ function Picker({ onClose }: { onClose: () => void }) {
   );
 }
 
-export function OnToday() {
-  const { data, setData, error } = useData<Item[]>('/today-panels');
-  const [picking, setPicking] = useState(false);
-  if (!data) return error ? <Loading error={error} /> : null;
-  const patchItem = (key: string, fn: (i: Item) => Item) => setData((d) => d.map((i) => (i.key === key ? fn(i) : i)));
-  const remove = (i: Item) =>
+/** A panel id for an item key: 'list:<id>' → 'list-<id>', 'project:<id>' → 'pnote-<id>'. */
+export const panelIdOf = (key: string) => (key.startsWith('project:') ? `pnote-${key.slice(8)}` : `list-${key.slice(5)}`);
+const KIND_NAME: Record<string, string> = { project: 'Project notes', note: 'Note', todo: 'To-do list', list: 'List' };
+
+function itemPanel(i: Item, data: Item[], setData: (fn: (d: Item[]) => Item[]) => void): PanelDef<TodayPanelProps> {
+  const patchItem = (fn: (i: Item) => Item) => setData((d) => d.map((x) => (x.key === i.key ? fn(x) : x)));
+  const remove = () =>
     optimistic(
       () => {
         const before = data;
@@ -91,20 +96,86 @@ export function OnToday() {
       () => put('/today-panels/show', { ...target(i), on: false }),
       `${i.name} is off Today`,
     );
+  const kind = i.type === 'note' ? 'note' : (i as ListItem).kind;
+  return {
+    id: panelIdOf(i.key),
+    title: i.type === 'note' && i.kind === 'project' ? `${i.name} · notes` : i.name,
+    description: KIND_NAME[i.type === 'note' ? i.kind : kind],
+    kind,
+    order: 0,
+    onRemove: remove,
+    oneCopy: () => (i.type === 'note' ? `note:${i.key}` : null),
+    count: () => (i.type === 'list' ? (i.kind === 'todo' ? todosOf(i).filter((t) => !t.done).length : cardsOf(i).length) : null),
+    render: () =>
+      i.type === 'note' ? (
+        <NotePanel n={i} setBody={(body) => patchItem((x) => ({ ...x, body }) as Item)} onRemove={remove} />
+      ) : (
+        <ListPanel l={i} setList={((fn) => patchItem((x) => ({ ...fn(x as ListItem), type: 'list', key: i.key }) as Item)) as SetList} onRemove={remove} />
+      ),
+  };
+}
+
+/** Each note and list on Today as its own panel (registerPanelSource), in the order they were added. */
+export function OnTodaySource({ children }: { props: TodayPanelProps; children: (panels: PanelDef<TodayPanelProps>[]) => VNode | null }) {
+  const { data, setData } = useData<Item[]>('/today-panels');
+  return children((data ?? []).map((i) => itemPanel(i, data!, setData)));
+}
+
+/** A note or list drawn on its own, off Today's page (a phone pill, a window): it loads itself. */
+function LoadedList({ id }: { id: string }) {
+  const { data, setData, error } = useData<FullList & { body?: string }>(`/lists/${id}/full`);
+  if (!data) return <Loading error={error} />;
+  if ((data.kind as string) === 'note')
+    return (
+      <NotePanel
+        n={{ type: 'note', key: `list:${id}`, name: data.name, kind: 'note', color: data.color, body: data.body ?? '' }}
+        setBody={(body) => setData((d) => ({ ...d, body }))}
+      />
+    );
+  return <ListPanel l={data} setList={setData as SetList} />;
+}
+function LoadedProjectNotes({ id }: { id: string }) {
+  const { data, setData, error } = useData<{ id: string; name: string; notes: string }>(`/projects/${id}/full`);
+  if (!data) return <Loading error={error} />;
+  return (
+    <NotePanel
+      n={{ type: 'note', key: `project:${id}`, name: data.name, kind: 'project', project_id: id, color: null, body: data.notes }}
+      setBody={(notes) => setData((d) => ({ ...d, notes }))}
+    />
+  );
+}
+
+export function resolveOnToday(id: string): PanelDef<any> | null {
+  const m = /^(list|pnote)-([A-Za-z0-9_-]+)$/.exec(id);
+  if (!m) return null;
+  return {
+    id,
+    title: m[1] === 'list' ? 'List' : 'Project notes',
+    order: 0,
+    // A list may be a note: the same key as its panel on Today (a list that is not a note never matches).
+    oneCopy: () => (m[1] === 'list' ? `note:list:${m[2]}` : `note:project:${m[2]}`),
+    kind: m[1] === 'list' ? 'list' : 'note',
+    render: () => (m[1] === 'list' ? <LoadedList key={id} id={m[2]} /> : <LoadedProjectNotes key={id} id={m[2]} />),
+  };
+}
+
+/** Notes and lists that could go on Today, for "+ Add feature" and the pills. */
+export async function addableOnToday(): Promise<Addable[]> {
+  const list = await get<Option[]>('/today-panels/available');
+  return list.map((o) => ({
+    id: panelIdOf(o.key),
+    title: o.name,
+    description: KIND_NAME[o.kind] ?? 'List',
+    kind: o.kind === 'project' ? 'note' : o.kind,
+    add: () => change(() => put('/today-panels/show', { ...target(o), on: true }), `${o.name} is on Today`),
+  }));
+}
+
+/** "+ Add to Today", under Today's panels. */
+export function AddToToday() {
+  const [picking, setPicking] = useState(false);
   return (
     <>
-      {data.map((i) =>
-        i.type === 'note' ? (
-          <NotePanel key={i.key} n={i} setBody={(body) => patchItem(i.key, (x) => ({ ...x, body }) as Item)} onRemove={() => remove(i)} />
-        ) : (
-          <ListPanel
-            key={i.key}
-            l={i}
-            setList={((fn) => patchItem(i.key, (x) => ({ ...fn(x as ListItem), type: 'list', key: i.key }) as Item)) as SetList}
-            onRemove={() => remove(i)}
-          />
-        ),
-      )}
       <div class="tp-add">
         <button class="ghost" onClick={() => setPicking(true)}>
           + Add to Today

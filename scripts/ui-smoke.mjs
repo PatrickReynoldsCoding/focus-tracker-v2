@@ -52,6 +52,8 @@ for (const [vp, name] of [[{ width: 390, height: 844 }, 'phone'], [{ width: 1280
   await page.fill('input[placeholder="Add a to-do for today"]', 'Buy milk');
   await page.press('input[placeholder="Add a to-do for today"]', 'Enter');
   await page.waitForSelector('text=Buy milk');
+  // On a phone Today shows one pill's panels at a time (V1-GAPS 40): the Habits pill first.
+  if (await page.$('.pl-pill')) await page.click('.pl-pill:has-text("Habits")');
   await page.click('.habits-panel .dot >> nth=0');
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${OUT}/${name}-today-session.png`, fullPage: true });
