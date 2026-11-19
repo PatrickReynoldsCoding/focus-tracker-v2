@@ -1,6 +1,7 @@
 import Sortable from 'sortablejs';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { optimistic, patch, post } from '../../core/api';
+import { Linkify } from '../../core/ui';
 import { DriveDialog } from './DriveDialog';
 import { KindIcon } from './icons';
 import { copyText, groupItems, hrefOf, kindLabel, kindOf, ownerKey, subtitle, type Owner, type Resource } from './model';
@@ -28,7 +29,12 @@ function Row({ r, onEdit }: { r: Resource; onEdit: () => void }) {
         )}
         <span class="res-sub muted small" title={kindLabel(r)}>
           {r.type === 'text' ? <span class="res-text">{r.value}</span> : subtitle(r)}
-          {r.note ? ` · ${r.note}` : ''}
+          {r.note && (
+            <>
+              {' · '}
+              <Linkify text={r.note} />
+            </>
+          )}
         </span>
       </div>
       {copyable && (

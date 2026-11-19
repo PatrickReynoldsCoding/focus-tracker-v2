@@ -24,6 +24,13 @@ class StatusTest {
         assertEquals(false, s.notifications[0].seen)
     }
 
+    @Test fun readsPausedAndWaiting() {
+        val s = Status.parse(JSONObject("""{"day":"d","focus":null,"todos_due":[],"habits_left":[],"notifications":[],
+          "session":{"project_name":"N","elapsed_seconds":60,"paused":true,"pomodoro":{"phase":"work","seconds_left":0,"waiting":true,"next_phase":"break"}}}"""))
+        assertEquals(true, s.session!!.paused)
+        assertEquals("break", s.session!!.waitingFor)
+    }
+
     @Test fun handlesNoSession() {
         val s = Status.parse(JSONObject("""{"day":"d","focus":null,"session":null,"todos_due":[],"habits_left":[],"notifications":[]}"""))
         assertNull(s.focusName)

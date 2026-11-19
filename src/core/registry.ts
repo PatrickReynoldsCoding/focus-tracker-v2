@@ -26,6 +26,12 @@ export interface Module {
   /** Extra REST routes, mounted under /api. */
   routes?(api: Hono<AppEnv>): void;
   tools?: Tool<any>[];
+  /**
+   * Runs before any row of any kind is deleted (after the entity's own onDelete), for
+   * modules whose rows point at several kinds, such as issue links. Deletes made here
+   * through the store are part of the same undo step.
+   */
+  beforeDelete?(ctx: Ctx, e: Entity, row: import('./entity').Row): Promise<void>;
   /** Feature flags this module reads (src/core/features.ts). */
   features?: import('./features').Feature[];
 }

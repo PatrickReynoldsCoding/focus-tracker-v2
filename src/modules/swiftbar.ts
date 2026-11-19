@@ -8,7 +8,8 @@ import type { Module } from '../core/registry';
 import { update } from '../core/store';
 import { checkHabit } from './habits';
 import { dismiss, notificationsEntity } from './notifications';
-import { startSession, status, stopSession } from './today';
+import { extendSession, nextPeriod, pauseSession, resumeSession, startSession, stopSession } from './sessions';
+import { status } from './today';
 
 /** SwiftBar treats "|" as the start of parameters; keep text safe and short. */
 const clean = (s: unknown, max = 60) => {
@@ -27,7 +28,14 @@ export async function swiftbarText(ctx: Ctx, origin: string): Promise<string> {
   let bar = '◎';
   if (s.session) {
     const p = s.session.pomodoro;
-    bar = p ? `${p.phase === 'break' ? '☕' : '◉'} ${clean(s.session.project_name, 18)} ${mmss(p.seconds_left)}` : `◉ ${clean(s.session.project_name, 18)} ${mmss(s.session.elapsed_seconds)}`;
+    const pl = s.session.planned;
+    const name = clean(s.session.project_name, 18);
+    if (s.session.paused) bar = `⏸ ${name} ${mmss(s.session.worked_seconds)}`;
+    else if (pl?.time_up) bar = `⏰ ${name}: time is up`;
+    else if (p?.waiting) bar = `⏰ ${name}: ${p.next_phase === 'break' ? 'break time' : 'back to work'}`;
+    else if (p) bar = `${p.phase === 'break' ? '☕' : '◉'} ${name} ${mmss(p.seconds_left)}`;
+    else if (pl) bar = `◉ ${name} ${mmss(pl.seconds_left)}`;
+    else bar = `◉ ${name} ${mmss(s.session.elapsed_seconds)}`;
   } else if (s.focus) bar = `◎ ${clean(s.focus.name, 22)}`;
   const unseen = s.notifications.filter((n) => !n.seen_at);
   if (unseen.length) bar += ` •${unseen.length}`;
@@ -36,7 +44,13 @@ export async function swiftbarText(ctx: Ctx, origin: string): Promise<string> {
   if (s.focus) {
     lines.push(`Focus: ${clean(s.focus.name)} | href=${origin}/#/p/${s.focus.id}`);
   } else lines.push(`No focus chosen | href=${origin}/#/today`);
-  if (s.session) lines.push(`Stop session… | ${act('stop')}`);
+  if (s.session) {
+    const p = s.session.pomodoro;
+    if (p?.waiting) lines.push(`${p.next_phase === 'break' ? 'Start break' : 'Start work'} | ${act('next')}`);
+    if (s.session.planned?.time_up) lines.push(`Keep going +10 min | ${act('extend', '10')}`, `Keep going +25 min | ${act('extend', '25')}`);
+    lines.push(s.session.paused ? `Resume | ${act('resume')}` : `Pause | ${act('pause')}`);
+    lines.push(`Stop session… | ${act('stop')}`);
+  }
   else if (s.focus) lines.push(`Start session | ${act('start')}`);
 
   if (s.todos_due.length) {
@@ -65,6 +79,14 @@ export async function swiftbarAction(ctx: Ctx, form: Record<string, string>) {
   switch (form.action) {
     case 'start':
       return startSession(ctx, {});
+    case 'pause':
+      return pauseSession(ctx);
+    case 'resume':
+      return resumeSession(ctx);
+    case 'next':
+      return nextPeriod(ctx);
+    case 'extend':
+      return extendSession(ctx, Number(id) || 10);
     case 'stop':
       return stopSession(ctx, { where_stopped: form.where_stopped || undefined });
     case 'tick': {
@@ -88,6 +110,7 @@ export const swiftbarModule: Module = {
   routes(api) {
     api.get('/swiftbar', async (c) => {
       const origin = c.env.PUBLIC_URL?.replace(/\/$/, '') || new URL(c.req.url).origin;
+      c.get('ctx').client ??= 'swiftbar';
       return c.text(await swiftbarText(c.get('ctx'), origin));
     });
     // Form-encoded so the plugin can send it with curl --data-urlencode, no JSON needed.

@@ -57,14 +57,25 @@ describe('SwiftBar menu bar', () => {
     await action({ action: 'start' });
     let out = await text();
     expect(out.split('\n')[0]).toMatch(/^◉ Pomo (25:00|24:5\d)/);
-    // Pretend the session started 26 minutes ago: it is break time.
+    expect(out).toContain('Pause | bash=__SELF__ param1=pause');
+    // Pretend the session started 26 minutes ago (saved the old way, without periods): work is over.
     const started = new Date(Date.now() - 26 * 60000).toISOString();
     await env.DB.prepare("UPDATE settings SET value = ? WHERE mode = 'work' AND key = 'session.current'")
       .bind(JSON.stringify({ project_id: p.id, started, pomodoro: { work: 25, break: 5 } }))
       .run();
     out = await text();
-    expect(out.split('\n')[0]).toMatch(/^☕ Pomo 4:\d\d/);
-    expect(out).toMatch(/#notify\t\w+\tBreak time/);
+    expect(out.split('\n')[0]).toMatch(/^⏰ Pomo: break time/);
+    expect(out).toMatch(/#notify\t\w+\tTime for a break/);
+    expect(out).toContain('Start break | bash=__SELF__ param1=next');
+    await action({ action: 'next' });
+    out = await text();
+    expect(out.split('\n')[0]).toMatch(/^☕ Pomo (5:00|4:5\d)/);
+    expect(out).not.toContain('Time for a break');
+    await action({ action: 'pause' });
+    out = await text();
+    expect(out.split('\n')[0]).toMatch(/^⏸ Pomo 26:0\d/);
+    expect(out).toContain('Resume | bash=__SELF__ param1=resume');
+    await action({ action: 'resume' });
     await action({ action: 'stop', where_stopped: 'page 3' });
     const log = await call('GET', `/log?project_id=${p.id}`, undefined, m);
     expect(log[0]).toMatchObject({ where_stopped: 'page 3', minutes: 26 });

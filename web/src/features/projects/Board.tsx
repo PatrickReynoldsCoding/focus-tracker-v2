@@ -4,13 +4,14 @@
 import Sortable from 'sortablejs';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { change, del, localStorageSet, newId, optimistic, patch, post } from '../../core/api';
-import { Panels, registerPanel, type CardSectionProps } from '../../core/registry';
-import { AddInput, ColorPicker, Dialog, InlineEdit, MarkdownEditor } from '../../core/ui';
+import { Panels, registerPanel, type CardSectionProps, type CardTileProps } from '../../core/registry';
+import { AddInput, ColorPicker, Dialog, InlineEdit, Linkify, MarkdownEditor, plainPreview } from '../../core/ui';
 
 export type Card = { id: string; title: string; note: string | null; color: string | null; column_id: string; ord: number };
 export type Column = { id: string; name: string; cards: Card[] };
 
-function CardDialog({ card, columns, onClose, onChange }: { card: Card; columns: Column[]; onClose: () => void; onChange: (c: Partial<Card> | null) => void }) {
+/** The card dialog; other features open it too (a linked card). */
+export function CardDialog({ card, columns, onClose, onChange }: { card: Card; columns: Column[]; onClose: () => void; onChange: (c: Partial<Card> | null) => void }) {
   const save = (p: Record<string, unknown>) => {
     onChange(p as Partial<Card>);
     change(() => patch(`/tasks/${card.id}`, p));
@@ -159,12 +160,16 @@ function ColumnView({
       <ul class="cards" ref={listRef} data-col={col.id}>
         {col.cards.map((c) => (
           <li key={c.id} data-id={c.id} class={`kcard c-${c.color || 'none'}`} tabIndex={0} onClick={() => onOpen(c)} onKeyDown={(e) => e.key === 'Enter' && onOpen(c)}>
-            <span>{c.title}</span>
-            {c.note && (
+            <span class="kcard-body">
+              <span class="kcard-title"><Linkify text={c.title} /></span>
+              {c.note && plainPreview(c.note) && <span class="kcard-note">{plainPreview(c.note)}</span>}
+            </span>
+            {c.note && !plainPreview(c.note) && (
               <span class="note-dot" aria-label="Has a note">
                 ¶
               </span>
             )}
+            <Panels<CardTileProps> place="card-tile" props={{ card: c }} />
           </li>
         ))}
       </ul>

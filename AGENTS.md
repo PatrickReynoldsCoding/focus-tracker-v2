@@ -29,7 +29,13 @@ Modular first: a feature lives in its own files on the server and in the browser
   - `registerPanel('today', …)` gets `{ today, setToday }` (GET /api/today),
   - `registerPanel('project', …)` gets `{ project, setProject }` (GET /api/projects/:id/full),
   - `registerPanel('card', …)` is a section of the card dialog, gets `{ card, columns, save, update, close }`,
-  - `registerPanel('settings', …)` is a section of Settings.
+  - `registerPanel('settings', …)` is a section of Settings,
+  - `registerOverlay` draws something over every page once signed in (gets `{ route }`), such as the session's corner timer.
+  - `registerPanel('card-tile', …)` is a small mark on a board card, gets `{ card }` (render a component, keep it tiny),
+  - `registerPanel('list', …)` is a section of a list's page (under its heading), gets `{ list, setList }` (GET /api/lists/:id/full),
+  - `tabBadges` (a signal) sets a small count beside a tab's name in the side bar and phone bar.
+  - `registerMarkdownEditor` supplies the editor behind `MarkdownEditor` (core/ui.tsx); `features/editor` registers the rich one (flag `rich-editor`), otherwise the plain text box is used. Give `MarkdownEditor` a `note={{ kind, id }}` for a project's or list's note so it saves with conflict protection and keeps drafts.
+  - A panel with `override: true` replaces another feature's panel of the same id whatever the import order (the editor's card-dialog `note` section does this).
   A feature that needs a new plug-in point adds it to `core/registry.tsx` in a small, separate commit.
 - `styles.css` holds shared tokens and base styles; a feature's own styles go in `features/<name>/<name>.css`, imported by the feature.
 - `clients/swiftbar/`, `android/`: the Mac menu bar plugin and the Android app (see their READMEs).
@@ -64,4 +70,5 @@ For a change to the web app, also run it (`npm run build && npx wrangler dev`) a
 - Work on a branch per feature (`feat/<name>`), merge to `main` when its tests pass. Parallel agents each get their own git worktree and branch.
 - After a merge to `main`: `npm test`, `npm run typecheck`, `npm run test:ui` against a local server, then `npm run deploy` (build, migrations, deploy to the owner's Cloudflare account) and push.
 - Release often so the owner can test: bump `version` in `package.json`, tag `vX.Y.Z`, and `gh release create vX.Y.Z` with short notes of what to try. When the Android app changed, bump `versionCode`/`versionName` in `android/app/build.gradle.kts` and attach the signed APK (`cd android && ./gradlew assembleRelease`).
+- **Android releases must look like this, or the app's updater will not see them** (see `android/README.md`, "Updating from inside the app"): the release is published (not a draft or pre-release); it has one asset named `focus-tracker-X.Y.Z.apk` where X.Y.Z is the app's `versionName` (not necessarily the tag: a web-only release has no APK, and the app skips it); the APK is the signed `assembleRelease` output; and the release notes contain a line of its own `versionCode: N` matching `versionCode` in `android/app/build.gradle.kts`. The notes are shown to the owner in the app. Example: `cp android/app/build/outputs/apk/release/app-release.apk /tmp/focus-tracker-0.3.0.apk && gh release create v0.6.0 /tmp/focus-tracker-0.3.0.apk --notes $'What to try...\n\nversionCode: 3'`. Check with `gh release view vX.Y.Z --json assets,body`.
 - Tell the owner what was deployed and what to try.

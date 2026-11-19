@@ -69,6 +69,7 @@ export function buildApp() {
     }
     if (!ok) throw new ApiError(401, 'Sign in, or send an API token');
     const ctx = new Ctx(c.env, await resolveMode(c.env, c.req.header('X-Mode') ?? c.req.query('mode')));
+    ctx.client = c.req.query('client') ?? null;
     ctx.label = `${c.req.method} ${new URL(c.req.url).pathname.replace(/^\/api\//, '')}`;
     c.set('ctx', ctx);
     await next();

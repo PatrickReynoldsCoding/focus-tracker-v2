@@ -19,9 +19,14 @@ export const notesEntity: Entity = {
     list_id: { type: 'text', ref: 'lists', cascade: true },
     body: { type: 'markdown', default: '' },
     show_today: { type: 'bool', default: false },
+    today_at: { type: 'time', readonly: true, desc: 'When it was put on Today (Today panels keep that order)' },
   },
-  beforeCreate(_ctx, row) {
+  beforeCreate(ctx, row) {
     if (!row.project_id === !row.list_id) throw bad('A note belongs to exactly one of project_id or list_id');
+    if (row.show_today) row.today_at = ctx.now();
+  },
+  beforeUpdate(ctx, before, patch) {
+    if (patch.show_today && !before.show_today) patch.today_at = ctx.now();
   },
 };
 
@@ -44,14 +49,44 @@ export const notesModule: Module = {
   id: 'notes',
   description: 'Project notes and notes on the Notes tab, as Markdown.',
   entities: [notesEntity],
+  // Read by the web app's note editor (web/src/features/editor).
+  features: [
+    {
+      id: 'rich-editor',
+      label: 'Rich note editor',
+      description: 'Notes are edited as formatted text with a toolbar, drafts kept on the device and a choice when two devices change a note. Off: the plain Markdown text box.',
+      default: true,
+    },
+    {
+      id: 'paper-themes',
+      label: 'Paper themes for notes',
+      description: 'Notes can look like a legal pad, grid or dot paper (chosen per device in the editor’s ⋯ menu).',
+      default: true,
+    },
+  ],
   routes(api) {
+    const ownerOf = (kind: string, id: string): Owner => (kind === 'project' ? { project_id: id } : { list_id: id });
+    // The note with its version (updated_at; null when it has never been written).
+    api.get('/notes/of/:kind/:id', async (c) => {
+      const n = await getNote(c.get('ctx'), ownerOf(c.req.param('kind'), c.req.param('id')));
+      return c.json({ body: String(n?.body ?? ''), updated_at: n?.updated_at ?? null });
+    });
+    // Write the note. With `base` (the updated_at the edit started from, or null for a new
+    // note), the write is refused with 409 when the note changed since, so an editor can
+    // offer a choice instead of overwriting another device's (or Claude's) change.
     api.put('/notes/of/:kind/:id', async (c) => {
       const ctx = c.get('ctx');
       ctx.label = 'edit note';
-      const { body } = await c.req.json<{ body: string }>();
-      const kind = c.req.param('kind');
+      const { body, base } = await c.req.json<{ body: string; base?: string | null }>();
       if (typeof body !== 'string') throw bad('body must be text');
-      const owner = kind === 'project' ? { project_id: c.req.param('id') } : { list_id: c.req.param('id') };
+      if (base !== undefined && base !== null && typeof base !== 'string') throw bad('base must be the note’s updated_at, or null');
+      const owner = ownerOf(c.req.param('kind'), c.req.param('id'));
+      if (base !== undefined) {
+        const now = await getNote(ctx, owner);
+        const current = now?.updated_at ?? null;
+        if (current !== base && String(now?.body ?? '') !== body)
+          return c.json({ error: 'This note was changed somewhere else since you started editing.', code: 'conflict', current: { body: String(now?.body ?? ''), updated_at: current } }, 409);
+      }
       return c.json(await setNote(ctx, owner, body));
     });
   },

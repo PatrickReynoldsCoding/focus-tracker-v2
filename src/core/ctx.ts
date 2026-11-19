@@ -34,6 +34,8 @@ export class Ctx {
   readonly batch = newId(12);
   readonly nowDate: Date;
   label = 'change';
+  /** Which client asked (?client=android|swiftbar|web), for per-client notification settings. */
+  client: string | null = null;
   private tz?: string;
   private settingsCache = new Map<string, string | null>();
 
@@ -104,6 +106,8 @@ export class Ctx {
   /** Write the changes of this request to the undo history. */
   async flushUndo(): Promise<void> {
     if (!this.changes.length) return;
+    // A new change ends what could be redone in this mode.
+    await this.db.prepare('DELETE FROM undo WHERE mode = ? AND undone = 1').bind(this.mode).run();
     const stmt = this.db.prepare(
       'INSERT INTO undo (mode, batch, label, entity, row_id, before, after, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
     );
