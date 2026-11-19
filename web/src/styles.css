@@ -185,11 +185,6 @@ ul.cards { list-style: none; margin: 0; padding: 0; display: flex; flex-directio
 .swatch.on { border-color: var(--fg); box-shadow: 0 0 0 2px var(--surface) inset; }
 
 /* ---------- notes ---------- */
-.masonry { columns: 2 150px; column-gap: 10px; }
-.note-card { break-inside: avoid; display: block; margin-bottom: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; color: var(--fg); box-shadow: var(--shadow); }
-.note-card:hover { text-decoration: none; border-color: var(--accent); }
-.note-card ul { margin: 0; padding: 0; list-style: none; font-size: 0.9rem; color: var(--muted); }
-.note-card .preview { font-size: 0.88rem; color: var(--muted); max-height: 9em; overflow: hidden; }
 .md { overflow-wrap: anywhere; }
 .md > :first-child { margin-top: 0; }
 .md > :last-child { margin-bottom: 0; }
@@ -219,7 +214,6 @@ dialog.sheet::backdrop { background: rgb(0 0 0 / 0.4); }
   .grid.today .focus { grid-column: 1 / -1; }
   .filters { flex-direction: row; flex-wrap: wrap; align-items: center; }
   .filters input[type='search'], .filters select { width: auto; flex: 0 1 220px; }
-  .masonry { columns: 3 200px; }
   dialog.sheet { margin: auto; border-radius: 16px; max-width: 520px; }
   dialog.sheet.wide { max-width: 720px; }
   .toast { bottom: 24px; }

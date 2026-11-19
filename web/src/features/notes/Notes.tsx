@@ -1,88 +1,9 @@
-import { useState } from 'preact/hooks';
 import { change, del, newId, optimistic, patch, post, put } from '../../core/api';
 import { Panels } from '../../core/registry';
-import { Board, type Column } from '../projects/Board';
-import { AddInput, ColorPicker, Dialog, fmtDay, go, InlineEdit, Loading, Markdown, MarkdownEditor, todayLocal, useData } from '../../core/ui';
-
-type Overview = { id: string; name: string; kind: 'list' | 'todo' | 'note'; color: string | null; show_today: boolean; preview?: string; items?: { title: string }[]; open?: number; count?: number };
-type Todo = { id: string; title: string; day: string | null; done: string | null; group_id: string };
-type FullList = Overview & { body?: string; columns?: Column[]; groups?: { id: string; name: string; todos: Todo[] }[] };
-
-const KIND_LABEL = { list: 'List', todo: 'To-do list', note: 'Note' };
-const KIND_ICON = { list: '≡', todo: '☐', note: '✎' };
-
-function NewDialog({ onClose }: { onClose: () => void }) {
-  const [name, setName] = useState('');
-  const make = async (kind: string) => {
-    if (!name.trim()) return;
-    onClose();
-    const l = await change(() => post<Overview>('/lists', { name: name.trim(), kind }));
-    if (l) go(`/n/${l.id}`);
-  };
-  return (
-    <Dialog title="New" onClose={onClose}>
-      <div class="stack">
-        <input placeholder="Name" value={name} autoFocus onInput={(e) => setName((e.target as HTMLInputElement).value)} onKeyDown={(e) => e.key === 'Enter' && make('note')} />
-        <div class="row">
-          {(['note', 'todo', 'list'] as const).map((k) => (
-            <button key={k} class="ghost" disabled={!name.trim()} onClick={() => make(k)}>
-              {KIND_ICON[k]} {KIND_LABEL[k]}
-            </button>
-          ))}
-        </div>
-      </div>
-    </Dialog>
-  );
-}
-
-export function Notes() {
-  const { data, error } = useData<Overview[]>('/lists/overview');
-  const [q, setQ] = useState('');
-  const [kind, setKind] = useState<string>('');
-  const [creating, setCreating] = useState(false);
-  if (!data) return <Loading error={error} />;
-  const shown = data.filter((l) => (!kind || l.kind === kind) && (!q || `${l.name} ${l.preview ?? ''} ${(l.items ?? []).map((i) => i.title).join(' ')}`.toLowerCase().includes(q.toLowerCase())));
-  return (
-    <div class="stack">
-      <div class="page-head row">
-        <h1>Notes</h1>
-        <button class="primary" onClick={() => setCreating(true)}>
-          + New
-        </button>
-      </div>
-      <div class="filters">
-        <input type="search" placeholder="Search" value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} aria-label="Search notes" />
-        <div class="chips">
-          {['', 'note', 'todo', 'list'].map((k) => (
-            <button key={k} class={`chip ${kind === k ? 'on' : ''}`} onClick={() => setKind(k)}>
-              {k ? KIND_LABEL[k as keyof typeof KIND_LABEL] : 'All'}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div class="masonry">
-        {shown.map((l) => (
-          <a key={l.id} href={`#/n/${l.id}`} class={`note-card c-${l.color || 'none'}`}>
-            <h3>
-              <span aria-hidden="true">{KIND_ICON[l.kind]}</span> {l.name}
-            </h3>
-            {l.kind === 'note' && l.preview && <Markdown text={l.preview} class="preview" />}
-            {l.items && (
-              <ul>
-                {l.items.map((i, n) => (
-                  <li key={n}>{l.kind === 'todo' ? '☐ ' : ''}{i.title}</li>
-                ))}
-              </ul>
-            )}
-            {l.show_today && <span class="tag">Today</span>}
-          </a>
-        ))}
-      </div>
-      {!shown.length && <p class="empty">Nothing here yet.</p>}
-      {creating && <NewDialog onClose={() => setCreating(false)} />}
-    </div>
-  );
-}
+import { Board } from '../projects/Board';
+import { AddInput, ColorPicker, fmtDay, go, InlineEdit, Loading, MarkdownEditor, todayLocal, useData } from '../../core/ui';
+import { KIND_LABEL, type FullList, type Todo } from './model';
+import { Notes } from './NotesTab';
 
 function TodoList({ l, setData }: { l: FullList; setData: (fn: (d: FullList) => FullList) => void }) {
   const today = todayLocal();
