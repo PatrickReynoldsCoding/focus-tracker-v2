@@ -28,6 +28,7 @@ Modular first: a feature lives in its own files on the server and in the browser
   - `registerTab` (side bar, and the phone's bottom bar when `phone: true`, at most 5), `registerRoute` (a page that is not a tab, such as `/p/<id>`),
   - `registerPanel('today', …)` gets `{ today, setToday }` (GET /api/today),
   - `registerPanel('project', …)` gets `{ project, setProject }` (GET /api/projects/:id/full),
+  - `registerPanel('projects', …)` is a section of the Projects tab (under the table), gets `{ category }` (the tab's category filter),
   - `registerPanel('card', …)` is a section of the card dialog, gets `{ card, columns, save, update, close }`,
   - `registerPanel('settings', …)` is a section of Settings,
   - `registerOverlay` draws something over every page once signed in (gets `{ route }`), such as the session's corner timer.
