@@ -59,12 +59,12 @@ export function DayStrip({ h, set }: { h: Progress; set: SetHabits }) {
             key={d.day}
             class={`strip-day ${d.count ? 'has' : ''} ${d.day === h.day ? 'today' : ''} ${open === d.day ? 'sel' : ''}`}
             disabled={d.future}
-            aria-label={`${dayName(d.day)}: ${d.count} ${d.count === 1 ? 'session' : 'sessions'}`}
+            aria-label={`${dayName(d.day)}: ${d.count} ${d.count === 1 ? 'session' : 'sessions'}${d.planned ? `, ${d.planned} planned` : ''}`}
             aria-expanded={open === d.day}
             onClick={() => setOpen(open === d.day ? null : d.day)}
           >
             <span class="strip-l">{weekdayLetter(d.day)}</span>
-            <span class="strip-n">{d.count || '·'}</span>
+            <span class="strip-n">{d.count || (d.future && d.planned ? '○' : '·')}</span>
           </button>
         ))}
       </div>
@@ -178,6 +178,8 @@ export function HabitLine({ h, set, strip }: { h: Progress; set: SetHabits; stri
         <span class="muted small">
           {h.target ? `${Math.min(h.done_this_period, h.target)} of ${h.target} ${h.per === 'week' ? 'this week' : 'today'}` : `${h.done_today} today`}
           {h.size ? ` · ${h.size}` : ''}
+          {(h.planned_today ?? 0) > h.done_today ? ' · planned today' : ''}
+          {h.planned_later ? ` · ${h.planned_later} planned later this week` : ''}
         </span>
       </div>
       <Dots h={h} set={set} />

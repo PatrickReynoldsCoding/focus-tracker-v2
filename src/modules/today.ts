@@ -3,7 +3,8 @@
 // for widgets and the menu bar. Running sessions are in sessions.ts.
 
 import { z } from 'zod';
-import { addDays, checkDay, weekdayIn, type Ctx } from '../core/ctx';
+import { addDays, checkDay, type Ctx } from '../core/ctx';
+import { changesFor, leadOn, loadRotation, mondayOf, setWeekChanges, WEEKDAYS, weekdayOf } from '../core/rotation';
 import type { Entity, Row } from '../core/entity';
 import { bad } from '../core/errors';
 import type { Module } from '../core/registry';
@@ -64,41 +65,32 @@ export const remindersEntity: Entity = {
   },
 };
 
-const WEEKDAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
+// ---------- rotation (stored and rolled over in src/core/rotation.ts) ----------
 
-// ---------- rotation ----------
-
-/** The rotation: per weekday a category id, 'away' or 'any'. With this week's changes applied. */
+/** The rotation: per weekday a category id, 'away' or 'any'. With the changes for the week that holds `day`, and next week's. */
 export async function rotation(ctx: Ctx, day?: string) {
-  const d = day ?? (await ctx.today());
-  const usual: Record<string, string> = {};
-  for (const w of WEEKDAYS) usual[w] = (await ctx.setting(`rotation.${w}`)) ?? 'any';
-  const weekOf = await ctx.setting('week.of');
-  const monday = (await import('./habits')).mondayOf(d);
-  const thisWeek: Record<string, string> = {};
-  if (weekOf === monday) {
-    for (const w of WEEKDAYS) {
-      const v = await ctx.setting(`week.${w}`);
-      if (v) thisWeek[w] = v;
-    }
-  }
-  const weekday = weekdayIn(new Date(`${d}T12:00:00Z`), 'UTC');
-  return { usual, this_week: thisWeek, week_of: monday, today: { day: d, weekday, category: thisWeek[weekday] ?? usual[weekday] } };
+  const r = await loadRotation(ctx);
+  const d = day ?? r.today;
+  const monday = mondayOf(d);
+  return {
+    usual: r.usual,
+    this_week: changesFor(r, d),
+    week_of: monday,
+    next_week: r.next.of === r.next_monday ? r.next.days : {},
+    next_week_of: r.next_monday,
+    today: { day: d, weekday: weekdayOf(d), category: leadOn(r, d).value },
+  };
 }
 
-export async function setRotation(ctx: Ctx, input: { usual?: Record<string, string | null>; this_week?: Record<string, string | null> }) {
-  for (const [part, prefix] of [
-    ['usual', 'rotation'],
-    ['this_week', 'week'],
-  ] as const) {
-    const values = input[part];
-    if (!values) continue;
-    for (const [w, v] of Object.entries(values)) {
+export async function setRotation(ctx: Ctx, input: { usual?: Record<string, string | null>; this_week?: Record<string, string | null>; next_week?: Record<string, string | null> }) {
+  if (input.usual) {
+    for (const [w, v] of Object.entries(input.usual)) {
       if (!WEEKDAYS.includes(w as never)) throw bad(`Unknown weekday ${w}`);
-      await ctx.setSetting(`${prefix}.${w}`, v || null);
+      await ctx.setSetting(`rotation.${w}`, v || null);
     }
-    if (part === 'this_week') await ctx.setSetting('week.of', (await rotation(ctx)).week_of);
   }
+  if (input.this_week) await setWeekChanges(ctx, 'week', input.this_week);
+  if (input.next_week) await setWeekChanges(ctx, 'next', input.next_week);
   return rotation(ctx);
 }
 
@@ -308,17 +300,19 @@ export const todayModule: Module = {
     },
     {
       name: 'get_rotation',
-      description: 'The weekly rotation: which category each weekday is for (or away/any), with this week’s changes.',
+      description: 'The weekly rotation: which category each weekday is for (or away/any), with this week’s changes and next week’s (next_week, made in Plan my week).',
       readOnly: true,
       input: z.object({}),
       run: (ctx) => rotation(ctx),
     },
     {
       name: 'set_rotation',
-      description: 'Change the usual weekly rotation and/or just this week. Values: a category id, "away", "any", or null to reset.',
+      description:
+        'Change the usual weekly rotation, just this week and/or just next week (keys are weekdays: monday … sunday). Values: a category id, "away", "any", or null to reset. Next week’s changes become this week’s when it starts.',
       input: z.object({
         usual: z.record(z.string(), z.string().nullable()).optional(),
         this_week: z.record(z.string(), z.string().nullable()).optional(),
+        next_week: z.record(z.string(), z.string().nullable()).optional(),
       }),
       run: (ctx, a) => setRotation(ctx, a),
     },

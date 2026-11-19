@@ -40,7 +40,11 @@ export type Progress = {
   level: string;
   size: string | null;
   goal: string | null;
-  days: { day: string; count: number; future: boolean }[];
+  /** planned: sessions planned that day in Plan my week. */
+  days: { day: string; count: number; future: boolean; planned?: number }[];
+  /** Sessions planned for this day, and for the days after it this week (Plan my week). */
+  planned_today?: number;
+  planned_later?: number;
   pending: { day: string; text: string; due: boolean } | null;
   step_up: StepUp | null;
   ask_stop: boolean;

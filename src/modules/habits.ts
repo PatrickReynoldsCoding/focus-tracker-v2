@@ -18,10 +18,13 @@ import { bad } from '../core/errors';
 import { requireFeature } from '../core/features';
 import type { Module } from '../core/registry';
 import { create, get, list, remove, removeWhere, update } from '../core/store';
+import { awayLookup, mondayOf } from '../core/rotation';
 import { formatLevel, levelFromRow, nextSteps, parseEvery, parseLevel, weekTarget, type Level, type Step } from '../core/habit-levels';
 
 export const HABIT_STATUS = ['active', 'paused', 'ended', 'aspiring'] as const;
 export const STEP_UP_FLAG = 'habit-step-up';
+/** Away days in the rotation ask nothing of a daily habit (step-up maths, Insights, Plan my week). */
+export const AWAY_FLAG = 'away-lowers-targets';
 /** A step-up needs this share of the target sessions done in the full weeks since the level changed. */
 export const MET_SHARE = 0.8;
 /** At most this many full weeks are looked at, newest first (keeps the query small). */
@@ -114,11 +117,8 @@ export const habitLogEntity: Entity = {
 
 // ---------- dates and small helpers ----------
 
-/** Monday of the week that holds `day`. */
-export function mondayOf(day: string): string {
-  const d = new Date(`${day}T12:00:00Z`);
-  return addDays(day, -((d.getUTCDay() + 6) % 7));
-}
+/** Monday of the week that holds `day` (kept here too for the modules that import it from habits). */
+export { mondayOf };
 
 /** First day of the period a day is in: the Monday for weekly habits, the day itself for daily ones. */
 export const periodStart = (per: string, day: string): string => (per === 'week' ? mondayOf(day) : day);
@@ -247,21 +247,37 @@ export function pauseIntervals(rows: Row[], today: string): { from: string; to: 
   return out;
 }
 
-/** How much of the target was done in the full weeks since the level last changed (paused weeks left out). */
-export function weeksMet(level: Level, weeks: string[], done: Row[]): WeeksMet {
+/**
+ * How much of the target was done in the full weeks since the level last changed (paused weeks left out).
+ * With `away` (flag away-lowers-targets), a daily habit asks nothing on an away day: that day is left out of
+ * the target, and sessions done on it are extra (they do not count towards the target).
+ */
+export function weeksMet(level: Level, weeks: string[], done: Row[], away?: (day: string) => boolean): WeeksMet {
   const per = level.per;
   const sessions = level.sessions ?? 0;
   let doneSum = 0;
+  let target = 0;
   for (const w of weeks) {
     const days = new Map<string, number>();
     for (const l of done) {
       if (l.kind !== 'done' || String(l.day) < w || String(l.day) > addDays(w, 6)) continue;
       days.set(String(l.day), (days.get(String(l.day)) ?? 0) + Number(l.count ?? 0));
     }
-    const counts = [...days.values()];
-    doneSum += per === 'day' ? counts.reduce((n, c) => n + Math.min(c, sessions), 0) : Math.min(counts.reduce((n, c) => n + c, 0), sessions);
+    if (per === 'day') {
+      const awayDays = away ? Array.from({ length: 7 }, (_, i) => addDays(w, i)).filter(away) : [];
+      target += (7 - awayDays.length) * sessions;
+      for (const [d, c] of days) if (!awayDays.includes(d)) doneSum += Math.min(c, sessions);
+    } else {
+      target += weekTarget(level);
+      doneSum += Math.min([...days.values()].reduce((n, c) => n + c, 0), sessions);
+    }
   }
-  return { weeks: weeks.length, done: doneSum, target: weeks.length * weekTarget(level) };
+  return { weeks: weeks.length, done: doneSum, target };
+}
+
+/** The away-day lookup when the flag away-lowers-targets is on, else undefined (nothing is away). */
+export async function awayForTargets(ctx: Ctx): Promise<((day: string) => boolean) | undefined> {
+  return (await ctx.feature(AWAY_FLAG)) ? awayLookup(ctx) : undefined;
 }
 
 export const isMet = (m: WeeksMet) => m.weeks > 0 && m.target > 0 && m.done >= m.target * MET_SHARE - 1e-9;
@@ -324,8 +340,12 @@ export interface HabitProgress {
   level: string;
   size: string | null;
   goal: string | null;
-  /** The days the dots can be tapped on: this week (weekly habits) or the last 7 days (daily ones). */
-  days: { day: string; count: number; future: boolean }[];
+  /** The days the dots can be tapped on: this week (weekly habits) or the last 7 days (daily ones). planned: sessions planned that day (Plan my week). */
+  days: { day: string; count: number; future: boolean; planned: number }[];
+  /** Sessions planned for this day in Plan my week. */
+  planned_today: number;
+  /** Sessions planned on the days after this one, to the end of the week (Monday to Sunday). */
+  planned_later: number;
   pending: Pending | null;
   step_up: StepUp | null;
   /** Three "not now" in a row: ask "Stop asking about this habit?" */
@@ -341,7 +361,10 @@ export async function habitProgress(ctx: Ctx, day?: string): Promise<HabitProgre
   const from = stripFrom < monday ? stripFrom : monday;
   const [habits, logs, meta] = await Promise.all([
     list(ctx, habitsEntity, { where: { status: 'active' } }),
-    list(ctx, habitLogEntity, { sql: 'day >= ? AND day <= ? AND kind IN (?, ?)', params: [from, addDays(monday, 6), 'done', 'skip'], limit: 2000 }),
+    list(ctx, habitLogEntity, { sql: 'day >= ? AND day <= ? AND kind IN (?, ?)', params: [from, addDays(monday, 6), 'done', 'skip'], limit: 2000 }).then(async (rows) => [
+      ...rows,
+      ...(await list(ctx, habitLogEntity, { where: { kind: 'plan' }, sql: 'day >= ? AND day <= ?', params: [monday, addDays(monday, 6)], limit: 2000 })),
+    ]),
     list(ctx, habitLogEntity, { sql: 'kind IN (?, ?, ?, ?)', params: ['level', 'pending', 'pause', 'resume'], order: 'day', limit: 2000 }),
   ]);
   const stepUps = asOf === real && habits.length ? await stepUpsFor(ctx, habits, meta, real) : new Map<string, StepUp>();
@@ -349,7 +372,9 @@ export async function habitProgress(ctx: Ctx, day?: string): Promise<HabitProgre
   for (const [id, s] of stepUps) if (s.ask_stop) askStop.add(id);
   return habits.map((h: Row) => {
     const mine = logs.filter((l) => l.habit_id === h.id);
-    const doneOn = (pred: (d: string) => boolean) => mine.filter((l) => l.kind === 'done' && pred(String(l.day))).reduce((n, l) => n + Number(l.count ?? 0), 0);
+    const countOf = (kind: string, pred: (d: string) => boolean) => mine.filter((l) => l.kind === kind && pred(String(l.day))).reduce((n, l) => n + Number(l.count ?? 0), 0);
+    const doneOn = (pred: (d: string) => boolean) => countOf('done', pred);
+    const plannedOn = (pred: (d: string) => boolean) => countOf('plan', pred);
     const per = (h.per as string | null) ?? 'day';
     const level = levelForDay(h, levelHistory(h, meta), asOf);
     const doneToday = doneOn((d) => d === asOf);
@@ -359,7 +384,7 @@ export async function habitProgress(ctx: Ctx, day?: string): Promise<HabitProgre
     const first = per === 'week' ? monday : stripFrom;
     const days = Array.from({ length: 7 }, (_, i) => {
       const d = addDays(first, i);
-      return { day: d, count: doneOn((x) => x === d), future: d > real };
+      return { day: d, count: doneOn((x) => x === d), future: d > real, planned: plannedOn((x) => x === d) };
     });
     const pend = meta.find((m) => m.habit_id === h.id && m.kind === 'pending');
     const su = stepUps.get(h.id as string) ?? null;
@@ -378,6 +403,8 @@ export async function habitProgress(ctx: Ctx, day?: string): Promise<HabitProgre
       size: level.size == null ? null : formatLevel({ ...level, sessions: null }),
       goal: (h.goal as string | null) ?? null,
       days,
+      planned_today: plannedOn((d) => d === asOf),
+      planned_later: plannedOn((d) => d > asOf),
       pending: pend ? { day: String(pend.day), text: String(pend.value ?? ''), due: String(pend.day) <= real } : null,
       step_up: su && !su.ask_stop ? su : null,
       ask_stop: askStop.has(h.id as string),
@@ -395,6 +422,7 @@ async function stepUpsFor(ctx: Ctx, habits: Row[], meta: Row[], today: string): 
   const askable = habits.filter((h) => h.prompts !== 'off' && h.prompts !== 'at goal');
   if (!askable.length) return out;
   const answers = await list(ctx, habitLogEntity, { where: { kind: 'answer' }, sql: 'day >= ?', params: [addDays(today, -200)], limit: 2000 });
+  const away = await awayForTargets(ctx);
   const answeredToday = answers.some((a) => a.day === today && ['yes', 'not now', 'at goal'].includes(String(a.value)));
   let cardGiven = answeredToday;
   for (const h of askable) {
@@ -409,10 +437,10 @@ async function stepUpsFor(ctx: Ctx, habits: Row[], meta: Row[], today: string): 
     if (!askStop && (waiting || !due || cardGiven)) continue;
     const since = history.length ? history[history.length - 1].day : String(h.started ?? h.created).slice(0, 10);
     const weeks = fullWeeks(since, today, pauseIntervals(meta.filter((m) => m.habit_id === h.id), today));
-    let met: WeeksMet = { weeks: weeks.length, done: 0, target: weeks.length * weekTarget(level) };
+    let met: WeeksMet = weeksMet(level, weeks, [], away);
     if (weeks.length) {
       const done = await list(ctx, habitLogEntity, { where: { habit_id: h.id, kind: 'done' }, sql: 'day >= ? AND day <= ?', params: [weeks[0], addDays(weeks[weeks.length - 1], 6)], limit: 2000 });
-      met = weeksMet(level, weeks, done);
+      met = weeksMet(level, weeks, done, away);
     }
     if (!askStop && !isMet(met)) continue;
     out.set(h.id, {
@@ -510,10 +538,11 @@ export async function answerPending(ctx: Ctx, habitId: string, answer: 'accept' 
 /** What Claude (and the step-up screens) need to judge every active habit with a goal, due or not. */
 export async function stepUpReview(ctx: Ctx) {
   const today = await ctx.today();
-  const [habits, meta, done] = await Promise.all([
+  const [habits, meta, done, away] = await Promise.all([
     list(ctx, habitsEntity, { where: { status: 'active' } }),
     list(ctx, habitLogEntity, { sql: 'kind IN (?, ?, ?, ?)', params: ['level', 'pending', 'pause', 'resume'], order: 'day', limit: 2000 }),
     list(ctx, habitLogEntity, { where: { kind: 'done' }, sql: 'day >= ?', params: [addDays(mondayOf(today), -7 * MAX_WEEKS)], limit: 2000 }),
+    awayForTargets(ctx),
   ]);
   return habits.map((h) => {
     const history = levelHistory(h, meta);
@@ -521,7 +550,7 @@ export async function stepUpReview(ctx: Ctx) {
     const opts = stepOptions(h, level);
     const since = history.length ? history[history.length - 1].day : String(h.started ?? h.created).slice(0, 10);
     const weeks = fullWeeks(since, today, pauseIntervals(meta.filter((m) => m.habit_id === h.id), today));
-    const met = weeksMet(level, weeks, done.filter((d) => d.habit_id === h.id));
+    const met = weeksMet(level, weeks, done.filter((d) => d.habit_id === h.id), away);
     const pend = meta.find((m) => m.habit_id === h.id && m.kind === 'pending');
     return {
       id: h.id,
@@ -552,6 +581,12 @@ export const habitsModule: Module = {
       id: STEP_UP_FLAG,
       label: 'Habit step-up prompts',
       description: 'Ask "Want to go further?" when a habit’s level has been met, and let the owner accept a bigger level. Off: habits keep the level they have until edited.',
+      default: true,
+    },
+    {
+      id: AWAY_FLAG,
+      label: 'Away days lower daily habit targets',
+      description: 'A daily habit asks nothing on a day that is Away in the rotation: the day is left out of its weekly target (step-up prompts, Insights, Plan my week). Weekly habits keep their target.',
       default: true,
     },
   ],
