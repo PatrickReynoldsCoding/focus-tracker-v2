@@ -1,0 +1,32 @@
+import { launch, apiCtx } from './lib.mjs';
+const browser = await launch();
+const { post, put, get } = await apiCtx(browser);
+const cat = await post('/categories', { label: 'Coding', color: 'blue' });
+const p1 = await post('/projects', { name: 'Focus Tracker v2', category_id: cat.id });
+const p2 = await post('/projects', { name: 'Garden shed' });
+for (const [t, c] of [['Design schema', null], ['MCP tools', 'green'], ['Write tests', 'red']]) await post('/tasks', { project_id: p1.id, title: t, color: c, note: t === 'Design schema' ? 'Tables for **every** entity' : null });
+await post('/criteria', { project_id: p1.id, text: 'Works on my phone' });
+await put(`/notes/of/project/${p1.id}`, { body: '# Plan\n- phone first\n- **e-ink** theme\n\nSome longer text so the card has lines to show.' });
+await put(`/notes/of/project/${p2.id}`, { body: 'Buy screws and a *hinge*.' });
+await post('/stickies', { project_id: p1.id, text: 'Remember the e-ink phone', color: 'yellow' });
+await post('/stickies', { project_id: p1.id, text: 'Ask about tilt', color: 'blue', x: 40, y: 220 });
+await post('/habits', { name: 'Stretch', sessions: 2, per: 'day', small_version: '1 minute' });
+await post('/habits', { name: 'Run', sessions: 3, per: 'week' });
+const today = new Date().toISOString().slice(0, 10);
+await post('/todos', { title: 'Reply to landlord', day: today });
+const colors = ['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'grey'];
+const a = await post('/lists', { name: 'Ideas', kind: 'note', color: 'yellow' });
+await put(`/notes/of/list/${a.id}`, { body: '# Ideas\n- widget\n- **menu bar**\n- swipe tabs' });
+const b = await post('/lists', { name: 'Shopping', kind: 'todo', color: 'green' });
+for (const t of ['Milk', 'Eggs', 'Bread', 'Coffee', 'Tea', 'Rice', 'Pasta', 'Soap']) await post('/todos', { title: t, list_id: b.id });
+const c = await post('/lists', { name: 'Read and watch', kind: 'list', color: 'blue' });
+const cols = (await get(`/lists/${c.id}/full`)).columns;
+for (const t of ['Dune', 'Severance', 'Piranesi']) await post('/tasks', { list_id: c.id, column_id: cols[0].id, title: t });
+let i = 0;
+for (const n of ['Recipes', 'Travel', 'Work log', 'Gift ideas']) {
+  const l = await post('/lists', { name: n, kind: 'note', color: colors[i++ % 9] });
+  await put(`/notes/of/list/${l.id}`, { body: `${n} body text goes here.\n\nSecond paragraph.` });
+}
+await post('/whiteboards', { name: 'Plan sketch' });
+console.log(JSON.stringify({ p1: p1.id, p2: p2.id, a: a.id, b: b.id }));
+await browser.close();
