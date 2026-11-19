@@ -18,7 +18,7 @@ export async function resolveMode(env: Env, requested: string | null | undefined
 }
 
 export function errorResponse(err: unknown): Response {
-  if (err instanceof ApiError) return Response.json({ error: err.message, code: err.code }, { status: err.status });
+  if (err instanceof ApiError) return Response.json({ ...err.data, error: err.message, code: err.code }, { status: err.status });
   if (err instanceof ZodError) return Response.json({ error: err.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '), code: 'bad_request' }, { status: 400 });
   if (err instanceof SyntaxError) return Response.json({ error: 'The request body is not valid JSON', code: 'bad_request' }, { status: 400 });
   console.error(err);

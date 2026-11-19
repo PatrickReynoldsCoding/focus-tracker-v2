@@ -2,7 +2,9 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
-    public code = status === 404 ? 'not_found' : status === 401 ? 'unauthorized' : 'bad_request',
+    public code = status === 404 ? 'not_found' : status === 401 ? 'unauthorized' : status === 409 ? 'conflict' : 'bad_request',
+    /** Extra fields for the JSON answer (a conflict sends the current row). */
+    public data?: Record<string, unknown>,
   ) {
     super(message);
   }
