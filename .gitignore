@@ -4,5 +4,5 @@ node_modules/
 .secrets.local
 dist/
 *.log
-public/
+/public/
 .claude/
