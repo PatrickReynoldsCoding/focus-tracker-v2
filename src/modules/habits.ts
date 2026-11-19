@@ -9,7 +9,7 @@
 //   pending  a level change waiting for the owner's Accept; `day` is when it falls due
 //   answer   the owner's answer to a step-up prompt (value yes / not now / at goal / stop asking / keep asking)
 //   pause / resume   the habit was paused or resumed on that day (weeks that overlap a pause are left out of step-up maths)
-// See docs/DECISIONS.md "D14" for why it is built this way.
+// See docs/DECISIONS.md "D22" for why it is built this way.
 
 import { z } from 'zod';
 import { addDays, checkDay, type Ctx } from '../core/ctx';
@@ -18,7 +18,7 @@ import { bad } from '../core/errors';
 import { requireFeature } from '../core/features';
 import type { Module } from '../core/registry';
 import { create, get, list, remove, removeWhere, update } from '../core/store';
-import { formatLevel, levelFromRow, nextSteps, parseEvery, parseLevel, weekTarget, type Level, type Step } from '../shared/habit-levels';
+import { formatLevel, levelFromRow, nextSteps, parseEvery, parseLevel, weekTarget, type Level, type Step } from '../core/habit-levels';
 
 export const HABIT_STATUS = ['active', 'paused', 'ended', 'aspiring'] as const;
 export const STEP_UP_FLAG = 'habit-step-up';
@@ -474,6 +474,11 @@ export async function answerStepUp(ctx: Ctx, habitId: string, answer: StepAnswer
       break;
   }
   await upsertLog(ctx, habitId, today, 'answer', 1, answer);
+  // The notification that asked the question is answered too.
+  await ctx.db
+    .prepare('UPDATE notifications SET dismissed_at = ? WHERE mode = ? AND dismissed_at IS NULL AND dedupe_key LIKE ?')
+    .bind(ctx.now(), ctx.mode, `habit:${habitId}:%`)
+    .run();
   const habit = await update(ctx, habitsEntity, habitId, patch);
   return { habit, pending };
 }

@@ -7,6 +7,7 @@ import type { Entity } from '../core/entity';
 import { newId } from '../core/ids';
 import type { Module } from '../core/registry';
 import { find, list, update } from '../core/store';
+import { habitProgress } from './habits';
 import { deliverable, getPrefs, kindAllowed } from './notify-prefs';
 
 export const notificationsEntity: Entity = {
@@ -59,16 +60,20 @@ export async function generate(ctx: Ctx): Promise<void> {
     await insertOnce(ctx, { kind: 'reminder', title: r.project ?? 'Reminder', body: r.text, due: r.due, dedupe_key: `reminder:${r.id}` });
   }
   const habits = !kindAllowed(prefs, 'habit')
-    ? { results: [] as { id: string; name: string; small_version: string | null; next_prompt: string }[] }
+    ? { results: [] as { id: string; name: string; small_version: string | null; next_prompt: string; goal: string | null }[] }
     : await ctx.db
-    .prepare(`SELECT id, name, small_version, next_prompt FROM habits WHERE mode = ? AND status = 'active' AND next_prompt IS NOT NULL AND next_prompt <= ?`)
+    .prepare(`SELECT id, name, small_version, next_prompt, goal FROM habits WHERE mode = ? AND status = 'active' AND next_prompt IS NOT NULL AND next_prompt <= ?`)
     .bind(ctx.mode, now)
-    .all<{ id: string; name: string; small_version: string | null; next_prompt: string }>();
+    .all<{ id: string; name: string; small_version: string | null; next_prompt: string; goal: string | null }>();
+  // A habit with a goal is being stepped up: its prompt is only worth a notification when the level was met (habits.ts).
+  const stepUps = habits.results.some((h) => h.goal) ? new Map((await habitProgress(ctx)).map((p) => [p.id, p.step_up])) : new Map();
   for (const h of habits.results) {
+    const su = stepUps.get(h.id);
+    if (h.goal && !su) continue;
     await insertOnce(ctx, {
       kind: 'habit',
       title: h.name,
-      body: h.small_version ? `Even the small version counts: ${h.small_version}` : null,
+      body: su ? `Want to go further? Next step: ${su.options[su.suggested].text}` : h.small_version ? `Even the small version counts: ${h.small_version}` : null,
       due: h.next_prompt,
       dedupe_key: `habit:${h.id}:${h.next_prompt}`,
     });

@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
 import { change, patch, post } from '../../core/api';
 import { Dialog, useData } from '../../core/ui';
-import { formatLevel, formatSize, stepsToGoal, suggestStart, type Level } from '../../../../src/shared/habit-levels';
+import { formatLevel, formatSize, stepsToGoal, suggestStart, type Level } from '../../../../src/core/habit-levels';
 import type { Habit } from './types';
 
 type Category = { id: string; label: string };
@@ -191,8 +191,8 @@ export function NewHabitDialog({ habit, onClose }: { habit?: Habit | null; onClo
             <h3>The steps</h3>
             <ol class="steps" aria-label="Steps from the start to the goal">
               {path.map((l, i) => (
-                <li key={i} class={i === 0 ? 'first' : i === path.length - 1 ? 'last' : ''}>
-                  {formatLevel(l)}
+                <li key={i}>
+                  <span class={`step ${i === 0 ? 'first' : i === path.length - 1 ? 'last' : ''}`}>{formatLevel(l)}</span>
                 </li>
               ))}
             </ol>

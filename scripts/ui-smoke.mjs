@@ -52,7 +52,7 @@ for (const [vp, name] of [[{ width: 390, height: 844 }, 'phone'], [{ width: 1280
   await page.fill('input[placeholder="Add a to-do for today"]', 'Buy milk');
   await page.press('input[placeholder="Add a to-do for today"]', 'Enter');
   await page.waitForSelector('text=Buy milk');
-  await page.click('.habit-tap >> nth=0');
+  await page.click('.habits-panel .dot >> nth=0');
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${OUT}/${name}-today-session.png`, fullPage: true });
   // stop the session
@@ -75,7 +75,7 @@ for (const [vp, name] of [[{ width: 390, height: 844 }, 'phone'], [{ width: 1280
   await page.screenshot({ path: `${OUT}/${name}-projects.png`, fullPage: true });
   await page.goto(`${B}/#/notes`); await page.waitForSelector('.masonry');
   await page.screenshot({ path: `${OUT}/${name}-notes.png`, fullPage: true });
-  await page.goto(`${B}/#/habits`); await page.waitForSelector('.habits');
+  await page.goto(`${B}/#/habits`); await page.waitForSelector('.habits-page');
   await page.goto(`${B}/#/settings`); await page.waitForSelector('text=Weekly rotation');
   await page.screenshot({ path: `${OUT}/${name}-settings.png`, fullPage: true });
   await page.goto(`${B}/#/log`); await page.waitForSelector('text=halfway through');

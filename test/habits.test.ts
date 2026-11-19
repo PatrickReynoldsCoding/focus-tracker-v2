@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { addDays } from '../src/core/ctx';
 import { fullWeeks, isMet, mondayOf, pauseIntervals, weeksMet } from '../src/modules/habits';
-import { atGoal, formatLevel, nextSteps, parseLevel, stepsToGoal, suggestStart } from '../src/shared/habit-levels';
+import { atGoal, formatLevel, nextSteps, parseLevel, stepsToGoal, suggestStart } from '../src/core/habit-levels';
 import { call, tool, toolError } from './helpers';
 
 const L = (text: string) => parseLevel(text)!;
@@ -357,5 +357,19 @@ describe('Claude tools', () => {
     await call('PATCH', `/habit_log/${pend.id}`, { day: await today() });
     const acc = await tool('answer_pending_level', { id: h.id, answer: 'accept' });
     expect(acc.habit).toMatchObject({ sessions: 2, size: '25 min' });
+  });
+});
+
+describe('step-up notifications', () => {
+  it('only notify when the level was met, and go away once answered', async () => {
+    await clean();
+    await runner(3, 1); // not met: nothing to ask
+    const good = await runner(3, 2, { name: 'Walk' });
+    const pending = async () => (await call('GET', '/notifications/pending')).filter((n: any) => n.kind === 'habit');
+    const list = await pending();
+    expect(list.map((n: any) => n.title)).toEqual(['Walk']);
+    expect(list[0].body).toMatch(/Want to go further\? Next step: /);
+    await call('POST', `/habits/${good.h.id}/step-up`, { answer: 'not now' });
+    expect(await pending()).toEqual([]);
   });
 });

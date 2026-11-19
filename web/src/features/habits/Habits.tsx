@@ -1,142 +1,136 @@
 import { useState } from 'preact/hooks';
-import { change, del, patch, post } from '../../core/api';
-import { Dialog, Loading, useData } from '../../core/ui';
+import { change, del, newId, optimistic, patch, post } from '../../core/api';
+import { registerTab } from '../../core/registry';
+import { AddInput, InlineEdit, Loading, useData } from '../../core/ui';
+import { EditHabitDialog } from './EditHabit';
+import { HabitCards, HabitLine } from './HabitRow';
+import { NewHabitDialog } from './NewHabit';
+import type { Habit, Progress } from './types';
+import './habits.css';
 
-type Habit = {
-  id: string;
-  name: string;
-  intention: string | null;
-  sessions: number | null;
-  per: string | null;
-  size: string | null;
-  small_version: string | null;
-  goal: string | null;
-  prompts: string | null;
-  status: string;
-};
-type Progress = { id: string; done_today: number; done_this_period: number; left: number; target: number | null; per: string | null };
-
-const FIELDS: [keyof Habit, string][] = [
-  ['intention', 'Intention'],
-  ['size', 'Size of one session'],
-  ['small_version', 'Small version (for bad days)'],
-  ['goal', 'Goal'],
-  ['prompts', 'When / after what'],
+const GROUPS: [string, string][] = [
+  ['active', 'Active'],
+  ['aspiring', 'Aspiring'],
+  ['paused', 'Paused'],
+  ['ended', 'Ended'],
 ];
 
-function HabitDialog({ habit, onClose }: { habit: Partial<Habit> | null; onClose: () => void }) {
-  const [h, setH] = useState<Partial<Habit>>(habit ?? { status: 'active', per: 'day', sessions: 1 });
-  const set = (k: keyof Habit, v: unknown) => setH({ ...h, [k]: v });
-  return (
-    <Dialog title={habit?.id ? 'Edit habit' : 'New habit'} onClose={onClose}>
-      <form
-        class="stack"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const { id, ...fields } = h as Habit;
-          onClose();
-          change(() => (id ? patch(`/habits/${id}`, fields) : post('/habits', fields)), 'Saved');
-        }}
-      >
-        <label>
-          Name
-          <input required value={h.name ?? ''} onInput={(e) => set('name', (e.target as HTMLInputElement).value)} autoFocus />
-        </label>
-        <div class="row">
-          <label>
-            Sessions
-            <input type="number" min={0} value={h.sessions ?? ''} onInput={(e) => set('sessions', (e.target as HTMLInputElement).value ? Number((e.target as HTMLInputElement).value) : null)} />
-          </label>
-          <label>
-            per
-            <select value={h.per ?? 'day'} onChange={(e) => set('per', (e.target as HTMLSelectElement).value)}>
-              <option value="day">day</option>
-              <option value="week">week</option>
-            </select>
-          </label>
-          <label>
-            Status
-            <select value={h.status ?? 'active'} onChange={(e) => set('status', (e.target as HTMLSelectElement).value)}>
-              {['active', 'paused', 'aspiring', 'ended'].map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-            </select>
-          </label>
-        </div>
-        {FIELDS.map(([k, label]) => (
-          <label key={k}>
-            {label}
-            <input value={(h[k] as string) ?? ''} onInput={(e) => set(k, (e.target as HTMLInputElement).value || null)} />
-          </label>
-        ))}
-        <div class="row">
-          {habit?.id && (
-            <button
-              type="button"
-              class="danger ghost"
-              onClick={() => {
-                onClose();
-                change(() => del(`/habits/${habit.id}`), 'Habit deleted');
-              }}
-            >
-              Delete
-            </button>
-          )}
-          <button class="primary">Save</button>
-        </div>
-      </form>
-    </Dialog>
-  );
-}
-
 export function Habits() {
-  const { data: habits, error } = useData<Habit[]>('/habits');
-  const { data: progress } = useData<Progress[]>('/habits/progress');
-  const [editing, setEditing] = useState<Partial<Habit> | null | undefined>(undefined);
+  const { data: habits, error, setData: setHabits } = useData<Habit[]>('/habits');
+  const { data: progress, setData: setProgress } = useData<Progress[]>('/habits/progress');
+  const [creating, setCreating] = useState<Habit | null | undefined>(undefined); // null = new, a habit = start an aspiring one
+  const [editing, setEditing] = useState<Habit | null>(null);
   if (!habits) return <Loading error={error} />;
-  const groups = ['active', 'aspiring', 'paused', 'ended'];
+  const setProg = (fn: (l: Progress[]) => Progress[]) => setProgress(fn);
+
+  /** Move a habit one place up or down among the habits of its group (the order is shared by all groups). */
+  const mover = (h: Habit) => {
+    const group = habits.filter((x) => x.status === h.status);
+    const i = group.findIndex((x) => x.id === h.id);
+    const swap = (to: number, body: Record<string, string>) => () =>
+      optimistic(
+        () => {
+          const before = habits;
+          setHabits((list) => {
+            const next = list.filter((x) => x.id !== h.id);
+            const at = next.findIndex((x) => x.id === group[to].id);
+            next.splice(to < i ? at : at + 1, 0, h);
+            return next;
+          });
+          return () => setHabits(() => before);
+        },
+        () => post(`/habits/${h.id}/move`, body),
+      );
+    return {
+      up: i > 0 ? swap(i - 1, { before_id: group[i - 1].id }) : undefined,
+      down: i < group.length - 1 ? swap(i + 1, { after_id: group[i + 1].id }) : undefined,
+    };
+  };
+
+  const addIdea = (name: string) => {
+    const id = newId();
+    return optimistic(
+      () => {
+        setHabits((l) => [...l, { id, name, status: 'aspiring' } as Habit]);
+        return () => setHabits((l) => l.filter((x) => x.id !== id));
+      },
+      () => post('/habits', { id, name, status: 'aspiring' }),
+    );
+  };
+
   return (
-    <div class="stack">
+    <div class="stack habits-page">
       <div class="page-head row">
         <h1>Habits</h1>
-        <button class="primary" onClick={() => setEditing(null)}>
+        <button class="primary" onClick={() => setCreating(null)}>
           + New
         </button>
       </div>
-      {groups.map((g) => {
-        const hs = habits.filter((h) => h.status === g);
-        if (!hs.length) return null;
+      {GROUPS.map(([status, label]) => {
+        const hs = habits.filter((h) => h.status === status);
+        if (!hs.length && status !== 'aspiring') return null;
         return (
-          <section class="card" key={g}>
-            <h2 class="cap">{g}</h2>
-            <ul class="habits">
+          <section class="card" key={status} aria-label={label}>
+            <div class="card-head">
+              <h2>{label}</h2>
+              {status === 'aspiring' && <span class="muted small">Ideas for later. They never show on Today.</span>}
+            </div>
+            {status === 'aspiring' && <AddInput placeholder="An idea for a habit…" onAdd={addIdea} />}
+            <ul class="habit-list">
               {hs.map((h) => {
                 const p = progress?.find((x) => x.id === h.id);
-                return (
-                  <li key={h.id}>
-                    {g === 'active' && (
-                      <button class="habit-tap" aria-label={`Done a session of ${h.name}`} onClick={() => change(() => post(`/habits/${h.id}/check`, { add: 1 }))}>
-                        {p && p.target && p.left === 0 ? '✓' : '+'}
+                const m = mover(h);
+                if (status === 'aspiring')
+                  return (
+                    <li key={h.id} class="idea">
+                      <div class="idea-name">
+                        <InlineEdit value={h.name} placeholder="Name" onSave={(v) => v && change(() => patch(`/habits/${h.id}`, { name: v }))} />
+                        {h.intention || h.description ? <span class="muted small">{h.intention ?? h.description}</span> : null}
+                      </div>
+                      <button class="icon small" aria-label={`Move ${h.name} up`} disabled={!m.up} onClick={m.up}>
+                        ▲
                       </button>
+                      <button class="icon small" aria-label={`Move ${h.name} down`} disabled={!m.down} onClick={m.down}>
+                        ▼
+                      </button>
+                      <button class="small" onClick={() => setCreating(h)}>
+                        Start
+                      </button>
+                      <button class="icon small danger" aria-label={`Delete ${h.name}`} onClick={() => change(() => del(`/habits/${h.id}`), 'Idea deleted')}>
+                        ✕
+                      </button>
+                    </li>
+                  );
+                return (
+                  <li key={h.id} class="habit-item">
+                    {status === 'active' && p ? (
+                      <div class="habit-main">
+                        <HabitCards h={p} set={setProg} />
+                        <HabitLine h={p} set={setProg} strip="toggle" />
+                        <span class="muted small">Level {p.level}{p.goal ? ` · goal ${p.goal}` : ''}</span>
+                      </div>
+                    ) : (
+                      <div class="habit-main">
+                        <strong>{h.name}</strong>
+                        <span class="muted small">{[h.sessions ? `${h.sessions} a ${h.per ?? 'day'}` : null, h.size].filter(Boolean).join(', ') || h.intention}</span>
+                      </div>
                     )}
-                    <div class="click" onClick={() => setEditing(h)}>
-                      <strong>{h.name}</strong>
-                      <span class="muted">
-                        {h.sessions ? `${p ? `${p.done_this_period}/` : ''}${h.sessions} per ${h.per ?? 'day'}` : h.intention ?? ''}
-                      </span>
-                    </div>
+                    <button class="small" aria-label={`Edit ${h.name}`} onClick={() => setEditing(h)}>
+                      Edit
+                    </button>
                   </li>
                 );
               })}
             </ul>
+            {status === 'aspiring' && !hs.length && <p class="muted small">Nothing here yet. Type an idea above and press Enter.</p>}
           </section>
         );
       })}
       {!habits.length && <p class="empty">No habits yet.</p>}
-      {editing !== undefined && <HabitDialog habit={editing} onClose={() => setEditing(undefined)} />}
+      {creating !== undefined && <NewHabitDialog habit={creating} onClose={() => setCreating(undefined)} />}
+      {editing && <EditHabitDialog habit={editing} onMove={mover(editing)} onClose={() => setEditing(null)} />}
     </div>
   );
 }
 
-import { registerTab } from '../../core/registry';
 registerTab({ id: 'habits', path: '/habits', label: 'Habits', icon: '✓', order: 40, phone: true, render: () => <Habits /> });
