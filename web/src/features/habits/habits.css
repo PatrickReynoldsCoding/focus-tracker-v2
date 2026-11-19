@@ -1,0 +1,50 @@
+/* Habits: dots, day strip, step-up cards, the new-habit steps. Colours come from the shared tokens. */
+.habit-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.habit { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+.habit-top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 10px; }
+.habit-item, .idea { display: flex; align-items: center; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.habit-item:last-child, .idea:last-child { border-bottom: 0; padding-bottom: 0; }
+.habit-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.idea-name { flex: 1; min-width: 0; display: flex; flex-direction: column; font-weight: 600; }
+.habits-page .add-input { margin-bottom: 4px; }
+
+.dots { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.dot { width: 32px; height: 32px; min-height: 32px; padding: 0; border-radius: 50%; border: 2px solid var(--muted); background: transparent; position: relative; flex: none; }
+.dot::after { content: ''; position: absolute; inset: -6px; } /* a 44 px tap area around the 32 px dot */
+.dot.on { background: var(--accent); border-color: var(--accent); }
+.dot.on::before { content: '✓'; color: var(--accent-fg); font-size: 0.9rem; font-weight: 700; line-height: 1; position: absolute; inset: 0; display: grid; place-items: center; }
+.dot-extra { font-size: 0.8rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); }
+.dot-minus, .dot-add { min-width: 32px; min-height: 32px; padding: 0; border-radius: 50%; color: var(--muted); }
+.dot-add { width: 44px; height: 44px; font-size: 1.2rem; font-weight: 700; }
+.habit.met .dot:not(.on) { opacity: 0.6; }
+@media (prefers-reduced-motion: no-preference) {
+  .dot { transition: background 0.15s, border-color 0.15s; }
+}
+html[data-theme='eink'] .dot, html[data-theme='eink'] .dot.on { transition: none; }
+
+button.link { border: 0; background: transparent; padding: 4px 0; min-height: 32px; color: var(--accent); align-self: flex-start; }
+
+.strip { display: flex; flex-direction: column; gap: 6px; }
+.strip-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; max-width: 360px; }
+.strip-day { display: flex; flex-direction: column; align-items: center; gap: 0; padding: 4px 0; min-height: 44px; border-radius: 10px; font-size: 0.8rem; }
+.strip-day .strip-l { color: var(--muted); font-size: 0.72rem; }
+.strip-day .strip-n { font-weight: 700; font-size: 1rem; }
+.strip-day.has { background: var(--accent-soft); border-color: var(--accent); }
+.strip-day.today { border-width: 2px; border-color: var(--fg); }
+.strip-day.sel { outline: 2px solid var(--accent); outline-offset: 1px; }
+.strip-day:disabled { opacity: 0.35; }
+.strip-edit { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; }
+.strip-edit strong { min-width: 1.5em; text-align: center; }
+.strip-edit .icon { border: 1px solid var(--line); border-radius: 10px; color: var(--fg); }
+
+.notice { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: var(--radius); background: var(--accent-soft); border: 1px solid var(--accent); }
+.notice .chips { gap: 6px; }
+
+fieldset.group { border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px 12px; margin: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+fieldset.group legend { padding: 0 6px; font-weight: 600; }
+ol.steps { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 4px; align-items: center; }
+ol.steps li { display: inline-flex; align-items: center; }
+ol.steps li:not(:last-child)::after { content: '→'; margin: 0 4px 0 8px; color: var(--muted); }
+ol.steps .step { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); font-size: 0.88rem; }
+ol.steps .step.first { border-color: var(--accent); }
+ol.steps .step.last { background: var(--accent-soft); border-color: var(--accent); font-weight: 600; }
