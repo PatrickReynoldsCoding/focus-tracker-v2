@@ -310,6 +310,8 @@ export interface Pending {
 
 export interface HabitProgress {
   id: string;
+  /** The day this progress is for (today unless asked for another). */
+  day: string;
   name: string;
   per: string | null;
   target: number | null;
@@ -363,6 +365,7 @@ export async function habitProgress(ctx: Ctx, day?: string): Promise<HabitProgre
     const su = stepUps.get(h.id as string) ?? null;
     return {
       id: h.id,
+      day: asOf,
       name: String(h.name),
       per: (h.per as string | null) ?? null,
       target,
