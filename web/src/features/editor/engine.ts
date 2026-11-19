@@ -69,6 +69,48 @@ const inQuote = (state: EditorState) => blockKind(state) === 'quote' || (() => {
   return false;
 })();
 
+/**
+ * Lines typed without a blank line between them are one paragraph with line breaks in it.
+ * Turn the lines the selection touches into a paragraph of their own first, so a heading
+ * changes only those lines and not the whole paragraph.
+ */
+export function isolateLines(state: EditorState): Transaction | null {
+  const { $from, $to } = state.selection;
+  const breakIn = ($p: typeof $from, want: 'before' | 'after') => {
+    if (!$p.parent.isTextblock) return -1;
+    let at = -1;
+    $p.parent.forEach((child, offset) => {
+      if (child.type !== n.hard_break) return;
+      const pos = $p.start() + offset;
+      if (want === 'before' ? pos < $p.pos : pos >= $p.pos && at < 0) at = pos;
+    });
+    return at;
+  };
+  const before = breakIn($from, 'before');
+  const after = breakIn($to, 'after');
+  if (before < 0 && after < 0) return null;
+  const tr = state.tr;
+  // The later break first, so the earlier position still holds.
+  for (const pos of [after, before]) if (pos >= 0) tr.delete(pos, pos + 1).split(pos);
+  return tr;
+}
+
+/** Run a command on the selected lines only (see isolateLines), as one undo step. */
+const onLines = (cmd: Command): Command => (state, dispatch, view) => {
+  const tr = isolateLines(state);
+  if (!tr) return cmd(state, dispatch, view);
+  if (!dispatch) return cmd(state.apply(tr));
+  let out: Transaction | null = null;
+  if (!cmd(state.apply(tr), (t) => (out = t))) return false;
+  const done = out as Transaction | null;
+  if (done) {
+    for (const step of done.steps) tr.step(step);
+    tr.setSelection(Selection.fromJSON(tr.doc, done.selection.toJSON()));
+  }
+  dispatch(tr.scrollIntoView());
+  return true;
+};
+
 export function setBlock(kind: BlockKind): Command {
   return (state, dispatch) => {
     if (kind === 'quote') return inQuote(state) ? lift(state, dispatch) : wrapIn(n.blockquote)(state, dispatch);
@@ -77,7 +119,7 @@ export function setBlock(kind: BlockKind): Command {
     const level = Number(kind.slice(1));
     const cur = state.selection.$from.parent;
     if (cur.type === n.heading && cur.attrs.level === level) return setBlockType(n.paragraph)(state, dispatch);
-    return setBlockType(n.heading, { level })(state, dispatch);
+    return onLines(setBlockType(n.heading, { level }))(state, dispatch);
   };
 }
 
