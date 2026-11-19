@@ -1,0 +1,17 @@
+/* Offline use: the header badge and the Settings section. */
+.net-wrap { display: inline-flex; min-width: 0; flex: 0 1 auto; }
+.net { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--muted); white-space: nowrap; min-width: 0; max-width: 100%; text-decoration: none; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); }
+.net i { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); flex: none; }
+.net.off { color: var(--fg); }
+.net.off i { background: var(--muted); }
+.net .net-long { overflow: hidden; text-overflow: ellipsis; }
+/* A phone's header has no room: a small pill hangs under it, centred. */
+@media (max-width: 600px) {
+  .net-wrap { position: absolute; top: calc(100% - 6px); left: 50%; transform: translateX(-50%); max-width: calc(100% - 32px); z-index: 6; }
+  .net { font-size: 0.75rem; padding: 3px 10px; box-shadow: var(--shadow); }
+}
+.offline-list { margin: 8px 0; padding-left: 1.2em; max-height: 14em; overflow: auto; overflow-wrap: anywhere; }
+.offline-list li { margin: 2px 0; }
+.offline-settings h3 { margin: 12px 0 4px; font-size: 1rem; }
+html[data-theme='eink'] .net { border-width: 2px; border-color: var(--fg); box-shadow: none; }
+html[data-theme='eink'] .net.off i { background: var(--fg); }
