@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { api, del, mode, newId, optimistic, post, say } from '../../core/api';
 import { useData } from '../../core/ui';
-import { clamp, LIMITS, shadeOf, STICKY_SHADES } from './colours';
+import { clamp, LIMITS, patternOf, shadeOf, STICKY_SHADES } from './colours';
 
 type Note = { id: string; project_id: string; text: string | null; color: string | null; opacity: number | null; x: number | null; y: number | null; w: number | null; h: number | null; created?: string };
 type Place = { left: number; top: number; w: number; h: number };
@@ -285,7 +285,7 @@ export function StickyLayer({ projectId }: { projectId: string }) {
                 onTouchStart={(e) => startPinch(e as unknown as TouchEvent, n)}
               >
                 <div class="sticky" role="group" aria-label="Sticky note">
-                  <div class="sticky-strip" onPointerDown={(e) => startPointer(e as unknown as PointerEvent, n, 'move')} title="Drag to move">
+                  <div class="sticky-strip" data-pat={patternOf(n.color)} onPointerDown={(e) => startPointer(e as unknown as PointerEvent, n, 'move')} title="Drag to move">
                     <button
                       class="sticky-btn"
                       aria-label="Note colour and paper"
@@ -323,6 +323,7 @@ export function StickyLayer({ projectId }: { projectId: string }) {
                           aria-label={name}
                           title={name}
                           class="sticky-dot"
+                          data-pat={patternOf(name)}
                           style={{ background: shade }}
                           onClick={() => edit(n.id, { color: name }, 0)}
                         />

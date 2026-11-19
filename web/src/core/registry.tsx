@@ -86,6 +86,13 @@ export interface OverlayDef {
   feature?: string;
   render: Render<{ route: string }>;
 }
+/** Something in the header, at its left edge (the Back button). Draw nothing (return null) when it has nothing to show. */
+export interface HeaderItemDef {
+  id: string;
+  order: number;
+  feature?: string;
+  render: Render<{ route: string }>;
+}
 /** A small count shown beside a tab's name (side bar and phone bar): set `tabBadges.value = { ...tabBadges.value, today: 2 }`. 0 or missing = none. */
 export const tabBadges = signal<Record<string, number>>({});
 
@@ -93,6 +100,7 @@ const tabs: TabDef[] = [];
 const routes: RouteDef[] = [];
 const panels: Record<string, PanelDef<any>[]> = {};
 const overlays: OverlayDef[] = [];
+const headerItems: HeaderItemDef[] = [];
 
 const add = <T extends { id: string; override?: boolean }>(list: T[], item: T) => {
   const i = list.findIndex((x) => x.id === item.id);
@@ -104,6 +112,7 @@ const add = <T extends { id: string; override?: boolean }>(list: T[], item: T) =
 export const registerTab = (t: TabDef) => add(tabs, t);
 export const registerRoute = (r: RouteDef) => add(routes, r);
 export const registerOverlay = (o: OverlayDef) => add(overlays, o);
+export const registerHeaderItem = (h: HeaderItemDef) => add(headerItems, h);
 
 /** What `MarkdownEditor` (core/ui.tsx) takes. Features may pass the optional ones. */
 export interface MarkdownEditorProps {
@@ -161,6 +170,11 @@ export function usePanels<P>(place: string): PanelDef<P>[] {
 export function Overlays({ route }: { route: string }) {
   const list = visible(overlays, useFlags()).sort((a, b) => a.order - b.order);
   return <>{list.map((o) => <OverlaySlot key={o.id} render={() => o.render({ route })} />)}</>;
+}
+/** Draw the header items registered with registerHeaderItem (main.tsx puts this first in the header). */
+export function HeaderItems({ route }: { route: string }) {
+  const list = visible(headerItems, useFlags()).sort((a, b) => a.order - b.order);
+  return <>{list.map((h) => <OverlaySlot key={h.id} render={() => h.render({ route })} />)}</>;
 }
 function OverlaySlot({ render }: { render: () => VNode | null }) {
   return render();

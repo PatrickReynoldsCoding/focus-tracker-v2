@@ -118,7 +118,7 @@ export function ListPanel({ l, setList, onRemove }: { l: FullList; setList: SetL
   }
   const count = l.kind === 'todo' ? todosOf(l).filter((t) => !t.done).length : cardsOf(l).length;
   return (
-    <section class="card tp-list" style={l.color ? { borderTop: `4px solid var(--c-${l.color})` } : undefined}>
+    <section class="card tp-list" data-pat-top={l.color || undefined} style={l.color ? { borderTop: `4px solid var(--c-${l.color})` } : undefined}>
       <div class="card-head">
         <h2>
           <a href={href}>{l.kind === 'todo' ? '☐ ' : '≡ '}{l.name}</a>

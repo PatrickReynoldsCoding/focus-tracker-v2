@@ -2,6 +2,7 @@
 // it. Moves on every N seconds, shuffled so nothing repeats until all were shown; ‹ › to skip.
 
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEink } from '../../core/theme';
 import { Markdown } from '../../core/ui';
 
 export type QuoteItem = { id: string; title: string; note?: string | null };
@@ -52,11 +53,12 @@ export function OneAtATime({ name, color, seconds, items, href, onRemove }: { na
     setPos(next);
     setTick((n) => n + 1);
   };
+  const eink = useEink(); // E-ink: no rotating by itself (each change redraws the screen); the arrows still work
   useEffect(() => {
-    if (order.length < 2) return;
+    if (order.length < 2 || eink) return;
     const t = setInterval(() => go(1), Math.max(5, seconds) * 1000);
     return () => clearInterval(t);
-  }, [seconds, tick, ids]);
+  }, [seconds, tick, ids, eink]);
   const item = items.find((i) => i.id === order[at]);
   return (
     <section class={`card tp-quote c-${color || 'none'}`}>

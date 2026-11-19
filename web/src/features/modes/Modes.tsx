@@ -3,6 +3,7 @@
 
 import { change, del, get, localStorageSet, mode, patch, post, signedIn, version } from '../../core/api';
 import { registerPanel } from '../../core/registry';
+import { resolvedTheme } from '../../core/theme';
 import { AddInput, InlineEdit, Loading, useData } from '../../core/ui';
 import './modes.css';
 
@@ -15,17 +16,30 @@ function readable(hex: string): string {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.55 ? '#10170f' : '#ffffff';
 }
 
+/** Mix a #rrggbb colour with white, so a dark accent still reads on a dark background. */
+function lighten(hex: string, amount: number): string {
+  const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  return '#' + c.map((v) => Math.round(v + (255 - v) * amount).toString(16).padStart(2, '0')).join('');
+}
+
+let current: string | null | undefined;
 export function setAccent(color: string | null | undefined) {
+  current = color;
   const s = document.documentElement.style;
   if (color && /^#[0-9a-fA-F]{6}$/.test(color)) {
-    s.setProperty('--accent', color);
-    s.setProperty('--accent-fg', readable(color));
-    s.setProperty('--accent-soft', `color-mix(in srgb, ${color} 18%, var(--surface))`);
+    // On a dark background the mode's colour is lightened until it can be read as text and as a button.
+    const shown = resolvedTheme.value === 'dark' ? lighten(color, 0.45) : color;
+    s.setProperty('--accent', shown);
+    s.setProperty('--accent-fg', readable(shown));
+    s.setProperty('--accent-soft', `color-mix(in srgb, ${shown} ${resolvedTheme.value === 'dark' ? 24 : 18}%, var(--surface))`);
   } else {
     for (const p of ['--accent', '--accent-fg', '--accent-soft']) s.removeProperty(p);
   }
   localStorageSet(`ft.accent.${mode.value}`, color ?? '');
 }
+
+// Light, Dark or E-ink changed (E-ink ignores the colour in its stylesheet): redo the accent for it.
+resolvedTheme.subscribe(() => setAccent(current));
 
 try {
   setAccent(localStorage.getItem(`ft.accent.${mode.value}`));

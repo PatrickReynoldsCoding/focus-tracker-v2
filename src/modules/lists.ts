@@ -119,6 +119,7 @@ export async function overview(ctx: Ctx) {
   const ids = lists.map((l) => l.id);
   if (!ids.length) return [];
   const marks = ids.map(() => '?').join(',');
+  const today = await ctx.today();
   const [cards, todos, notes] = await Promise.all([
     ctx.db.prepare(`SELECT list_id, title FROM tasks WHERE list_id IN (${marks}) ORDER BY ord`).bind(...ids).all<{ list_id: string; title: string }>(),
     ctx.db.prepare(`SELECT id, list_id, title, done FROM todos WHERE list_id IN (${marks}) ORDER BY done IS NOT NULL, ord`).bind(...ids).all<{ id: string; list_id: string; title: string; done: string | null }>(),
@@ -128,11 +129,30 @@ export async function overview(ctx: Ctx) {
     if (l.kind === 'note') return { ...l, preview: notes.results.find((n) => n.list_id === l.id)?.preview ?? '' };
     if (l.kind === 'todo') {
       const mine = todos.results.filter((t) => t.list_id === l.id);
-      return { ...l, open: mine.filter((t) => !t.done).length, items: mine.filter((t) => !t.done).slice(0, 6) };
+      const open = mine.filter((t) => !t.done);
+      // Open to-dos first, then those ticked today (so a tick on a card does not make the line vanish).
+      const doneToday = mine.filter((t) => t.done === today);
+      return { ...l, open: open.length, done_today: doneToday.length, items: [...open.slice(0, 6), ...doneToday.slice(0, 3)] };
     }
     const mine = cards.results.filter((c) => c.list_id === l.id);
     return { ...l, count: mine.length, items: mine.slice(0, 6).map((c) => ({ title: c.title })) };
   });
+}
+
+const PROJECT_NOTES_KEY = 'notes.project_cards';
+
+/** Project notes as cards on the Notes tab: a per-mode switch, and (while it is on) the notes with text. */
+export async function projectNoteCards(ctx: Ctx) {
+  const on = (await ctx.setting(PROJECT_NOTES_KEY)) === '1';
+  if (!on) return { on, notes: [] };
+  const rows = await ctx.db
+    .prepare(
+      `SELECT p.id AS project_id, p.name, n.show_today, substr(n.body, 1, 300) AS preview FROM notes n JOIN projects p ON p.id = n.project_id
+       WHERE n.mode = ? AND n.project_id IS NOT NULL AND n.body != '' AND p.status = 'active' ORDER BY n.updated_at DESC`,
+    )
+    .bind(ctx.mode)
+    .all<{ project_id: string; name: string; show_today: number; preview: string }>();
+  return { on, notes: rows.results.map((r) => ({ ...r, show_today: !!r.show_today })) };
 }
 
 export const listsModule: Module = {
@@ -141,6 +161,14 @@ export const listsModule: Module = {
   entities: [listsEntity, todosEntity],
   routes(api) {
     api.get('/lists/overview', async (c) => c.json(await overview(c.get('ctx'))));
+    api.get('/lists/project-notes', async (c) => c.json(await projectNoteCards(c.get('ctx'))));
+    api.put('/lists/project-notes', async (c) => {
+      const ctx = c.get('ctx');
+      const b = await c.req.json<{ on?: unknown }>().catch(() => ({}) as { on?: unknown });
+      if (typeof b.on !== 'boolean') throw bad('Send {"on": true} or {"on": false}');
+      await ctx.setSetting(PROJECT_NOTES_KEY, b.on ? '1' : null);
+      return c.json(await projectNoteCards(ctx));
+    });
     api.get('/lists/:id/full', async (c) => c.json(await fullList(c.get('ctx'), c.req.param('id'))));
     api.post('/todos/:id/tick', async (c) => {
       const ctx = c.get('ctx');

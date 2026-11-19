@@ -1,0 +1,20 @@
+/* The Notes tab: cards in a grid that packs like Google Keep (each card spans the rows it needs). */
+.note-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 8px; column-gap: 10px; align-items: start; }
+@media (min-width: 700px) { .note-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); } }
+.note-card { display: block; min-width: 0; border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; color: var(--fg); box-shadow: var(--shadow); cursor: pointer; overflow: hidden; -webkit-touch-callout: none; user-select: none; }
+.note-card.c-none { background: var(--surface); }
+.note-card:hover { border-color: var(--accent); }
+.note-card h3 { display: flex; gap: 4px; align-items: baseline; overflow-wrap: anywhere; }
+.note-card .card-title { color: var(--fg); }
+.note-card .card-title:hover { text-decoration: none; }
+.note-card ul { margin: 0 0 6px; padding: 0; list-style: none; font-size: 0.9rem; color: var(--muted); }
+.note-card .preview { font-size: 0.88rem; color: var(--muted); max-height: 9em; overflow: hidden; margin: 0 0 6px; }
+.note-card .tag + .tag { margin-left: 4px; }
+.note-card.sortable-chosen { box-shadow: var(--shadow-pop); }
+.note-card .card-todos { color: var(--fg); display: flex; flex-direction: column; }
+.note-card .card-todos label { flex-direction: row; align-items: flex-start; gap: 8px; color: var(--fg); font-size: 0.9rem; padding: 4px 0; min-height: 32px; cursor: pointer; }
+.note-card .card-todos li.done span { text-decoration: line-through; color: var(--muted); }
+.note-grid[data-draggable='true'] .note-card { cursor: grab; }
+.note-card > .small { display: block; }
+.section-title { margin-top: 6px; color: var(--muted); font-size: 0.9rem; }
+.project-switch { margin-left: 4px; }

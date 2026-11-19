@@ -6,7 +6,8 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { signal, useSignal } from '../../core/signal';
 import { go } from '../../core/ui';
-import { clock, useSession } from './session';
+import { useEink } from '../../core/theme';
+import { clock as clockSeconds, clockMinutes, useSession } from './session';
 
 type Corner = 'tl' | 'tr' | 'bl' | 'br';
 
@@ -35,6 +36,7 @@ export const useCornerHidden = () => useSignal(hiddenSig);
 
 export function CornerTimer({ route }: { route: string }) {
   const { live: l } = useSession();
+  const clock = useEink() ? clockMinutes : clockSeconds; // E-ink redraws once a minute, so no seconds
   const hidden = useCornerHidden();
   const [corner, setCorner] = useState<Corner>(() => {
     const c = read('ft.timer.corner');

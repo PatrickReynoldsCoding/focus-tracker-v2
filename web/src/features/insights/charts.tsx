@@ -17,6 +17,10 @@ export function ChartDefs() {
           <rect width="6" height="6" class="ins-hatch-bg" />
           <rect width="3" height="6" class="ins-hatch-ink" />
         </pattern>
+        <pattern id="ins-light" width="4" height="4" patternUnits="userSpaceOnUse">
+          <rect width="4" height="4" class="ins-hatch-bg" />
+          <circle cx="1" cy="1" r="0.9" class="ins-hatch-ink" />
+        </pattern>
       </defs>
     </svg>
   );

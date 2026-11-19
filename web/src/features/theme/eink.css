@@ -1,0 +1,231 @@
+/* E-ink theme (html[data-theme='eink']): for an e-ink screen such as the Hisense A9.
+   White paper, black ink, 2-3 px black borders, no tints, shadows, animation or transitions,
+   44 px tap targets, colours drawn as black-and-white patterns, the selected state as a thick
+   border plus a tick. Behaviour that follows it lives in the code (core/theme.ts: useEink):
+   the corner timer shows minutes and updates once a minute, lists do not rotate by themselves.
+   Everything else reads the tokens, so a feature only needs to use var(--fg), var(--line) ... */
+
+html[data-theme='eink'] {
+  --bg: #fff; --surface: #fff; --surface-2: #fff; --fg: #000; --muted: #000; --line: #000;
+  --accent: #000 !important; --accent-fg: #fff !important; --accent-soft: #fff !important; /* the mode's colour is ignored */
+  --warm: #000; --danger: #000; --danger-fg: #fff; --ok: #000; --warn: #000;
+  --shadow: none; --shadow-pop: none; --backdrop: rgb(255 255 255 / 0.9); --radius: 8px;
+  --c-red: #fff; --c-orange: #fff; --c-yellow: #fff; --c-green: #fff; --c-teal: #fff; --c-blue: #fff; --c-purple: #fff; --c-pink: #fff; --c-grey: #fff;
+  --bw: 2px;
+  color-scheme: light;
+
+  /* the patterns: one per colour, 8 x 8 black marks on white */
+  --pat-red: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M-2 2L2 -2M0 8L8 0M6 10L10 6' stroke='black' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  --pat-orange: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M-2 6L2 10M0 0L8 8M6 -2L10 2' stroke='black' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  --pat-yellow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M0 1H8M0 5H8' stroke='black' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  --pat-green: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M1 0V8M5 0V8' stroke='black' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  --pat-teal: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Ccircle cx='2' cy='2' r='1.4'/%3E%3Ccircle cx='6' cy='6' r='1.4'/%3E%3C/svg%3E");
+  --pat-blue: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M0 1H8M1 0V8M0 5H8M5 0V8' stroke='black' stroke-width='1' fill='none'/%3E%3C/svg%3E");
+  --pat-purple: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M0 0L8 8M8 0L0 8' stroke='black' stroke-width='1.3' fill='none'/%3E%3C/svg%3E");
+  --pat-pink: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Ccircle cx='4' cy='4' r='2.4' stroke='black' stroke-width='1.3' fill='none'/%3E%3C/svg%3E");
+  --pat-grey: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect width='2' height='2'/%3E%3Crect x='4' y='4' width='2' height='2'/%3E%3C/svg%3E");
+}
+
+/* ---------- no motion, no shadow ---------- */
+html[data-theme='eink'] *, html[data-theme='eink'] *::before, html[data-theme='eink'] *::after {
+  box-shadow: none !important; text-shadow: none !important; transition: none !important; animation: none !important; scroll-behavior: auto !important;
+}
+html[data-theme='eink'] body { font-weight: 500; }
+html[data-theme='eink'] ::placeholder { color: #000; opacity: 1; font-style: italic; }
+html[data-theme='eink'] :is(.drag-ghost, .ed-edit-hint, .ed-view.is-loading) { opacity: 1; }
+
+/* ---------- ink ---------- */
+html[data-theme='eink'] a { text-decoration: underline; text-underline-offset: 3px; }
+html[data-theme='eink'] :is(.tabs a, .side a, .more-sheet a, .note-card .card-title, a.chip, .brand, .back, .wb-link, .ins-project-top a) { text-decoration: none; }
+html[data-theme='eink'] :is(button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible) { outline: 3px solid #000; outline-offset: 2px; }
+html[data-theme='eink'] :is(button:disabled, input:disabled, select:disabled) { opacity: 1; border-style: dashed; }
+html[data-theme='eink'] code { border: 1px solid #000; background: #fff; }
+html[data-theme='eink'] .md pre, html[data-theme='eink'] .ed .ed-doc pre { border: 2px solid #000; background: #fff; }
+
+/* ---------- 2 px black borders ---------- */
+html[data-theme='eink'] :is(button, input:not([type='checkbox'], [type='radio'], [type='range']), select, textarea, .card, .kcard, .note-card, .column, .chip, .tag, .table, dialog.sheet, .more-sheet, .sticky-menu, .corner-timer, .callout, .notice, .tp-banner, .ins-tile, .ins-table-wrap, .seg, .aa-update, fieldset.group, ul.link-results, .link-picked, .token, .toast, .theme-option, .ed.is-editing, .ed-pop, .ed-raw, .ed-theirs, .ed-conflict, .mode-colour, .wb-open, .sticky) { border-width: var(--bw); border-color: #000; }
+html[data-theme='eink'] :is(button, input, select, textarea, .card, .kcard, .note-card, .column, .tag, .callout, .notice, .tp-banner, .ins-tile, .theme-option) { background-color: #fff; color: #000; }
+html[data-theme='eink'] :is(.card, .note-card, .kcard, .column, dialog.sheet, .ins-tile) { border-style: solid; }
+html[data-theme='eink'] dialog.sheet { border-width: 3px; }
+html[data-theme='eink'] .sheet-head { border-bottom: 2px solid #000; }
+html[data-theme='eink'] .more-sheet { border-width: 3px; }
+html[data-theme='eink'] :is(.tabs, .side) { border-color: #000; }
+html[data-theme='eink'] .tabs { border-top: 3px solid #000; }
+html[data-theme='eink'] .side { border-right: 3px solid #000; }
+html[data-theme='eink'] :is(.table th, .table td, ul.checks li, .tp-items li, ul.log li) { border-color: #000; }
+html[data-theme='eink'] :is(.toast, .toast.error) { background: #000; color: #fff; border: 3px solid #000; }
+html[data-theme='eink'] .toast button { border: 2px solid #fff; color: #fff; background: #000; }
+html[data-theme='eink'] button.primary { background: #000; color: #fff; border-color: #000; }
+html[data-theme='eink'] button.ghost, html[data-theme='eink'] button.icon { background: #fff; }
+html[data-theme='eink'] button.icon { border: 0; }
+html[data-theme='eink'] .badge { background: #000; color: #fff; border: 2px solid #fff; outline: 2px solid #000; }
+html[data-theme='eink'] .tag { border: 1px solid #000; }
+html[data-theme='eink'] .tag.late { border-width: 2px; font-weight: 700; text-decoration: underline; }
+html[data-theme='eink'] .saving i { background: #000; }
+html[data-theme='eink'] .saving.error { font-weight: 700; }
+html[data-theme='eink'] .saving.busy i { background: #fff; border: 2px solid #000; }
+html[data-theme='eink'] .corner-timer.alert { border-width: 5px; border-style: double; }
+html[data-theme='eink'] .corner-timer { border-width: 3px; }
+html[data-theme='eink'] .add-input input { border-style: dashed; }
+html[data-theme='eink'] .add-input input:focus { border-style: solid; }
+html[data-theme='eink'] .link-status { border: 1px solid #000; }
+html[data-theme='eink'] .tp-banner { border-width: 3px; }
+html[data-theme='eink'] .blocked-banner { border: 3px solid #000; }
+html[data-theme='eink'] .res-row { background: #fff; }
+html[data-theme='eink'] .ed-bar, html[data-theme='eink'] .ed-foot, html[data-theme='eink'] .ed.is-phone .ed-head { border-color: #000; }
+html[data-theme='eink'] .ed.is-editing { border-width: 3px; }
+html[data-theme='eink'] .ed-view { border-color: #000; }
+html[data-theme='eink'] .ed-view:hover { border-color: #000; }
+html[data-theme='eink'] .ed-pop { border-width: 3px; }
+html[data-theme='eink'] .ed-item:hover:not(:disabled), html[data-theme='eink'] .ed-item:focus-visible { background: #fff; outline: 3px solid #000; outline-offset: -3px; }
+html[data-theme='eink'] .ed-tick { font-weight: 800; }
+
+/* ---------- 44 px tap targets ---------- */
+html[data-theme='eink'] :is(button, input:not([type='checkbox'], [type='radio'], [type='range'], [type='color']), select, .chip, .mode-switch button, .subtabs button, .seg button, .link-btn, .link-open, button.small, button.link, .ed-tb, .ed-item, .res-row button.small, .day-pick, .strip-day, .tabs a, .tabs .more-tab, .side a, .more-sheet a, .sticky-btn, .wb-bar button) { min-height: 44px; }
+html[data-theme='eink'] :is(button.icon, button.icon.small, .dot-minus, .dot-add, .mode-switch button, .ed-tb, .sticky-btn, .wb-back, .tp-quote-nav button) { min-width: 44px; }
+html[data-theme='eink'] :is(.swatch, .sticky-dot) { width: 44px; height: 44px; min-height: 44px; }
+html[data-theme='eink'] .swatches { gap: 8px; }
+html[data-theme='eink'] .sticky-swatches { grid-template-columns: repeat(4, 1fr); }
+html[data-theme='eink'] .dot { width: 44px; height: 44px; min-height: 44px; border-width: 3px; }
+html[data-theme='eink'] .dots { gap: 6px; }
+html[data-theme='eink'] input[type='checkbox'], html[data-theme='eink'] input[type='radio'] { width: 28px; height: 28px; accent-color: #000; border: 2px solid #000; }
+html[data-theme='eink'] :is(ul.checks label, .tp-note label.inline, label.inline, .card-todos label) { min-height: 44px; }
+html[data-theme='eink'] .note-card .card-todos label { min-height: 44px; }
+html[data-theme='eink'] .mode-colour { width: 56px; min-height: 44px; }
+html[data-theme='eink'] .sticky-strip { min-height: 44px; }
+html[data-theme='eink'] .sticky-resize { width: 44px; height: 44px; }
+
+/* ---------- selected = thick border + tick ---------- */
+html[data-theme='eink'] :is(.chip.on, .mode-switch button.on, .subtabs button.on, .seg button.on, .ed-tb[aria-pressed='true'], .ed-tb[aria-expanded='true']) { background: #fff; color: #000; border: 4px solid #000; font-weight: 700; }
+html[data-theme='eink'] :is(.chip.on, .mode-switch button.on, .subtabs button.on, .seg button.on)::before { content: '✓ '; font-weight: 800; white-space: pre; }
+html[data-theme='eink'] .mode-switch { background: #fff; border: 2px solid #000; }
+html[data-theme='eink'] .subtabs { background: #fff; border: 2px solid #000; }
+html[data-theme='eink'] .seg button + button { border-left: 2px solid #000; }
+html[data-theme='eink'] .tabs a.on, html[data-theme='eink'] .tabs .more-tab.on { box-shadow: none; border-top: 6px solid #000; margin-top: -3px; color: #000; font-weight: 800; }
+html[data-theme='eink'] .tabs a.on > span:last-child::before, html[data-theme='eink'] .tabs .more-tab.on > span:last-child::before { content: '✓ '; }
+html[data-theme='eink'] .tabs a, html[data-theme='eink'] .tabs .more-tab, html[data-theme='eink'] .side a { color: #000; }
+html[data-theme='eink'] .side a.on, html[data-theme='eink'] .more-sheet a.on { background: #fff; border: 4px solid #000; font-weight: 800; }
+html[data-theme='eink'] .side a.on::after { content: '✓'; margin-left: auto; font-weight: 800; }
+html[data-theme='eink'] .more-sheet a.on::after { content: '✓'; font-weight: 800; }
+html[data-theme='eink'] .side a { border: 4px solid transparent; }
+html[data-theme='eink'] .side .brand { color: #000; border: 0; }
+html[data-theme='eink'] .swatch.on, html[data-theme='eink'] .sticky-dot[aria-checked='true'] { border: 5px solid #000; position: relative; }
+html[data-theme='eink'] .swatch.on::after, html[data-theme='eink'] .sticky-dot[aria-checked='true']::after { content: '✓'; position: absolute; inset: 0; margin: auto; width: 24px; height: 24px; line-height: 20px; border-radius: 50%; background: #fff; color: #000; border: 2px solid #000; font-weight: 800; font-size: 16px; text-align: center; }
+html[data-theme='eink'] .swatch { border: 2px solid #000; }
+html[data-theme='eink'] .theme-option.on { border: 4px solid #000; background: #fff; }
+html[data-theme='eink'] .theme-option.on .theme-text strong::after { content: ' ✓'; }
+html[data-theme='eink'] .theme-swatch { border-color: #000; }
+html[data-theme='eink'] .strip-day { border: 2px solid #000; background: #fff; }
+html[data-theme='eink'] .strip-day.has { border-width: 4px; }
+html[data-theme='eink'] .strip-day.has .strip-n::after { content: ' ✓'; }
+html[data-theme='eink'] .strip-day.today { border-style: double; border-width: 5px; }
+html[data-theme='eink'] .strip-day.sel { outline: 3px solid #000; outline-offset: 2px; }
+html[data-theme='eink'] .dot.on { background: #000; border-color: #000; }
+html[data-theme='eink'] .dot.on::before { color: #fff; font-size: 1.4rem; }
+html[data-theme='eink'] li.met .habit-tap { background: #000; color: #fff; border-color: #000; }
+html[data-theme='eink'] .dot-extra { background: #fff; border: 2px solid #000; }
+html[data-theme='eink'] ol.steps .step.last { border-width: 4px; background: #fff; }
+html[data-theme='eink'] .link-picked { border-width: 4px; background: #fff; }
+html[data-theme='eink'] .kcard:hover, html[data-theme='eink'] .note-card:hover { border-color: #000; }
+html[data-theme='eink'] .note-card.sortable-chosen { border-width: 4px; }
+
+/* ---------- colours as patterns ---------- */
+html[data-theme='eink'] :is(.c-red, [data-pat='red'], [data-pat-top='red']) { --pat: var(--pat-red); }
+html[data-theme='eink'] :is(.c-orange, [data-pat='orange'], [data-pat-top='orange']) { --pat: var(--pat-orange); }
+html[data-theme='eink'] :is(.c-yellow, [data-pat='yellow'], [data-pat-top='yellow']) { --pat: var(--pat-yellow); }
+html[data-theme='eink'] :is(.c-green, [data-pat='green'], [data-pat-top='green']) { --pat: var(--pat-green); }
+html[data-theme='eink'] :is(.c-teal, [data-pat='teal'], [data-pat-top='teal']) { --pat: var(--pat-teal); }
+html[data-theme='eink'] :is(.c-blue, [data-pat='blue'], [data-pat-top='blue']) { --pat: var(--pat-blue); }
+html[data-theme='eink'] :is(.c-purple, [data-pat='purple'], [data-pat-top='purple']) { --pat: var(--pat-purple); }
+html[data-theme='eink'] :is(.c-pink, [data-pat='pink'], [data-pat-top='pink']) { --pat: var(--pat-pink); }
+html[data-theme='eink'] :is(.c-grey, [data-pat='grey'], [data-pat-top='grey']) { --pat: var(--pat-grey); }
+/* a coloured card: a 14 px strip of its pattern down the left edge, closed by a black line */
+html[data-theme='eink'] :is(.c-red, .c-orange, .c-yellow, .c-green, .c-teal, .c-blue, .c-purple, .c-pink, .c-grey) {
+  background-color: #fff; background-image: linear-gradient(#000, #000), var(--pat);
+  background-size: 2px 100%, 14px 14px; background-position: 14px 0, 0 0; background-repeat: no-repeat, repeat-y; padding-left: 28px;
+}
+/* a colour swatch: the whole circle is the pattern */
+html[data-theme='eink'] .swatch:is(.c-red, .c-orange, .c-yellow, .c-green, .c-teal, .c-blue, .c-purple, .c-pink, .c-grey) { background-image: var(--pat); background-size: 8px 8px; background-position: 0 0; background-repeat: repeat; padding-left: 0; }
+html[data-theme='eink'] .swatch.c-none { background-image: linear-gradient(135deg, transparent 45%, #000 45%, #000 55%, transparent 55%); }
+/* a Today panel's colour: a band along the top */
+html[data-theme='eink'] :is(.tp-note, .tp-list)[data-pat-top] {
+  border-top-width: 2px !important; background-color: #fff; background-image: linear-gradient(#000, #000), var(--pat);
+  background-size: 100% 2px, 14px 14px; background-position: 0 14px, 0 0; background-repeat: no-repeat, repeat-x; padding-top: 30px;
+}
+/* a sticky note's colour: its handle strip */
+html[data-theme='eink'] .sticky { background: #fff; border: 3px solid #000; color: #000; }
+html[data-theme='eink'] .sticky-strip[data-pat] { background-color: #fff; background-image: var(--pat); background-size: 8px 8px; background-repeat: repeat; border-bottom: 3px solid #000; }
+html[data-theme='eink'] .sticky-btn { background: #fff; color: #000; border: 2px solid #000; opacity: 1; margin: 2px; }
+html[data-theme='eink'] .sticky textarea { color: #000; }
+html[data-theme='eink'] .sticky textarea::placeholder { color: #000; }
+html[data-theme='eink'] .sticky-resize { background: #fff; border: 3px solid #000; border-radius: 0; }
+html[data-theme='eink'] .sticky-dot[data-pat] { background-color: #fff !important; background-image: var(--pat) !important; background-size: 8px 8px !important; border: 2px solid #000; }
+html[data-theme='eink'] .sticky-fab button { border-width: 3px; }
+/* a to-do's "late" and the like use plain white, so say it with weight, not colour */
+html[data-theme='eink'] :is(.callout.up, .callout.brk, .callout.wrk) { border-width: 3px; background: #fff; }
+html[data-theme='eink'] .pomo.break .big { text-decoration: underline; }
+/* resource icons are brand colours: show them as grey ink */
+html[data-theme='eink'] .kind-icon { filter: grayscale(1) contrast(1.6); }
+
+/* ---------- Insights charts: black bars, patterns for the lighter ones ---------- */
+html[data-theme='eink'] .ins-bar { fill: #000; stroke: #000; stroke-width: 1; }
+html[data-theme='eink'] .ins-bar.light { fill: url(#ins-light); stroke: #000; stroke-width: 2; }
+html[data-theme='eink'] .ins-over { fill: url(#ins-hatch); stroke: #000; stroke-width: 2; }
+html[data-theme='eink'] .ins-dot { fill: #000; stroke: #fff; }
+html[data-theme='eink'] .ins-target { stroke-width: 3; stroke-dasharray: 5 3; }
+html[data-theme='eink'] .ins-target-halo { stroke: #fff; }
+html[data-theme='eink'] .ins-axis { stroke: #000; stroke-width: 2; }
+html[data-theme='eink'] .ins-sel { fill: #fff; stroke: #000; stroke-width: 2; stroke-dasharray: 4 3; opacity: 1; }
+html[data-theme='eink'] .ins-tbar, html[data-theme='eink'] .ins-share { background: #fff; border: 2px solid #000; height: 16px; }
+html[data-theme='eink'] .ins-tbar .fill { background: #000; opacity: 1; border-radius: 99px; }
+html[data-theme='eink'] .ins-tbar .fill.light { background: repeating-linear-gradient(90deg, #000 0 2px, #fff 2px 5px); opacity: 1; }
+html[data-theme='eink'] .ins-tbar .extra { background: repeating-linear-gradient(45deg, #000 0 2px, #fff 2px 5px); border: 2px solid #000; }
+html[data-theme='eink'] .ins-tbar .mark { background: #000; width: 3px; box-shadow: none; }
+html[data-theme='eink'] .ins-share > span { background: #000; }
+html[data-theme='eink'] .ins-legend .sw { border: 1px solid #000; }
+html[data-theme='eink'] .ins-legend .sw.solid { background: #000; }
+html[data-theme='eink'] .ins-legend .sw.hatch { background: repeating-linear-gradient(45deg, #000 0 2px, #fff 2px 5px); }
+html[data-theme='eink'] .ins-xlabels span.today { text-decoration: underline; }
+html[data-theme='eink'] .ins-table tbody th { background: #fff; }
+
+/* ---------- notes, whiteboards, editor ---------- */
+html[data-theme='eink'] .wb-full, html[data-theme='eink'] .wb-bar { background: #fff; color: #000; }
+html[data-theme='eink'] .wb-bar { border-bottom: 3px solid #000; }
+html[data-theme='eink'] .wb-bar button.primary { background: #000; color: #fff; }
+html[data-theme='eink'] .wb-open, html[data-theme='eink'] .wb-none { background: #fff; border-width: 2px; color: #000; }
+html[data-theme='eink'] .wb-alert { background: #fff; color: #000; border: 3px solid #000; font-weight: 700; }
+html[data-theme='eink'] .wb-status { color: #000; }
+html[data-theme='eink'] .ed .ed-doc blockquote { border-left-width: 5px; border-left-color: #000; }
+html[data-theme='eink'] .ed .ed-doc a { text-decoration-color: #000; }
+html[data-theme='eink'] .ed-check { border-color: #000; width: 24px; height: 24px; margin-top: calc((var(--ed-lh) - 24px) / 2); }
+html[data-theme='eink'] .ed-task[data-checked='true'] > .ed-check { background: #000; }
+html[data-theme='eink'] .ed-draft, html[data-theme='eink'] .ed-conflict { background: #fff; border: 3px solid #000; }
+/* paper themes become black rules on white */
+html[data-theme='eink'] .ed.paper-legal, html[data-theme='eink'] .ed.paper-grid, html[data-theme='eink'] .ed.paper-dot { --ed-bg: #fff; --ed-rule: #000; --ed-margin: #000; --ed-dot: #000; }
+html[data-theme='eink'] .ed.paper-legal :is(.ed-view, .ed-scroll), html[data-theme='eink'] .ed.paper-legal.ed-view { color: #000; }
+html[data-theme='eink'] .ed.paper-legal .ed-doc :is(blockquote, h4) { color: #000; }
+html[data-theme='eink'] .ed.paper-grid { --ed-rule: rgb(0 0 0 / 0.55); }
+html[data-theme='eink'] .ed.paper-legal { --ed-rule: rgb(0 0 0 / 0.55); }
+html[data-theme='eink'] .ed-grip { background: #fff; border: 2px solid #000; }
+html[data-theme='eink'] .ed-grip:hover, html[data-theme='eink'] .ed-grip:focus-visible { background-color: #fff; }
+
+/* ---------- small things ---------- */
+html[data-theme='eink'] .tp-quote blockquote { font-weight: 700; }
+html[data-theme='eink'] .tp-quote-note { opacity: 1; }
+html[data-theme='eink'] .timer { background: #fff; border: 2px solid #000; }
+html[data-theme='eink'] .kcard { border-width: 2px; }
+html[data-theme='eink'] .add-column { border-width: 2px; border-style: dashed; background: #fff; }
+html[data-theme='eink'] .column { border: 2px solid #000; }
+html[data-theme='eink'] .table tr.click:hover td, html[data-theme='eink'] .inline-edit:hover, html[data-theme='eink'] .md-view:hover, html[data-theme='eink'] ul.link-results button:hover { background: #fff; }
+html[data-theme='eink'] .notice { border-width: 3px; }
+html[data-theme='eink'] .more-sheet-backdrop { background: rgb(255 255 255 / 0.9); }
+html[data-theme='eink'] .corner-timer { background: #fff; }
+html[data-theme='eink'] .tabs, html[data-theme='eink'] .top, html[data-theme='eink'] .side { background: #fff; }
+html[data-theme='eink'] .top { border-bottom: 2px solid #000; }
+html[data-theme='eink'] progress { accent-color: #000; border: 2px solid #000; }
+html[data-theme='eink'] :is(.top .undo, .top .redo, .table th button) { min-width: 44px; }
+html[data-theme='eink'] .ed.is-phone .ed-bar .ed-tb { min-height: 44px; min-width: 44px; }
+html[data-theme='eink'] :is(.theme-swatch.sw-light, .theme-swatch.sw-dark, .theme-swatch.sw-system) { border-width: 2px; color: #000; }
+html[data-theme='eink'] .theme-swatch.sw-light { background: #fff; }
+html[data-theme='eink'] .theme-swatch.sw-dark { background: #000; color: #fff; }
+html[data-theme='eink'] .theme-swatch.sw-system { background: linear-gradient(105deg, #fff 50%, #000 50%); color: #888; }

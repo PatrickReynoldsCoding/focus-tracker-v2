@@ -83,8 +83,7 @@
 .ed-bar { display: flex; align-items: center; gap: 2px; padding: 4px; background: var(--surface); border-bottom: 1px solid var(--line); border-radius: 12px 12px 0 0; position: sticky; top: 0; z-index: 3; flex-wrap: nowrap; }
 .ed-tb { border: 0; background: transparent; color: var(--fg); min-height: 36px; min-width: 36px; padding: 0 8px; border-radius: 8px; font-size: 0.92rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; }
 .ed-tb:hover:not(:disabled) { background: var(--surface-2); }
-.ed-tb[aria-pressed='true'], .ed-tb[aria-expanded='true'] { background: var(--accent-soft); color: var(--accent); }
-:root[data-theme='dark'] .ed-tb[aria-pressed='true'] { color: var(--fg); }
+.ed-tb[aria-pressed='true'], .ed-tb[aria-expanded='true'] { background: var(--accent-soft); color: var(--fg); box-shadow: inset 0 -2px 0 var(--accent); }
 .ed-b { font-weight: 800; }
 .ed-i { font-style: italic; font-family: Georgia, 'Times New Roman', serif; font-size: 1.02rem; }
 .ed-s { text-decoration: line-through; }
@@ -95,7 +94,7 @@
 .ed-menu.off > .ed-menu-btn { opacity: 0.45; pointer-events: none; }
 
 /* fold-out menus */
-.ed-pop { position: absolute; top: calc(100% + 4px); left: 0; z-index: 30; min-width: 270px; max-width: min(340px, calc(100vw - 24px)); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 6px; box-shadow: 0 10px 30px rgb(0 0 0 / 0.16), 0 2px 6px rgb(0 0 0 / 0.08); animation: ed-pop 0.12s ease-out; }
+.ed-pop { position: absolute; top: calc(100% + 4px); left: 0; z-index: 30; min-width: 270px; max-width: min(340px, calc(100vw - 24px)); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 6px; box-shadow: var(--shadow-pop); animation: ed-pop 0.12s ease-out; }
 .ed-pop.up { top: auto; bottom: calc(100% + 6px); }
 .ed-pop.end { left: auto; right: 0; }
 @keyframes ed-pop { from { opacity: 0; transform: translateY(-4px); } }
@@ -172,11 +171,11 @@
 .ed.paper-legal.ed-view, .ed.paper-grid.ed-view, .ed.paper-dot.ed-view { border-color: var(--line); }
 .ed.paper-legal .ed-doc pre, .ed.paper-grid .ed-doc pre, .ed.paper-dot .ed-doc pre { background: color-mix(in srgb, var(--surface-2) 85%, transparent); }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .ed.paper-legal { --ed-bg: #2a2716; --ed-rule: rgb(120 160 220 / 0.2); --ed-margin: rgb(230 100 100 / 0.35); }
-  :root:not([data-theme='light']) .ed.paper-legal .ed-scroll, :root:not([data-theme='light']) .ed.paper-legal.ed-view { color: var(--fg); }
-  :root:not([data-theme='light']) .ed.paper-legal .ed-doc blockquote { color: var(--muted); }
-  :root:not([data-theme='light']) .ed.paper-grid { --ed-rule: rgb(140 170 220 / 0.1); }
-  :root:not([data-theme='light']) .ed.paper-dot { --ed-dot: rgb(230 230 220 / 0.2); }
+  :root:not([data-theme]) .ed.paper-legal { --ed-bg: #2a2716; --ed-rule: rgb(120 160 220 / 0.2); --ed-margin: rgb(230 100 100 / 0.35); }
+  :root:not([data-theme]) .ed.paper-legal .ed-scroll, :root:not([data-theme]) .ed.paper-legal.ed-view { color: var(--fg); }
+  :root:not([data-theme]) .ed.paper-legal .ed-doc blockquote { color: var(--muted); }
+  :root:not([data-theme]) .ed.paper-grid { --ed-rule: rgb(140 170 220 / 0.1); }
+  :root:not([data-theme]) .ed.paper-dot { --ed-dot: rgb(230 230 220 / 0.2); }
 }
 :root[data-theme='dark'] .ed.paper-legal { --ed-bg: #2a2716; --ed-rule: rgb(120 160 220 / 0.2); --ed-margin: rgb(230 100 100 / 0.35); }
 :root[data-theme='dark'] .ed.paper-legal .ed-scroll, :root[data-theme='dark'] .ed.paper-legal.ed-view { color: var(--fg); }

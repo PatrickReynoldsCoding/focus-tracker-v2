@@ -2,7 +2,7 @@ import { render } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { checkSignedIn, get, localStorageSet, login, mode, redo, saving, signedIn, toast, undo, version } from './core/api';
 import { loadFeatures } from './core/features';
-import { Overlays, tabBadges, useRoutes, useTabs } from './core/registry';
+import { HeaderItems, Overlays, tabBadges, useRoutes, useTabs } from './core/registry';
 import { useSignal } from './core/signal';
 import { go, route } from './core/ui';
 import './features';
@@ -215,6 +215,7 @@ function App() {
       </nav>
       <div class="main">
         <header class="top">
+          <HeaderItems route={current} />
           <ModeSwitch />
           <SavingDot />
           <button class="ghost undo" aria-label="Undo" onClick={undo} title="Undo (Ctrl+Z)">

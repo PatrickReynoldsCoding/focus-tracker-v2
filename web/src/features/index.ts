@@ -20,3 +20,5 @@ import './editor';
 import './whiteboards';
 import './stickies';
 import './insights';
+import './theme';
+import './navigation';

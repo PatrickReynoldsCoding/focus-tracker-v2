@@ -33,7 +33,7 @@ ul.pick button .tag { margin-right: 4px; }
   border-radius: 12px;
   background: var(--surface);
   border: 1px solid var(--line);
-  box-shadow: 0 4px 18px rgb(0 0 0 / 0.14);
+  box-shadow: var(--shadow-pop);
   cursor: grab;
   touch-action: none;
   user-select: none;
@@ -50,7 +50,7 @@ ul.pick button .tag { margin-right: 4px; }
 .corner-timer .ct-main { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.2; }
 .corner-timer .ct-sub { font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .corner-timer.paused .ct-main { color: var(--muted); }
-.corner-timer.alert { border-color: var(--warm); box-shadow: 0 0 0 2px var(--warm), 0 4px 18px rgb(0 0 0 / 0.14); }
+.corner-timer.alert { border-color: var(--warm); box-shadow: 0 0 0 2px var(--warm), var(--shadow-pop); }
 .corner-timer.alert .ct-main { color: var(--warm); }
 @media (min-width: 900px) {
   .corner-timer.at-tl, .corner-timer.at-tr { top: 66px; }

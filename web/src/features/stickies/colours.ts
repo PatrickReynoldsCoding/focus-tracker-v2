@@ -20,6 +20,10 @@ export const STICKY_SHADES: [name: string, shade: string][] = [
 const BY_NAME = Object.fromEntries(STICKY_SHADES);
 export const shadeOf = (c: string | null | undefined) => BY_NAME[c ?? ''] ?? BY_NAME.yellow;
 
+/** E-ink shows a colour as a black-and-white pattern (theme/eink.css, [data-pat]); the 15 shades share the 9 patterns. */
+const PATTERN: Record<string, string> = { yellow: 'yellow', sand: 'grey', peach: 'orange', orange: 'orange', red: 'red', pink: 'pink', lavender: 'purple', purple: 'purple', blue: 'blue', sky: 'blue', teal: 'teal', mint: 'green', green: 'green', lime: 'green', grey: 'grey' };
+export const patternOf = (c: string | null | undefined) => PATTERN[c ?? ''] ?? 'yellow';
+
 /** The server's limits (src/modules/stickies.ts STICKY_LIMITS). */
 export const LIMITS = { opacity: [0.4, 1], x: [0, 100], y: [0, 20000], w: [120, 900], h: [80, 900] } as const;
 export const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));

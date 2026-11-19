@@ -32,6 +32,7 @@ Modular first: a feature lives in its own files on the server and in the browser
   - `registerPanel('card', …)` is a section of the card dialog, gets `{ card, columns, save, update, close }`,
   - `registerPanel('settings', …)` is a section of Settings,
   - `registerOverlay` draws something over every page once signed in (gets `{ route }`), such as the session's corner timer.
+  - `registerHeaderItem` puts something at the left edge of the header (gets `{ route }`), such as the Back button.
   - `registerPanel('card-tile', …)` is a small mark on a board card, gets `{ card }` (render a component, keep it tiny),
   - `registerPanel('list', …)` is a section of a list's page (under its heading), gets `{ list, setList }` (GET /api/lists/:id/full),
   - `tabBadges` (a signal) sets a small count beside a tab's name in the side bar and phone bar.
@@ -55,6 +56,7 @@ Modular first: a feature lives in its own files on the server and in the browser
 - Every query on mode-scoped data filters on `ctx.mode` (the store does it; hand-written SQL must too).
 - Never return `accounts.refresh_token_enc` or any secret: only columns described in an entity leave the database.
 - Workers free plan: 10 ms CPU per request. No heavy crypto or big loops per request.
+- Colours in a feature's CSS come from the tokens in `styles.css` (`var(--fg)`, `var(--surface)`, `var(--line)`, `var(--c-red)` ...), never hex or `rgb()`, so Light, Dark and E-ink (`features/theme/eink.css`) all follow. Where a colour carries meaning, E-ink needs a pattern: give the element a `c-<colour>` class or a `data-pat` attribute (see eink.css).
 - Markdown is the format for notes. Never store or render HTML from a client without DOMPurify (the web app's `Markdown` component does this).
 - Dates are ISO text: days `2026-11-18`, times `2026-11-18T14:05:00.000Z`. "Today" uses the owner's time zone (`ctx.today()`), not UTC.
 
