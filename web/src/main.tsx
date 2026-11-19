@@ -241,6 +241,17 @@ render(<App />, document.getElementById('app')!);
 // The service worker keeps the app on this device, so it opens with no signal (public/sw.js).
 // Not under `vite` dev, where files have no hashes.
 if ('serviceWorker' in navigator && window.isSecureContext && !(import.meta as { env?: { DEV?: boolean } }).env?.DEV) {
+  // A new deploy's service worker takes over: load the new app at once, or a page left open
+  // (the Android app stays in memory for days) keeps running the old one. Safe to reload:
+  // queued changes and note drafts are kept on the device. Not when the first worker takes over.
+  let hadWorker = !!navigator.serviceWorker.controller;
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadWorker) return void (hadWorker = true);
+    if (reloading) return;
+    reloading = true;
+    location.reload();
+  });
   navigator.serviceWorker
     .register('/sw.js')
     .then((reg) => {

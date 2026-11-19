@@ -251,6 +251,11 @@ const shot = (page, n) => page.screenshot({ path: `${OUT}/offline-${n}.png` });
       if (res.ok() && (res.headers()['content-type'] ?? '').includes('javascript')) break;
       await page.waitForTimeout(500);
     }
+    // A page left open (the Android app) finds the new deploy when it comes back to the front and loads it by itself.
+    await page.evaluate(async () => (await navigator.serviceWorker.getRegistration()).update());
+    const self = await page.waitForFunction(() => window.__ftDeploy === 2, null, { timeout: 20000 }).then(() => true, () => false);
+    ok(self, 'a page left open loads a new deploy by itself');
+    await page.waitForSelector('.shell');
     await page.reload();
     await page.waitForSelector('.shell');
     ok(await page.evaluate(() => window.__ftDeploy === 2), 'a new deploy shows on the next open (network first for the page)');
