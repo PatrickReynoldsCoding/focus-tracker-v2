@@ -25,6 +25,7 @@ claude mcp add --transport http focus-tracker https://<your-tracker>/mcp --heade
 - "Move everything in Done on the Garden board to a new column called Archive."
 - "Write up these meeting notes into the notes of project X."
 - "Make a to-do list for the weekend: ..."
+- "Find my notes about the boiler", "Make a folder Receipts and move the tax notes into it" (`list_files`, `create_folder`, `move_files`).
 - "Log 40 minutes on the novel: stopped at chapter 3, next is the dialogue pass."
 - Modes: "... in work mode" (every tool takes `mode`).
 
