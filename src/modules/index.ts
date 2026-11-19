@@ -3,6 +3,7 @@ import type { Module } from '../core/registry';
 import { basicsModule } from './basics';
 import { extrasModule } from './extras';
 import { habitsModule } from './habits';
+import { insightsModule } from './insights';
 import { listsModule } from './lists';
 import { notesModule } from './notes';
 import { notificationsModule } from './notifications';
@@ -34,6 +35,7 @@ export const MODULES: Module[] = [
   whiteboardsModule,
   stickiesModule,
   extrasModule,
+  insightsModule,
   swiftbarModule,
   systemModule,
 ];
