@@ -61,6 +61,10 @@ export interface PanelDef<P> {
   kind?: string;
   /** For a panel a source made (a list on Today): what Remove does instead of hiding it. */
   onRemove?: () => void;
+  /** A short count for the phone's Today pills (to-dos open, habits done of all); nothing = no count. */
+  count?: (props: P) => string | number | null | undefined;
+  /** A short version, for the top of a phone's Today (the focus card). */
+  compact?: Render<P>;
 }
 
 export interface TodayPanelProps {
