@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { call } from './helpers';
+import { call, tool, toolError } from './helpers';
 
 let n = 0;
 /** A fresh mode, so each test starts with no saved layout and an empty undo history. */
@@ -11,7 +11,7 @@ async function freshMode() {
 describe('desktop layout', () => {
   it('saves a page’s grid per mode and reads it back', async () => {
     const m = await freshMode();
-    expect(await call('GET', '/layout/today', undefined, m)).toEqual({ grid: null, pills: null, view: {} });
+    expect(await call('GET', '/layout/today', undefined, m)).toEqual({ grid: null, pills: null, grids: {}, view: {} });
     const grid = { items: { focus: { x: 0, y: 0, w: 12 }, todos: { x: 6, y: 1, w: 6, h: 300 } }, removed: ['neglected'] };
     expect(await call('PUT', '/layout/today/grid', grid, m)).toEqual(grid);
     expect((await call('GET', '/layout/today', undefined, m)).grid).toEqual(grid);
@@ -125,14 +125,83 @@ describe('Today pills', () => {
     const m = await freshMode();
     expect(await call('PUT', '/layout/today/view', { focusCard: 'hidden' }, m)).toEqual({ focusCard: 'hidden' });
     expect(await call('PUT', '/layout/today/view', { pillCounts: false, pillLast: true }, m)).toEqual({ focusCard: 'hidden', pillCounts: false, pillLast: true });
+    expect((await call('PUT', '/layout/today/view', { pillAll: false }, m)).pillAll).toBe(false);
+    await call('PUT', '/layout/today/view', { pillAll: true }, m);
     expect((await call('PUT', '/layout/today/view', { focusCard: 'huge' }, { ...m, expect: 400 })).error).toContain('focusCard');
     expect((await call('PUT', '/layout/today/view', { pillSwipe: 'yes' }, { ...m, expect: 400 })).error).toContain('true or false');
     expect((await call('PUT', '/layout/today/view', { colour: 'red' }, { ...m, expect: 400 })).error).toContain('Unknown setting');
-    expect((await call('GET', '/layout/today', undefined, m)).view).toEqual({ focusCard: 'hidden', pillCounts: false, pillLast: true });
+    expect((await call('GET', '/layout/today', undefined, m)).view).toEqual({ focusCard: 'hidden', pillCounts: false, pillLast: true, pillAll: true });
   });
 
   it('has the layout flags on by default', async () => {
     const list = await call('GET', '/features');
     for (const id of ['movable-panels', 'today-pills', 'popout-windows']) expect(list.find((f: any) => f.id === id)?.enabled).toBe(true);
+  });
+});
+
+describe('a pill’s own grid', () => {
+  it('saves each pill’s grid apart from the page’s, and drops grids of deleted pills', async () => {
+    const m = await freshMode();
+    const page = { items: { todos: { x: 0, y: 0, w: 6 } }, removed: ['neglected'] };
+    await call('PUT', '/layout/today/grid', page, m);
+    const g = { items: { habits: { x: 6, y: 0, w: 6, h: 200 }, todos: { x: 0, y: 10, w: 12 } }, removed: ['ignored'] };
+    // With no pills saved, the usual pills' ids work.
+    expect(await call('PUT', '/layout/today/grids/today', g, m)).toEqual({ ...g, removed: [] });
+    let d = await call('GET', '/layout/today', undefined, m);
+    expect(d.grids).toEqual({ today: { ...g, removed: [] } });
+    expect(d.grid).toEqual(page);
+    // Pills saved: a grid of a pill that is gone is dropped on the next save.
+    await call('PUT', '/layout/today/pills', { pills: [{ id: 'notes', name: 'Notes', panels: ['list-a'] }] }, m);
+    await call('PUT', '/layout/today/grids/notes', { items: { 'list-a': { x: 0, y: 0, w: 4 } } }, m);
+    d = await call('GET', '/layout/today', undefined, m);
+    expect(Object.keys(d.grids)).toEqual(['notes']);
+    // Checked like the page's grid.
+    expect((await call('PUT', '/layout/today/grids/notes', { items: { a: { x: 10, y: 0, w: 4 } } }, { ...m, expect: 400 })).error).toContain('right edge');
+    expect((await call('PUT', '/layout/today/grids/bad%20id', { items: {} }, { ...m, expect: 400 })).error).toContain('Unknown pill');
+  });
+
+  it('resets a pill’s grid, and Undo brings it back', async () => {
+    const m = await freshMode();
+    const g = { items: { habits: { x: 0, y: 0, w: 8 } }, removed: [] };
+    await call('PUT', '/layout/today/grids/today', g, m);
+    await call('DELETE', '/layout/today/grids/today', undefined, m);
+    expect((await call('GET', '/layout/today', undefined, m)).grids).toEqual({});
+    const u = await call('POST', '/undo', {}, m);
+    expect(u.label).toContain('pill');
+    expect((await call('GET', '/layout/today', undefined, m)).grids).toEqual({ today: g });
+  });
+
+  it('is refused while the pills or the grid are off', async () => {
+    const m = await freshMode();
+    for (const f of ['today-pills', 'movable-panels']) {
+      await call('PUT', `/features/${f}`, { enabled: false });
+      try {
+        await call('PUT', '/layout/today/grids/today', { items: {} }, { ...m, expect: 404 });
+      } finally {
+        await call('PUT', `/features/${f}`, { enabled: true });
+      }
+    }
+  });
+});
+
+describe('Claude and the pills', () => {
+  it('reads the pills and the panel ids it can use', async () => {
+    const list = await call('POST', '/lists', { name: 'Pill test list', kind: 'todo' });
+    const out = await tool('get_today_pills');
+    expect(out.pills === null || Array.isArray(out.pills)).toBe(true);
+    expect(out.panels.map((p: any) => p.id)).toEqual(expect.arrayContaining(['todos', 'habits', `list-${list.id}`]));
+    expect(out.icons).toContain('🏠');
+  });
+
+  it('replaces the pills (undoable) and changes the switches', async () => {
+    const before = (await call('GET', '/layout/today')).pills;
+    const out = await tool('set_today_pills', { pills: [{ id: 'home', name: 'Home', icon: '🏠', panels: ['todos', 'habits'] }], view: { pillAll: false, focusCard: 'full' } });
+    expect(out.pills).toEqual([{ id: 'home', name: 'Home', icon: '🏠', panels: ['todos', 'habits'] }]);
+    expect(out.view).toMatchObject({ pillAll: false, focusCard: 'full' });
+    expect(await toolError('set_today_pills', { pills: [{ id: 'x', name: '', panels: [] }] })).toContain('needs a name');
+    expect(await toolError('set_today_pills', { pills: [], view: { colour: 'red' } })).toContain('Unknown setting');
+    await call('POST', '/undo', {});
+    expect((await call('GET', '/layout/today')).pills).toEqual(before);
+    await tool('set_today_pills', { pills: null, view: { pillAll: true, focusCard: 'compact' } });
   });
 });
