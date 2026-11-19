@@ -62,3 +62,71 @@ html[data-theme='eink'] .lg-add-list li { border: 2px solid #000; }
 html[data-theme='eink'] .lg-add-list li.lg-on { opacity: 1; border-style: dashed; }
 html[data-theme='eink'] .lg-moving { outline: 3px solid #000; opacity: 1; }
 .lg-editing .sticky-layer { display: none; } /* sticky notes step aside while the layout is edited */
+
+/* ---------- the phone's Today: pinned focus, pills, Today settings (pills.tsx) ---------- */
+.pl-page { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.focus.compact { gap: 8px; }
+.focus.compact .card-head { align-items: center; }
+.focus.compact .focus-name { font-size: 1.1rem; min-width: 0; overflow-wrap: anywhere; }
+.pl-bar { display: flex; align-items: center; gap: 4px; position: sticky; top: 58px; z-index: 4; background: var(--bg); padding: 4px 0; margin: 0 -4px; }
+.pl-row { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex: 1; padding: 2px 4px; min-width: 0; }
+.pl-row::-webkit-scrollbar { display: none; }
+.pl-pill { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 6px 14px; border-radius: 999px; background: var(--surface); color: var(--fg); white-space: nowrap; }
+.pl-pill.on { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+.pl-count { font-size: 0.78rem; font-variant-numeric: tabular-nums; opacity: 0.85; }
+.pl-pill:not(.on) .pl-count { color: var(--muted); }
+.pl-gear { flex: none; min-width: 44px; min-height: 44px; font-size: 1.25rem; }
+.pl-panels { display: flex; flex-direction: column; gap: 12px; min-height: 40vh; touch-action: pan-y; }
+.pl-empty { align-items: flex-start; }
+
+.pl-settings { display: flex; flex-direction: column; gap: 18px; }
+.pl-settings section { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.pl-settings section > * { align-self: stretch; }
+.pl-settings section > button { align-self: flex-start; }
+.pl-settings h3, .pl-editor h3 { margin: 0; font-size: 0.95rem; }
+.pl-settings p { margin: 0; }
+.pl-cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pl-card { display: flex; gap: 8px; align-items: center; justify-content: space-between; border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; }
+.pl-card-main { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.pl-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.pl-card-acts { display: flex; align-items: center; gap: 2px; flex: none; }
+.pl-card-acts .icon, .pl-in .icon { min-width: 44px; min-height: 44px; }
+.pl-seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); align-self: flex-start !important; }
+.pl-seg button { border: 0; border-radius: 0; min-height: 44px; padding: 4px 16px; background: transparent; color: var(--muted); }
+.pl-seg button + button { border-left: 1px solid var(--line); }
+.pl-seg button.on { background: var(--accent-soft); color: var(--fg); font-weight: 600; box-shadow: inset 0 -3px 0 var(--accent); }
+.pl-switch { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; color: var(--fg); font-size: 1rem; min-height: 44px; }
+.pl-switch input { appearance: none; width: 46px; height: 28px; min-height: 0; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); position: relative; flex: none; cursor: pointer; padding: 0; }
+.pl-switch input::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--muted); transition: left 0.15s; }
+.pl-switch input:checked { background: var(--accent); border-color: var(--accent); }
+.pl-switch input:checked::after { left: 21px; background: var(--accent-fg); }
+.pl-editor { display: flex; flex-direction: column; gap: 12px; }
+.pl-icons { border: 0; padding: 0; margin: 0; }
+.pl-icons legend { font-size: 0.9rem; color: var(--muted); margin-bottom: 4px; }
+.pl-icons [role='radiogroup'] { display: flex; flex-wrap: wrap; gap: 6px; }
+.pl-icons button { min-width: 44px; min-height: 44px; padding: 0; font-size: 1.2rem; }
+.pl-icons button.on { border: 2px solid var(--accent); background: var(--accent-soft); }
+.pl-in { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.pl-in li { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid var(--line); border-radius: 10px; padding: 2px 4px 2px 12px; }
+.pl-add-group h4 { margin: 4px 0; font-size: 0.85rem; color: var(--muted); }
+.pl-add-group .chip { min-height: 44px; }
+.pl-editor-foot { margin-top: 4px; }
+
+html[data-theme='eink'] .pl-pill { border: 2px solid #000; min-height: 44px; }
+html[data-theme='eink'] .pl-pill.on { background: #000; color: #fff; border-width: 3px; }
+html[data-theme='eink'] .pl-pill.on .pl-count { color: #fff; }
+html[data-theme='eink'] .pl-card, html[data-theme='eink'] .pl-in li { border: 2px solid #000; }
+html[data-theme='eink'] .pl-seg { border: 3px solid #000; }
+html[data-theme='eink'] .pl-seg button + button { border-left: 2px solid #000; }
+html[data-theme='eink'] .pl-seg button.on { background: #000; color: #fff; box-shadow: none; }
+html[data-theme='eink'] .pl-seg button.on::before { content: '✓ '; }
+html[data-theme='eink'] .pl-switch input { border: 3px solid #000; background: #fff; }
+html[data-theme='eink'] .pl-switch input::after { background: #000; }
+html[data-theme='eink'] .pl-switch input:checked { background: #000; }
+html[data-theme='eink'] .pl-switch input:checked::after { background: #fff; }
+html[data-theme='eink'] .pl-icons button.on { border: 3px solid #000; background: #fff; }
+html[data-theme='eink'] .pl-bar { border-bottom: 2px solid #000; }
+.pl-notice { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--fg); color: var(--bg); border-radius: 10px; padding: 6px 6px 6px 12px; }
+.pl-notice button { background: transparent; color: inherit; border-color: currentColor; }
+html[data-theme='eink'] .pl-notice { background: #000; color: #fff; border: 3px solid #000; }
+html[data-theme='eink'] .pl-notice button { min-height: 44px; background: #000; color: #fff; border: 2px solid #fff; }

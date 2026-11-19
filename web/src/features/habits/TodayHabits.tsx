@@ -35,6 +35,7 @@ registerPanel('today', {
   id: 'habits',
   title: 'Habits',
   description: 'Each habit with its sessions this week; tap to check in.',
+  count: ({ today }) => (today.habits.length ? `${today.habits.filter((h: Progress) => h.left === 0).length}/${today.habits.length}` : null),
   order: 30,
   render: ({ today, setToday }) => <HabitPanel data={today} setData={setToday} />,
 });

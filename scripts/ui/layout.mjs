@@ -140,6 +140,112 @@ if (!only || only === 'grid') {
   await grid('eink');
 }
 
+// ---------------- the phone's Today pills ----------------
+
+async function swipe(page, cdp, { from, to, y, steps = 10 }) {
+  const pt = (x) => [{ x, y, id: 1 }];
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: pt(from) });
+  for (let i = 1; i <= steps; i++) {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: pt(from + ((to - from) * i) / steps) });
+    await page.waitForTimeout(16);
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await page.waitForTimeout(600);
+}
+const selected = (page) => page.$eval('.pl-pill[aria-selected="true"]', (b) => b.textContent.trim());
+
+async function pills(theme) {
+  const name = `pills-${theme}`;
+  await api.call('DELETE', '/layout/today/pills'); // the default: one pill per panel
+  await api.put('/layout/today/view', { focusCard: 'compact', pillCounts: true, pillSwipe: true, pillLast: true });
+  const { page, ctx } = await open(browser, { width: 390, height: 844 }, errors, { name, touch: true, init: theme === 'eink' ? eink : undefined });
+  const cdp = await ctx.newCDPSession(page);
+  await page.goto(`${B}/#/today`);
+  await page.waitForSelector('.pl-pill');
+  await page.waitForTimeout(400);
+  await shot(page, `${name}-start`);
+  const names = await page.$$eval('.pl-pill', (els) => els.map((e) => e.textContent.trim()));
+  ok(names.length >= 4 && names.some((n) => n.startsWith('To do today')) && names.some((n) => n.startsWith('Shopping')), `${name}: one pill per Today panel (${names.join(' | ')})`);
+  ok(!!(await page.$('.pl-page .focus.compact')), `${name}: the focus card is pinned, compact`);
+  ok(/To do today\s*1/.test(names[0]), `${name}: pills show counts`);
+
+  // Tap a pill.
+  await page.click('.pl-pill:has-text("Habits")');
+  await page.waitForTimeout(200);
+  ok((await selected(page)).startsWith('Habits') && !!(await page.$('#pl-panels .habits-panel')), `${name}: tapping Habits shows the habits`);
+  // Swipe on the panels: the next pill, not the next tab.
+  const area = await page.locator('#pl-panels').boundingBox();
+  const before = await selected(page);
+  await swipe(page, cdp, { from: 320, to: 60, y: area.y + 40 });
+  const after = await selected(page);
+  ok(after !== before && (await page.evaluate(() => location.hash)) === '#/today', `${name}: a swipe on the panels moves to the next pill (${before} → ${after})`);
+  await swipe(page, cdp, { from: 60, to: 320, y: area.y + 40 });
+  ok((await selected(page)) === before, `${name}: and back`);
+  // A swipe on the focus card still changes tab.
+  const fb = await page.locator('.pl-page .focus').boundingBox();
+  await swipe(page, cdp, { from: 320, to: 60, y: fb.y + fb.height - 12 });
+  ok((await page.evaluate(() => location.hash)) !== '#/today', `${name}: a swipe on the focus card changes tab`);
+  await page.goto(`${B}/#/today`);
+  await page.waitForSelector('.pl-pill');
+  ok((await selected(page)) === before, `${name}: Today opens on the pill used last`);
+
+  // Today settings: a new pill with Habits and a note that is not on Today.
+  await page.click('.pl-gear');
+  await page.waitForSelector('dialog[open] .pl-settings');
+  await shot(page, `${name}-settings`);
+  await page.click('dialog[open] button:has-text("New pill")');
+  await page.waitForSelector('dialog[open] .pl-editor');
+  await page.fill('dialog[open] .pl-editor input', 'Evening');
+  await page.click('dialog[open] .pl-icons button[aria-label="🌙"]');
+  await page.click('dialog[open] .pl-add-group .chip:has-text("Habits")');
+  await page.waitForSelector('dialog[open] .pl-add-group .chip:has-text("Travel")');
+  await page.click('dialog[open] .pl-add-group .chip:has-text("Travel")');
+  await page.click('dialog[open] .pl-in li:has-text("Travel") button[aria-label^="Move Travel up"]');
+  await shot(page, `${name}-editor`);
+  await page.click('dialog[open] button:has-text("Add pill")');
+  await page.waitForTimeout(500);
+  let saved = (await api.get('/layout/today')).pills;
+  const evening = saved?.find((p) => p.name === 'Evening');
+  ok(evening && evening.icon === '🌙' && evening.panels.length === 2 && evening.panels[0].startsWith('list-'), `${name}: the new pill is saved with its icon and panels in order`);
+  ok(saved.length > 4, `${name}: the first change saves every pill (${saved.length})`);
+  // Switches and the focus card.
+  await page.click('dialog[open] .pl-seg button:has-text("Hidden")');
+  await page.click('dialog[open] .pl-switch:has-text("Show counts") input');
+  await page.waitForTimeout(400);
+  const view = (await api.get('/layout/today')).view;
+  ok(view.focusCard === 'hidden' && view.pillCounts === false, `${name}: focus card and counts saved (${JSON.stringify(view)})`);
+  // The phone's back button closes the sheet.
+  await page.goBack();
+  await page.waitForTimeout(300);
+  ok(!(await page.$('dialog[open]')), `${name}: the back button closes Today settings`);
+  ok((await page.evaluate(() => location.hash)) === '#/today', `${name}: and stays on Today`);
+  ok(!(await page.$('.pl-page .focus')), `${name}: the focus card is hidden`);
+  // The new pill shows its two panels, the note first.
+  await page.click('.pl-pill:has-text("Evening")');
+  await page.waitForTimeout(800);
+  const cards = await page.$$eval('#pl-panels > *', (els) => els.map((e) => e.textContent.slice(0, 30)));
+  ok(cards.length === 2 && cards[0].includes('Travel'), `${name}: the pill shows its panels in order (${cards.join(' | ')})`);
+  await shot(page, `${name}-evening`);
+  // Delete it with Undo.
+  await page.click('.pl-gear');
+  await page.click('dialog[open] .pl-card:has-text("Evening") button:has-text("Edit")');
+  await page.click('dialog[open] .pl-editor button:has-text("Delete pill")');
+  await page.waitForTimeout(500);
+  ok(!(await api.get('/layout/today')).pills.some((p) => p.name === 'Evening'), `${name}: Delete pill`);
+  await page.click('dialog[open] .pl-notice button:has-text("Undo")');
+  await page.waitForTimeout(800);
+  ok((await api.get('/layout/today')).pills.some((p) => p.name === 'Evening'), `${name}: Undo brings it back`);
+  ok(!!(await page.$('dialog[open] .pl-card:has-text("Evening")')), `${name}: the sheet shows it again`);
+  await page.keyboard.press('Escape');
+  await api.put('/layout/today/view', { focusCard: 'compact', pillCounts: true, pillSwipe: true, pillLast: true });
+  await ctx.close();
+}
+
+if (!only || only === 'pills') {
+  await pills('light');
+  await pills('eink');
+}
+
 console.log(errors.length ? `console errors:\n${errors.join('\n')}` : 'no console errors');
 await browser.close();
 if (errors.length) process.exit(1);

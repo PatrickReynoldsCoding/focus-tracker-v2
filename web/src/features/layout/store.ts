@@ -110,6 +110,9 @@ const queries = new Map<string, MediaQueryList>();
 const mediaQuery = (q: string) => queries.get(q) ?? (queries.set(q, matchMedia(q)), queries.get(q)!);
 
 
+/** The Today panel pinned above the phone's pills (not in any pill). */
+export const PINNED = 'focus';
+
 /** Desktop: the movable grid and pop-out windows. Phone: the Today pills. */
 export const DESKTOP = '(min-width: 900px)';
 export const WINDOWS = '(min-width: 760px)';

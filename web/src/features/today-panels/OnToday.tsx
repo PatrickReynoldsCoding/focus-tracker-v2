@@ -6,7 +6,7 @@ import { useState } from 'preact/hooks';
 import { change, get, optimistic, put } from '../../core/api';
 import type { Addable, PanelDef, TodayPanelProps } from '../../core/registry';
 import { Dialog, Loading, MarkdownEditor, useData } from '../../core/ui';
-import { ListPanel, type FullList, type SetList } from './ListBody';
+import { cardsOf, ListPanel, todosOf, type FullList, type SetList } from './ListBody';
 
 type NoteItem = { type: 'note'; key: string; name: string; kind: 'note' | 'project'; id?: string; project_id?: string; color: string | null; body: string };
 type ListItem = FullList & { type: 'list'; key: string };
@@ -104,6 +104,7 @@ function itemPanel(i: Item, data: Item[], setData: (fn: (d: Item[]) => Item[]) =
     kind,
     order: 0,
     onRemove: remove,
+    count: () => (i.type === 'list' ? (i.kind === 'todo' ? todosOf(i).filter((t) => !t.done).length : cardsOf(i).length) : null),
     render: () =>
       i.type === 'note' ? (
         <NotePanel n={i} setBody={(body) => patchItem((x) => ({ ...x, body }) as Item)} onRemove={remove} />
