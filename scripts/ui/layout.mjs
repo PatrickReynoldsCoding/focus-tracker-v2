@@ -246,6 +246,91 @@ if (!only || only === 'pills') {
   await pills('eink');
 }
 
+// ---------------- pop-out windows ----------------
+
+async function popout(theme) {
+  const name = `popout-${theme}`;
+  const { page, ctx } = await open(browser, { width: 1280, height: 900 }, errors, { name, init: theme === 'eink' ? eink : undefined });
+  await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('ft.popout.')).forEach((k) => localStorage.removeItem(k)));
+  await page.goto(`${B}/#/today`);
+  await page.waitForSelector('.lg-item[data-panel="todos"] .po-btn', { state: 'attached' });
+  await page.hover('.lg-item[data-panel="todos"]');
+  await page.click('.lg-item[data-panel="todos"] .po-btn');
+  await page.waitForSelector('.po-win');
+  ok(!!(await page.$('.lg-item[data-panel="todos"] .po-placeholder')), `${name}: the page shows a placeholder where the panel was`);
+  await page.waitForSelector('.po-win :text("Reply to landlord")', { timeout: 5000 }).catch(() => {});
+  ok((await page.textContent('.po-win')).includes('Reply to landlord'), `${name}: the window shows the to-dos`);
+  await shot(page, `${name}-window`);
+  // Drag it by its title and resize it.
+  const w0 = await page.locator('.po-win').boundingBox();
+  const head = await page.locator('.po-win .po-title').boundingBox();
+  await page.mouse.move(head.x + 20, head.y + 8);
+  await page.mouse.down();
+  await page.mouse.move(head.x - 300, head.y + 200, { steps: 6 });
+  await page.mouse.up();
+  const w1 = await page.locator('.po-win').boundingBox();
+  ok(Math.abs(w1.x - (w0.x - 320)) < 6 && Math.abs(w1.y - (w0.y + 192)) < 6, `${name}: dragged by its title (${Math.round(w0.x)},${Math.round(w0.y)} → ${Math.round(w1.x)},${Math.round(w1.y)})`);
+  const sz = await page.locator('.po-win .po-size').boundingBox();
+  await page.mouse.move(sz.x + 8, sz.y + 8);
+  await page.mouse.down();
+  await page.mouse.move(sz.x + 108, sz.y - 92, { steps: 6 });
+  await page.mouse.up();
+  const w2 = await page.locator('.po-win').boundingBox();
+  ok(w2.width > w1.width + 90 && w2.height < w1.height - 80, `${name}: resized from its corner (${Math.round(w1.width)}×${Math.round(w1.height)} → ${Math.round(w2.width)}×${Math.round(w2.height)})`);
+  // It stays on screen on another tab.
+  await page.click('.side a:has-text("Habits")');
+  await page.waitForTimeout(600);
+  ok(!!(await page.$('.po-win')) && (await page.textContent('.po-win')).includes('Reply to landlord'), `${name}: the window stays on the Habits tab`);
+  await shot(page, `${name}-other-tab`);
+  // Minimise to the dock and back.
+  await page.click('.po-win button[aria-label^="Minimise"]');
+  ok(!(await page.$('.po-win')) && !!(await page.$('.po-dock .po-chip')), `${name}: minimised to a chip in the dock`);
+  await page.click('.po-dock .po-chip');
+  ok(!!(await page.$('.po-win')), `${name}: the chip brings it back`);
+  // Dock it on the right: the page makes room.
+  await page.click('.po-win button[aria-label^="Dock"]');
+  await page.waitForTimeout(300);
+  const pane = await page.locator('.po-pane').boundingBox();
+  const main = await page.locator('.main').boundingBox();
+  ok(pane && Math.abs(pane.x + pane.width - 1280) < 2 && main.x + main.width <= pane.x + 2, `${name}: docked as a pane on the right, the page beside it`);
+  await page.goto(`${B}/#/p/${p1.id}`);
+  await page.waitForSelector('.lg-item[data-panel="notes"]');
+  ok(!!(await page.$('.po-pane')), `${name}: the pane stays on a project page`);
+  // One notes editor on screen: pop out the project's notes, then its notes on Today show a placeholder.
+  await page.hover('.lg-item[data-panel="notes"]');
+  await page.click('.lg-item[data-panel="notes"] .po-btn');
+  await page.waitForSelector('.po-win');
+  await shot(page, `${name}-project`);
+  await api.put('/today-panels/show', { project_id: p1.id, on: true });
+  await page.click('.side a:has-text("Today")');
+  await page.waitForSelector(`.lg-item[data-panel="pnote-${p1.id}"]`);
+  ok(!!(await page.$(`.lg-item[data-panel="pnote-${p1.id}"] .po-placeholder`)), `${name}: the same notes on Today show a placeholder while they are in a window`);
+  ok((await page.$$('.po-win .ed, .po-win .md-view, .po-win textarea')).length >= 1, `${name}: the window has the editor`);
+  await shot(page, `${name}-one-copy`);
+  // Kept after a reload.
+  await page.reload();
+  await page.waitForSelector('.po-win');
+  ok(!!(await page.$('.po-pane')), `${name}: windows and the pane come back after a reload`);
+  // No windows on a phone; they come back on a wide screen.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(400);
+  ok(!(await page.$('.po-win, .po-pane, .po-btn, .po-placeholder')), `${name}: no windows, buttons or placeholders on a phone`);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.waitForTimeout(400);
+  ok(!!(await page.$('.po-win')), `${name}: back on a wide screen`);
+  // Put everything back.
+  for (const b of await page.$$('.po-win button[aria-label^="Put"], .po-pane button[aria-label^="Put"]')) await b.click();
+  await page.waitForTimeout(300);
+  ok(!(await page.$('.po-win, .po-pane, .po-placeholder')), `${name}: ✕ puts the panels back`);
+  await api.put('/today-panels/show', { project_id: p1.id, on: false });
+  await ctx.close();
+}
+
+if (!only || only === 'popout') {
+  await popout('light');
+  await popout('eink');
+}
+
 console.log(errors.length ? `console errors:\n${errors.join('\n')}` : 'no console errors');
 await browser.close();
 if (errors.length) process.exit(1);

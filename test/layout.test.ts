@@ -133,6 +133,6 @@ describe('Today pills', () => {
 
   it('has the layout flags on by default', async () => {
     const list = await call('GET', '/features');
-    for (const id of ['movable-panels', 'today-pills']) expect(list.find((f: any) => f.id === id)?.enabled).toBe(true);
+    for (const id of ['movable-panels', 'today-pills', 'popout-windows']) expect(list.find((f: any) => f.id === id)?.enabled).toBe(true);
   });
 });

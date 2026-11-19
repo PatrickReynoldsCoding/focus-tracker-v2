@@ -5,6 +5,7 @@
 //   layout.<page>.pills  [{ id, name, icon, panels: [<panel id>] }]                       (phone pills, undoable)
 //   layout.<page>.view   { focusCard, pillCounts, pillSwipe, pillLast }                     (phone switches)
 // The browser draws everything (web/src/features/layout/); the server only checks and keeps it.
+// Pop-out windows are kept on each device (localStorage), not here.
 
 import { requireFeature } from '../core/features';
 import type { Ctx } from '../core/ctx';
@@ -133,6 +134,12 @@ export const layoutModule: Module = {
       id: 'today-pills',
       label: 'Today pills on a phone',
       description: 'On a phone, Today shows the focus card and a row of pills; each pill shows a group of panels you choose in Today settings. Off: Today is one long page.',
+      default: true,
+    },
+    {
+      id: 'popout-windows',
+      label: 'Pop-out windows',
+      description: 'On a wide screen, pop any panel out into a window that stays on screen on every tab, or dock it on the right. Kept on each device. Not on a phone.',
       default: true,
     },
   ],

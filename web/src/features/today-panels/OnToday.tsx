@@ -104,6 +104,7 @@ function itemPanel(i: Item, data: Item[], setData: (fn: (d: Item[]) => Item[]) =
     kind,
     order: 0,
     onRemove: remove,
+    oneCopy: () => (i.type === 'note' ? `note:${i.key}` : null),
     count: () => (i.type === 'list' ? (i.kind === 'todo' ? todosOf(i).filter((t) => !t.done).length : cardsOf(i).length) : null),
     render: () =>
       i.type === 'note' ? (
@@ -151,6 +152,8 @@ export function resolveOnToday(id: string): PanelDef<any> | null {
     id,
     title: m[1] === 'list' ? 'List' : 'Project notes',
     order: 0,
+    // A list may be a note: the same key as its panel on Today (a list that is not a note never matches).
+    oneCopy: () => (m[1] === 'list' ? `note:list:${m[2]}` : `note:project:${m[2]}`),
     kind: m[1] === 'list' ? 'list' : 'note',
     render: () => (m[1] === 'list' ? <LoadedList key={id} id={m[2]} /> : <LoadedProjectNotes key={id} id={m[2]} />),
   };

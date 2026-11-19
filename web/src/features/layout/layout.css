@@ -56,7 +56,7 @@ html[data-theme='eink'] .lg-shadow { border: 3px dashed #000; background: #fff; 
 html[data-theme='eink'] .lg-edit-name { background: #000; color: #fff; }
 html[data-theme='eink'] .lg-edit-bar button, html[data-theme='eink'] .lg-add-list button { min-height: 44px; }
 html[data-theme='eink'] .lg-edit-bar { top: -22px; }
-html[data-theme='eink'] .lg-grip { height: 30px; top: -15px; }
+html[data-theme='eink'] .lg-grip { top: -22px; min-width: 44px; }
 html[data-theme='eink'] .lg-resize { width: 30px; height: 30px; border-color: #000; }
 html[data-theme='eink'] .lg-add-list li { border: 2px solid #000; }
 html[data-theme='eink'] .lg-add-list li.lg-on { opacity: 1; border-style: dashed; }
@@ -130,3 +130,49 @@ html[data-theme='eink'] .pl-bar { border-bottom: 2px solid #000; }
 .pl-notice button { background: transparent; color: inherit; border-color: currentColor; }
 html[data-theme='eink'] .pl-notice { background: #000; color: #fff; border: 3px solid #000; }
 html[data-theme='eink'] .pl-notice button { min-height: 44px; background: #000; color: #fff; border: 2px solid #fff; }
+
+/* ---------- pop-out windows (popout.tsx) ---------- */
+.po-slot { position: relative; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.grid.today > .po-slot.wide { grid-column: 1 / -1; }
+@media (min-width: 900px) { .grid.today > .po-slot.wide { grid-column: span 2; } }
+.po-btn {
+  position: absolute; top: -11px; right: 14px; z-index: 3; min-height: 0; height: 22px; padding: 0 9px; font-size: 0.8rem; line-height: 1;
+  border-radius: 999px; background: var(--surface); color: var(--muted); opacity: 0;
+}
+.po-slot:hover > .po-btn, .po-btn:focus-visible { opacity: 1; }
+@media (hover: none) { .po-btn { opacity: 1; } }
+.lg-editing .po-btn { display: none; }
+.po-placeholder { border-style: dashed; background: transparent; box-shadow: none; }
+.po-placeholder p { margin: 0; }
+
+.po-win { position: fixed; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-pop); overflow: hidden; min-width: 0; }
+.po-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 4px 4px 4px 12px; background: var(--surface-2); border-bottom: 1px solid var(--line); cursor: grab; user-select: none; touch-action: none; flex: none; }
+.po-title { font-weight: 600; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.po-tools { display: flex; flex: none; }
+.po-tools .icon { cursor: pointer; }
+.po-body { flex: 1; overflow: auto; padding: 10px; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+.po-body > .card, .po-body > .po-slot > .card { border: 0; box-shadow: none; padding: 4px; }
+.po-size { position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; cursor: nwse-resize; touch-action: none; background: linear-gradient(135deg, transparent 50%, var(--line) 50%); }
+body.po-grabbing, body.po-grabbing * { user-select: none !important; }
+.po-gone { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+
+html.po-docked .shell { padding-right: var(--po-pane); }
+.po-pane { position: fixed; top: 0; right: 0; bottom: 0; z-index: 8; background: var(--surface); border-left: 1px solid var(--line); display: flex; flex-direction: column; min-width: 0; }
+.po-pane .po-head { cursor: default; }
+.po-divider { position: absolute; left: -5px; top: 0; bottom: 0; width: 10px; cursor: ew-resize; touch-action: none; z-index: 2; }
+.po-divider:hover, .po-divider:focus-visible { background: var(--accent-soft); }
+.po-tabs { display: flex; gap: 2px; overflow-x: auto; padding: 6px 6px 0; flex: none; }
+.po-tabs button { min-height: 34px; padding: 4px 10px; border-radius: 8px 8px 0 0; font-size: 0.85rem; white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+.po-tabs button.on { background: var(--accent-soft); border-color: var(--accent); font-weight: 600; }
+
+.po-dock { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 40; display: flex; gap: 6px; max-width: calc(100vw - 32px); overflow-x: auto; padding: 4px; }
+.po-chip { white-space: nowrap; border-radius: 999px; box-shadow: var(--shadow-pop); background: var(--surface); max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
+
+html[data-theme='eink'] .po-btn { opacity: 1; border: 2px solid #000; top: -22px; min-width: 44px; }
+html[data-theme='eink'] .po-win, html[data-theme='eink'] .po-pane { border: 3px solid #000; }
+html[data-theme='eink'] .po-head { background: #fff; border-bottom: 3px solid #000; }
+html[data-theme='eink'] .po-tools .icon, html[data-theme='eink'] .po-chip, html[data-theme='eink'] .po-tabs button { min-width: 44px; min-height: 44px; }
+html[data-theme='eink'] .po-chip { border: 3px solid #000; }
+html[data-theme='eink'] .po-tabs button.on { background: #000; color: #fff; }
+html[data-theme='eink'] .po-placeholder { border: 3px dashed #000; }
+html[data-theme='eink'] .po-size { width: 26px; height: 26px; background: linear-gradient(135deg, transparent 50%, #000 50%); }

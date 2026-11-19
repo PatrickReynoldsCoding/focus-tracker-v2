@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import { change, newId, optimistic, post, put } from '../../core/api';
-import { Panels, registerPanel, registerTab, type TodayPanelProps } from '../../core/registry';
+import { Panels, registerPanel, registerPlace, registerTab, type TodayPanelProps } from '../../core/registry';
 import { AddInput, daysAgo, fmtDay, Linkify, Loading, useData } from '../../core/ui';
 import { useSession, type Session } from './session';
 import { SessionArea } from './SessionControls';
@@ -190,6 +190,17 @@ export function Today() {
     </div>
   );
 }
+
+// Today's panels drawn away from Today (a pop-out window on another tab) load Today themselves.
+registerPlace<TodayPanelProps>({
+  place: 'today',
+  useProps: () => {
+    const { data, error, setData } = useData<TodayData>('/today');
+    return { props: data ? { today: data, setToday: setData as TodayPanelProps['setToday'] } : null, error };
+  },
+  keyOf: () => '',
+  label: () => 'Today',
+});
 
 registerTab({ id: 'today', path: '/today', label: 'Today', icon: '◎', order: 10, phone: true, render: () => <Today /> });
 

@@ -1,6 +1,6 @@
 import { useEffect } from 'preact/hooks';
 import { change, del, newId, optimistic, patch, post, put } from '../../core/api';
-import { Panels, registerPanel, registerRoute, type ProjectPanelProps } from '../../core/registry';
+import { Panels, registerPanel, registerPlace, registerRoute, type ProjectPanelProps } from '../../core/registry';
 import { AddInput, daysAgo, fmtDay, fmtMinutes, go, InlineEdit, Linkify, Loading, MarkdownEditor, todayLocal, useData } from '../../core/ui';
 import { Board, type Column } from './Board';
 import { CategorySelect } from './CategorySelect';
@@ -63,6 +63,17 @@ export function ProjectPage({ id }: { id: string }) {
   );
 }
 
+// A project's panels drawn away from its page (a pop-out window) load the project themselves.
+registerPlace<ProjectPanelProps>({
+  place: 'project',
+  useProps: (id) => {
+    const { data, error, setData } = useData<Full>(`/projects/${id}/full`);
+    return { props: data ? { project: data, setProject: setData as ProjectPanelProps['setProject'] } : null, error };
+  },
+  keyOf: (p) => p.project.id,
+  label: (p) => p.project.name,
+});
+
 registerRoute({ id: 'project', prefix: '/p', tab: 'projects', render: ({ params }) => <ProjectPage id={params[0]} /> });
 
 registerPanel('project', { id: 'board', title: 'Board', description: 'The project’s cards in their columns.', alwaysShown: true, order: 10, wide: true, render: ({ project, setProject }) => <Board columns={project.columns} owner={{ project_id: project.id }} onColumns={(columns) => setProject((p) => ({ ...p, columns }))} /> });
@@ -71,6 +82,7 @@ registerPanel('project', {
   title: 'Notes',
   description: 'The project’s notes.',
   order: 20,
+  oneCopy: ({ project }) => `note:project:${project.id}`,
   render: ({ project }) => (
     <section class="card">
       <h2>Notes</h2>
