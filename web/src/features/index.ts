@@ -25,3 +25,4 @@ import './navigation';
 import './plan';
 import './offline';
 import './layout';
+import './today-list';

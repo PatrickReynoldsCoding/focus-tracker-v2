@@ -212,8 +212,8 @@ const QUEUE_RULES: [method: string, path: RegExp][] = [
   ['PATCH', new RegExp(`^/(${KINDS})/[\\w-]+$`)],
   // moves, ticks and habit check-ins
   ['POST', new RegExp(`^/(${KINDS})/[\\w-]+/move$`)],
-  ['POST', /^\/todos\/[\w-]+\/tick$/],
-  ['POST', /^\/habits\/[\w-]+\/check$/],
+  ['POST', /^\/(todos|tasks)\/[\w-]+\/tick$/],
+  ['POST', /^\/habits\/[\w-]+\/(check|not-today)$/],
   // note saves (the editor sends its base)
   ['PUT', /^\/notes\/of\/(project|list)\/[\w-]+$/],
   // page layouts (the whole layout each time, so the last one wins)
