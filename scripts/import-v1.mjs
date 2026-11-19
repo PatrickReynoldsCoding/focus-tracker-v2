@@ -85,17 +85,19 @@ if (a['dry-run']) process.exit(0);
 let problems = 0;
 for (const kind of ORDER) {
   for (let i = 0; i < rows[kind].length; i += 200) {
-    const r = await send('POST', `/import/${kind}`, { rows: rows[kind].slice(i, i + 200) });
+    // Drawings are not part of a whiteboard row (they live in whiteboard_scenes); they follow below.
+    const batch = rows[kind].slice(i, i + 200).map((row) => (kind === 'whiteboards' ? { ...row, scene: undefined } : row));
+    const r = await send('POST', `/import/${kind}`, { rows: batch });
     console.log(`${kind}: ${r.created} added, ${r.skipped} already there${r.errors.length ? `, ${r.errors.length} refused` : ''}`);
     for (const e of r.errors) console.log(`  ${e.id}: ${e.error}`);
     problems += r.errors.length;
   }
 }
-// A whiteboard that was imported earlier without its drawing gets the drawing now.
+// A whiteboard without a drawing on the server (new, or imported earlier without it) gets its drawing now.
 for (const w of rows.whiteboards.filter((x) => x.scene)) {
-  const cur = await send('GET', `/whiteboards/${w.id}`);
+  const cur = await send('GET', `/whiteboards/${w.id}/scene`);
   if (!cur.scene) {
-    await send('PATCH', `/whiteboards/${w.id}`, { scene: w.scene });
+    await send('PUT', `/whiteboards/${w.id}/scene`, { scene: w.scene });
     console.log(`whiteboards: drawing added to ${w.id}`);
   }
 }

@@ -1,24 +1,7 @@
-// Whiteboards, and the tables Google Drive sync will use (Phase 4).
+// The tables Google Drive sync would have used (Phase 4, dropped: DECISIONS D11). Whiteboards: whiteboards.ts.
 
 import type { Entity } from '../core/entity';
 import type { Module } from '../core/registry';
-
-export const whiteboardsEntity: Entity = {
-  name: 'whiteboards',
-  table: 'whiteboards',
-  singular: 'whiteboard',
-  desc: 'Excalidraw whiteboards, optionally on a project. scene is the Excalidraw scene JSON.',
-  modeScoped: true,
-  orderGroup: [],
-  filters: ['project_id', 'show_today'],
-  fields: {
-    name: { type: 'text', required: true },
-    project_id: { type: 'text', ref: 'projects', cascade: true },
-    show_today: { type: 'bool', default: false },
-    scene: { type: 'json' },
-    thumbnail: { type: 'text', desc: 'Small data: URL preview' },
-  },
-};
 
 export const accountsEntity: Entity = {
   name: 'accounts',
@@ -57,6 +40,6 @@ export const driveLinksEntity: Entity = {
 
 export const extrasModule: Module = {
   id: 'extras',
-  description: 'Whiteboards, and the Google accounts and Drive links used by Drive sync.',
-  entities: [whiteboardsEntity, accountsEntity, driveLinksEntity],
+  description: 'The Google accounts and Drive links used by Drive sync (unused).',
+  entities: [accountsEntity, driveLinksEntity],
 };

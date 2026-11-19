@@ -1,0 +1,36 @@
+/* Sticky notes over a project page. The page is their frame. */
+.stack.project { position: relative; padding-bottom: 56px; } /* room for + Note under the last panel */
+.sticky-layer { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+.sticky-wrap { position: absolute; pointer-events: auto; touch-action: pan-x pan-y; }
+.sticky-wrap.moving { z-index: 1; }
+.sticky-wrap.moving .sticky { box-shadow: 0 14px 30px rgb(0 0 0 / 0.25); }
+.sticky { width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden; color: #2a2418;
+  background: color-mix(in srgb, var(--paper) calc(var(--paper-a) * 100%), transparent); border-radius: 4px 4px 12px 4px;
+  box-shadow: 0 8px 20px rgb(0 0 0 / 0.18), 0 1px 3px rgb(0 0 0 / 0.12); position: relative; }
+.sticky-wrap { --paper: #fff3a3; --paper-a: 1; }
+.sticky-strip { display: flex; align-items: center; justify-content: flex-end; gap: 2px; padding: 2px 4px; min-height: 28px; cursor: grab; touch-action: none; user-select: none;
+  background: color-mix(in srgb, #000 6%, transparent); flex: none; }
+.sticky-wrap.moving .sticky-strip { cursor: grabbing; }
+.sticky-btn { border: 0; background: transparent; color: #2a2418; min-height: 0; padding: 2px 8px; border-radius: 5px; font-size: 15px; line-height: 1; opacity: 0.8; }
+.sticky-btn:hover, .sticky-btn[aria-expanded='true'] { opacity: 1; background: rgb(0 0 0 / 0.08); }
+.sticky textarea { flex: 1 1 auto; min-height: 0; width: 100%; border: 0; border-radius: 0; background: transparent; color: inherit; resize: none; padding: 8px 10px; font-size: 15px; line-height: 1.45; }
+.sticky textarea::placeholder { color: rgb(42 36 24 / 0.5); }
+.sticky textarea:focus-visible { outline: none; }
+.sticky-resize { position: absolute; right: 0; bottom: 0; width: 22px; height: 22px; min-height: 0; padding: 0; border: 0; border-radius: 0 0 12px 0; cursor: nwse-resize; touch-action: none;
+  background: linear-gradient(135deg, transparent 50%, rgb(0 0 0 / 0.16) 50%, rgb(0 0 0 / 0.16) 60%, transparent 60%, transparent 70%, rgb(0 0 0 / 0.16) 70%, rgb(0 0 0 / 0.16) 80%, transparent 80%); }
+.sticky-menu { position: absolute; top: 32px; right: 0; z-index: 2; width: 232px; max-width: calc(100vw - 32px); background: var(--surface); color: var(--fg); border: 1px solid var(--line);
+  border-radius: 10px; box-shadow: 0 10px 28px rgb(0 0 0 / 0.22); padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.sticky-menu.left { right: auto; left: 0; }
+.sticky-swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; justify-items: center; }
+.sticky-dot { width: 30px; height: 30px; min-height: 0; border-radius: 50%; border: 1px solid rgb(0 0 0 / 0.45); padding: 0; }
+.sticky-dot[aria-checked='true'] { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--fg); }
+.sticky-menu input[type='range'] { padding: 0; min-height: 28px; border: 0; background: none; accent-color: var(--accent); }
+.sticky-range { display: flex; justify-content: space-between; font-size: 0.75rem; }
+.sticky-fab { position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 35; display: flex; gap: 8px; }
+.sticky-fab button { position: relative; border-radius: 999px; height: 44px; padding: 0 16px; font-weight: 600; box-shadow: 0 6px 16px rgb(0 0 0 / 0.16); }
+.sticky-fab .badge { position: absolute; top: -6px; right: -6px; }
+@media (max-width: 760px) {
+  .sticky-strip { min-height: 38px; gap: 6px; }
+  .sticky-btn { min-width: 40px; min-height: 34px; font-size: 18px; }
+}
+@media (min-width: 900px) { .sticky-fab { bottom: max(16px, env(safe-area-inset-bottom)); } }

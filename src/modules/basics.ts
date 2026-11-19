@@ -1,4 +1,4 @@
-// Small modules: modes, categories, backlog, criteria, resources, stickies. (Links: relations.ts.)
+// Small modules: modes, categories, backlog, criteria. (Links: relations.ts, stickies: stickies.ts.)
 
 import { z } from 'zod';
 import type { Entity } from '../core/entity';
@@ -106,29 +106,10 @@ export const criteriaEntity: Entity = {
   },
 };
 
-export const stickiesEntity: Entity = {
-  name: 'stickies',
-  table: 'stickies',
-  singular: 'sticky note',
-  desc: 'Sticky notes placed on a project’s page.',
-  modeScoped: true,
-  filters: ['project_id'],
-  fields: {
-    project_id: { type: 'text', required: true, ref: 'projects', cascade: true },
-    text: { type: 'text' },
-    color: COLOR,
-    opacity: { type: 'real' },
-    x: { type: 'real' },
-    y: { type: 'real' },
-    w: { type: 'real' },
-    h: { type: 'real' },
-  },
-};
-
 export const basicsModule: Module = {
   id: 'basics',
-  description: 'Modes, categories, backlog, done criteria and stickies.',
-  entities: [modesEntity, categoriesEntity, backlogEntity, criteriaEntity, stickiesEntity],
+  description: 'Modes, categories, backlog and done criteria.',
+  entities: [modesEntity, categoriesEntity, backlogEntity, criteriaEntity],
   routes(api) {
     // Start a backlog item: it becomes an active project.
     api.post('/backlog/:id/start', async (c) => {

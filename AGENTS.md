@@ -38,6 +38,7 @@ Modular first: a feature lives in its own files on the server and in the browser
   - `registerMarkdownEditor` supplies the editor behind `MarkdownEditor` (core/ui.tsx); `features/editor` registers the rich one (flag `rich-editor`), otherwise the plain text box is used. Give `MarkdownEditor` a `note={{ kind, id }}` for a project's or list's note so it saves with conflict protection and keeps drafts.
   - A panel with `override: true` replaces another feature's panel of the same id whatever the import order (the editor's card-dialog `note` section does this).
   A feature that needs a new plug-in point adds it to `core/registry.tsx` in a small, separate commit.
+- React is used only by `features/whiteboards/host.ts` (Excalidraw, loaded on demand); Vite's React-to-Preact aliases are off, so never import `react` anywhere else.
 - `styles.css` holds shared tokens and base styles; a feature's own styles go in `features/<name>/<name>.css`, imported by the feature.
 - `clients/swiftbar/`, `android/`: the Mac menu bar plugin and the Android app (see their READMEs).
 

@@ -10,11 +10,13 @@ import { notifyPrefsModule } from './notify-prefs';
 import { projectsModule } from './projects';
 import { resourcesModule } from './resources';
 import { sessionsModule } from './sessions';
+import { stickiesModule } from './stickies';
 import { relationsModule } from './relations';
 import { swiftbarModule } from './swiftbar';
 import { systemModule } from './system';
 import { todayModule } from './today';
 import { todayPanelsModule } from './today-panels';
+import { whiteboardsModule } from './whiteboards';
 
 export const MODULES: Module[] = [
   projectsModule,
@@ -29,6 +31,8 @@ export const MODULES: Module[] = [
   todayPanelsModule,
   notificationsModule,
   notifyPrefsModule,
+  whiteboardsModule,
+  stickiesModule,
   extrasModule,
   swiftbarModule,
   systemModule,
