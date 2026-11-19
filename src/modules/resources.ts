@@ -8,6 +8,7 @@ import { z } from 'zod';
 import type { Ctx } from '../core/ctx';
 import type { Entity, Row } from '../core/entity';
 import { bad } from '../core/errors';
+import type { FileItem } from '../core/files';
 import type { Module } from '../core/registry';
 import { detectResource, guessTitle, parseResourceText, RESOURCE_KINDS, RESOURCE_TYPES, sameKey } from '../core/resource-kinds';
 import { create, list } from '../core/store';
@@ -33,7 +34,7 @@ export const resourcesEntity: Entity = {
   desc: 'Links and contact details kept with a project, or shared by a category. Google Docs, Sheets, Slides and Drive files or folders are links (type drive); the kind is worked out from the address. Never store anything sensitive (bank details, passwords, ID numbers).',
   modeScoped: true,
   orderGroup: ['project_id', 'category_id'],
-  filters: ['project_id', 'category_id', 'type', 'kind', 'grp'],
+  filters: ['project_id', 'category_id', 'type', 'kind', 'grp', 'folder_id'],
   fields: {
     title: { type: 'text', required: true },
     type: { type: 'text', enum: RESOURCE_TYPES, default: 'link' },
@@ -43,9 +44,10 @@ export const resourcesEntity: Entity = {
     note: { type: 'text' },
     project_id: { type: 'text', ref: 'projects', cascade: true, desc: 'Empty means shared by the category' },
     category_id: { type: 'text', ref: 'categories', cascade: true },
+    folder_id: { type: 'text', ref: 'folders', desc: 'The Files folder of a link (empty: top level, or the project’s folder). A project’s folder makes it that project’s link' },
   },
   beforeCreate(_ctx, row) {
-    if (!row.project_id && !row.category_id) throw bad('A resource needs project_id or category_id');
+    if (!row.project_id && !row.category_id && !('folder_id' in row)) throw bad('A resource needs project_id, category_id or folder_id (null for the top level of Files)');
     settle(row);
   },
   beforeUpdate(_ctx, before, patch) {
@@ -120,8 +122,30 @@ const bulkBody = z.object({
   items: z.array(itemInput).min(1).max(200),
 });
 
+/** Links (web addresses and Google Drive items) as files, with their kind for the icon. Resources a
+ *  category shares with all its projects stay on the Projects tab; phone numbers, emails and text are not files. */
+async function linkFiles(ctx: Ctx, like: string | null): Promise<FileItem[]> {
+  const search = like ? ` AND (title LIKE ?2 ESCAPE '\\' OR value LIKE ?2 ESCAPE '\\' OR note LIKE ?2 ESCAPE '\\')` : '';
+  const rows = await ctx.db
+    .prepare(`SELECT id, title, value, type, kind, folder_id, project_id, created, updated_at FROM resources WHERE mode = ?1 AND type IN ('link', 'drive') AND NOT (project_id IS NULL AND category_id IS NOT NULL)${search} LIMIT 2000`)
+    .bind(...(like ? [ctx.mode, like] : [ctx.mode]))
+    .all<{ id: string; title: string; value: string; type: string; kind: string | null; folder_id: string | null; project_id: string | null; created: string; updated_at: string }>();
+  return rows.results.map((r) => ({
+    type: 'link',
+    id: r.id,
+    name: r.title,
+    folder_id: r.folder_id,
+    project_id: r.project_id,
+    created: r.created,
+    updated_at: r.updated_at,
+    url: r.value,
+    kind: r.kind || detectResource(r.value, r.type).kind,
+  }));
+}
+
 export const resourcesModule: Module = {
   id: 'resources',
+  files: [{ type: 'link', group: 'links', label: 'Link', entity: 'resources', list: linkFiles }],
   description: 'Resources: links, Google Drive items, contact details and text kept with a project or shared by a category.',
   entities: [resourcesEntity],
   features: [
@@ -148,9 +172,15 @@ export const resourcesModule: Module = {
       input: z.object({
         project_id: z.string().optional().describe('The project the resource belongs to'),
         category_id: z.string().optional().describe('Or a category, to share it with all its projects'),
+        folder_id: z.string().optional().describe('Or a Files folder (a link only)'),
         ...itemInput.shape,
       }),
-      run: async (ctx, { project_id, category_id, ...item }) => {
+      run: async (ctx, { project_id, category_id, folder_id, ...item }) => {
+        if (folder_id && !project_id && !category_id) {
+          const value = item.value.trim();
+          const d = detectResource(value, item.type === 'link' ? undefined : item.type);
+          return create(ctx, resourcesEntity, { folder_id, title: item.title?.trim() || guessTitle(value, d.kind), value, type: d.type, kind: item.kind, grp: item.group ?? null, note: item.note ?? null });
+        }
         const r = await addResources(ctx, { project_id, category_id }, [item]);
         if (!r.created.length) throw bad(`Not added: ${r.skipped[0].reason}`);
         return r.created[0];

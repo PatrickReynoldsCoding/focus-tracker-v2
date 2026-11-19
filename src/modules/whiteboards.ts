@@ -11,6 +11,7 @@ import type { Ctx } from '../core/ctx';
 import type { Entity } from '../core/entity';
 import { ApiError, bad } from '../core/errors';
 import { requireFeature } from '../core/features';
+import type { FileItem } from '../core/files';
 import type { Module } from '../core/registry';
 import { create, get, getRaw, remove, update } from '../core/store';
 
@@ -52,11 +53,12 @@ export const whiteboardsEntity: Entity = {
   desc: 'Excalidraw whiteboards, on a project or on their own. The drawing is not in this row: use get_whiteboard and create_whiteboard.',
   modeScoped: true,
   orderGroup: [],
-  filters: ['project_id', 'show_today'],
+  filters: ['project_id', 'show_today', 'folder_id'],
   sort: 'updated_at DESC',
   fields: {
     name: { type: 'text', required: true },
     project_id: { type: 'text', ref: 'projects', cascade: true, desc: 'Empty means a board of its own' },
+    folder_id: { type: 'text', ref: 'folders', desc: 'The Files folder it is in (empty: top level). A project’s folder makes it that project’s board' },
     show_today: { type: 'bool', default: false, desc: 'Shown on Today as a preview' },
     thumbnail: { type: 'text', desc: 'Small data:image preview, made by the web app when the board is saved' },
   },
@@ -146,8 +148,18 @@ async function boardList(ctx: Ctx, projectId?: string | null) {
   return rows.results.map((r) => ({ ...r, show_today: r.show_today === 1, has_preview: r.has_preview === 1, drawing_size: r.drawing_size ?? 0 }));
 }
 
+/** Whiteboards as files (the Files tab); the preview image comes from GET /api/whiteboards/:id/thumbnail. */
+async function boardFiles(ctx: Ctx, like: string | null): Promise<FileItem[]> {
+  const rows = await ctx.db
+    .prepare(`SELECT id, name, folder_id, project_id, show_today, created, updated_at, thumbnail IS NOT NULL AS has_preview FROM whiteboards WHERE mode = ?1${like ? ` AND name LIKE ?2 ESCAPE '\\'` : ''} LIMIT 2000`)
+    .bind(...(like ? [ctx.mode, like] : [ctx.mode]))
+    .all<{ id: string; name: string; folder_id: string | null; project_id: string | null; show_today: number; created: string; updated_at: string; has_preview: number }>();
+  return rows.results.map((r) => ({ type: 'whiteboard', id: r.id, name: r.name, folder_id: r.folder_id, project_id: r.project_id, show_today: r.show_today === 1, created: r.created, updated_at: r.updated_at, thumbnail: r.has_preview === 1 }));
+}
+
 export const whiteboardsModule: Module = {
   id: 'whiteboards',
+  files: [{ type: 'whiteboard', group: 'whiteboards', label: 'Whiteboard', entity: 'whiteboards', feature: FLAG, list: boardFiles }],
   description: 'Excalidraw whiteboards on projects or on their own, with previews, a Today panel and Claude tools to draw.',
   entities: [whiteboardsEntity, whiteboardScenesEntity],
   features: [{ id: FLAG, label: 'Whiteboards', description: 'Excalidraw whiteboards: a Whiteboards tab, boards on project pages and on Today.', default: true }],
@@ -192,6 +204,19 @@ export const whiteboardsModule: Module = {
       ctx.label = 'delete whiteboard';
       await remove(ctx, whiteboardsEntity, c.req.param('id'));
       return c.json({ deleted: c.req.param('id') });
+    });
+    // The preview as an image (the Files tab's grid), so lists need not carry it. The address
+    // carries the board's updated_at, so the browser may keep it.
+    api.get('/whiteboards/:id/thumbnail', async (c) => {
+      const ctx = c.get('ctx');
+      await requireFeature(ctx, FLAG);
+      const board = await get(ctx, whiteboardsEntity, c.req.param('id'));
+      const m = THUMB_RE.exec(String(board.thumbnail ?? ''));
+      if (!m) return c.json({ error: 'This whiteboard has no preview', code: 'not_found' }, 404);
+      const bin = atob(String(board.thumbnail).slice(String(board.thumbnail).indexOf(',') + 1));
+      const out = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+      return new Response(out, { headers: { 'Content-Type': `image/${m[1]}`, 'Cache-Control': 'private, max-age=604800' } });
     });
     // A preview on its own, for a board that has none yet (an imported one opened and closed unchanged).
     // Not undoable, and it does not move the board up the "newest first" list.
@@ -246,12 +271,13 @@ export const whiteboardsModule: Module = {
       input: z.object({
         name: z.string().min(1),
         project_id: z.string().optional(),
+        folder_id: z.string().optional().describe('The Files folder to put it in'),
         show_today: z.boolean().optional(),
         elements: z.array(elementSchema).max(5000).optional(),
         background: z.string().regex(/^#[0-9a-fA-F]{3,8}$/).optional(),
       }),
       run: async (ctx, a) => {
-        const board = await create(ctx, whiteboardsEntity, { name: a.name, project_id: a.project_id, show_today: a.show_today });
+        const board = await create(ctx, whiteboardsEntity, { name: a.name, project_id: a.project_id, folder_id: a.folder_id, show_today: a.show_today });
         if (a.elements?.length) {
           const text = sceneText({ elements: a.elements, appState: { viewBackgroundColor: a.background ?? '#ffffff' }, files: {} });
           await writeScene(ctx, board.id, text, { undoable: true });

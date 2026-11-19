@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { Ctx } from '../core/ctx';
 import type { Entity, Row } from '../core/entity';
 import { bad } from '../core/errors';
+import { type FileItem, type FileSource } from '../core/files';
 import type { Module } from '../core/registry';
 import { create, get, list, update } from '../core/store';
 import { board, columnsEntity, firstColumn, tasksEntity } from './projects';
@@ -18,11 +19,12 @@ export const listsEntity: Entity = {
   desc: 'What the Notes tab shows: plain lists (items are cards), to-do lists (items are to-dos) and notes (Markdown text).',
   modeScoped: true,
   orderGroup: [],
-  filters: ['kind', 'project_id', 'show_today'],
+  filters: ['kind', 'project_id', 'show_today', 'folder_id'],
   fields: {
     name: { type: 'text', required: true },
     kind: { type: 'text', enum: LIST_KINDS, default: 'list' },
-    project_id: { type: 'text', ref: 'projects', desc: 'Shows the list on that project’s page too' },
+    project_id: { type: 'text', ref: 'projects', desc: 'Shows the list on that project’s page too (and puts it in the project’s folder)' },
+    folder_id: { type: 'text', ref: 'folders', desc: 'The Files folder it is in (empty: top level). A project’s folder makes it that project’s list' },
     show_today: { type: 'bool', default: false },
     color: { type: 'text' },
     display: { type: 'text', enum: ['full', 'one'], default: 'full', desc: 'On Today: the whole list ("full") or one random item at a time ("one")' },
@@ -155,10 +157,45 @@ export async function projectNoteCards(ctx: Ctx) {
   return { on, notes: rows.results.map((r) => ({ ...r, show_today: !!r.show_today })) };
 }
 
+/** Lists of one kind as files (the Files tab): a note with its first lines, a list with its item count,
+ *  a to-do list with its open to-dos; last changed counts what is inside. */
+async function listFiles(ctx: Ctx, kind: (typeof LIST_KINDS)[number], like: string | null): Promise<FileItem[]> {
+  const inner =
+    kind === 'note'
+      ? { join: 'LEFT JOIN notes x ON x.list_id = l.id', cols: 'x.updated_at AS inner_at, substr(x.body, 1, 240) AS preview, NULL AS count', search: ` OR x.body LIKE ?3 ESCAPE '\\'` }
+      : kind === 'todo'
+        ? { join: 'LEFT JOIN (SELECT list_id, MAX(updated_at) AS u, SUM(done IS NULL) AS n FROM todos WHERE mode = ?1 GROUP BY list_id) x ON x.list_id = l.id', cols: 'x.u AS inner_at, NULL AS preview, x.n AS count', search: '' }
+        : { join: 'LEFT JOIN (SELECT list_id, MAX(updated_at) AS u, COUNT(*) AS n FROM tasks WHERE mode = ?1 AND list_id IS NOT NULL GROUP BY list_id) x ON x.list_id = l.id', cols: 'x.u AS inner_at, NULL AS preview, x.n AS count', search: '' };
+  const where = like ? ` AND (l.name LIKE ?3 ESCAPE '\\'${inner.search})` : '';
+  const rows = await ctx.db
+    .prepare(`SELECT l.id, l.name, l.folder_id, l.project_id, l.show_today, l.created, l.updated_at, ${inner.cols} FROM lists l ${inner.join} WHERE l.mode = ?1 AND l.kind = ?2${where} LIMIT 2000`)
+    .bind(...(like ? [ctx.mode, kind, like] : [ctx.mode, kind]))
+    .all<{ id: string; name: string; folder_id: string | null; project_id: string | null; show_today: number; created: string; updated_at: string; inner_at: string | null; preview: string | null; count: number | null }>();
+  return rows.results.map((r) => ({
+    type: kind,
+    id: r.id,
+    name: r.name,
+    folder_id: r.folder_id,
+    project_id: r.project_id,
+    show_today: r.show_today === 1,
+    created: r.created,
+    updated_at: r.inner_at && r.inner_at > r.updated_at ? r.inner_at : r.updated_at,
+    preview: r.preview,
+    count: r.count ?? 0,
+  }));
+}
+
+const listFileSources: FileSource[] = [
+  { type: 'note', group: 'notes', label: 'Note', entity: 'lists', list: (ctx, like) => listFiles(ctx, 'note', like) },
+  { type: 'todo', group: 'lists', label: 'To-do list', entity: 'lists', list: (ctx, like) => listFiles(ctx, 'todo', like) },
+  { type: 'list', group: 'lists', label: 'List', entity: 'lists', list: (ctx, like) => listFiles(ctx, 'list', like) },
+];
+
 export const listsModule: Module = {
   id: 'lists',
   description: 'Plain lists, to-do lists, notes and to-dos.',
   entities: [listsEntity, todosEntity],
+  files: listFileSources,
   routes(api) {
     api.get('/lists/overview', async (c) => c.json(await overview(c.get('ctx'))));
     api.get('/lists/project-notes', async (c) => c.json(await projectNoteCards(c.get('ctx'))));
@@ -202,6 +239,7 @@ export const listsModule: Module = {
         body: z.string().optional().describe('Markdown body for a note'),
         show_today: z.boolean().optional(),
         project_id: z.string().optional(),
+        folder_id: z.string().optional().describe('The Files folder to put it in'),
         color: z.string().optional(),
       }),
       run: async (ctx, { items, body, ...a }) => {

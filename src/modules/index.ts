@@ -1,6 +1,7 @@
 // Every feature module. Remove a line to remove a feature (and its tables stay unused).
 import type { Module } from '../core/registry';
 import { basicsModule } from './basics';
+import { filesModule } from './files';
 import { habitsModule } from './habits';
 import { insightsModule } from './insights';
 import { layoutModule } from './layout';
@@ -44,6 +45,8 @@ export const MODULES: Module[] = [
   layoutModule,
   stickiesModule,
   insightsModule,
+  // After every module with files: deleting a project deletes or clears its files before its folder.
+  filesModule,
   swiftbarModule,
   systemModule,
 ];

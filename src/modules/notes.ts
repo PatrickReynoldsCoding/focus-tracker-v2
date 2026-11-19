@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { Ctx } from '../core/ctx';
 import type { Entity, Row } from '../core/entity';
 import { bad } from '../core/errors';
+import type { FileItem } from '../core/files';
 import type { Module } from '../core/registry';
 import { create, list, update } from '../core/store';
 
@@ -45,10 +46,36 @@ export async function setNote(ctx: Ctx, owner: Owner, body: string, how: 'replac
   return create(ctx, notesEntity, { ...owner, body: next });
 }
 
+/** Each project's notes as a file in the project's folder (they cannot move). Empty ones show
+ *  only in the folder itself, not in searches or the Notes filter. */
+async function projectNoteFiles(ctx: Ctx, like: string | null): Promise<FileItem[]> {
+  const where = like ? ` AND (p.name LIKE ?2 ESCAPE '\\' OR n.body LIKE ?2 ESCAPE '\\')` : '';
+  const rows = await ctx.db
+    .prepare(
+      `SELECT p.id, p.name, p.created, n.updated_at, n.show_today, substr(n.body, 1, 240) AS preview, length(n.body) AS size
+       FROM projects p LEFT JOIN notes n ON n.project_id = p.id WHERE p.mode = ?1${where} LIMIT 2000`,
+    )
+    .bind(...(like ? [ctx.mode, like] : [ctx.mode]))
+    .all<{ id: string; name: string; created: string; updated_at: string | null; show_today: number | null; preview: string | null; size: number | null }>();
+  return rows.results.map((r) => ({
+    type: 'project-note',
+    id: r.id,
+    name: `${r.name} notes`,
+    folder_id: null,
+    project_id: r.id,
+    created: r.created,
+    updated_at: r.updated_at ?? r.created,
+    show_today: r.show_today === 1,
+    preview: r.preview,
+    quiet: !r.size,
+  }));
+}
+
 export const notesModule: Module = {
   id: 'notes',
   description: 'Project notes and notes on the Notes tab, as Markdown.',
   entities: [notesEntity],
+  files: [{ type: 'project-note', group: 'notes', label: 'Project notes', list: projectNoteFiles }],
   // Read by the web app's note editor (web/src/features/editor).
   features: [
     {
