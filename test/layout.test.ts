@@ -24,6 +24,14 @@ describe('desktop layout', () => {
     expect(again.removed).toEqual(['notes', 'list-abc']);
   });
 
+  it('keeps a phone height apart from the computer’s', async () => {
+    const m = await freshMode();
+    const grid = { items: { habits: { x: 0, y: 0, w: 6, h: 300, ph: 180 }, todos: { x: 6, y: 10, w: 6, ph: 240 } }, removed: [] };
+    expect(await call('PUT', '/layout/today/grid', grid, m)).toEqual(grid);
+    const pill = await call('PUT', '/layout/today/grids/today', { items: { habits: { x: 0, y: 0, w: 12, ph: 120 } } }, m);
+    expect(pill.items.habits).toEqual({ x: 0, y: 0, w: 12, ph: 120 });
+  });
+
   it('refuses places off the grid and odd ids', async () => {
     const m = await freshMode();
     const bad = async (body: unknown) => (await call('PUT', '/layout/today/grid', body, { ...m, expect: 400 })).error as string;
@@ -32,6 +40,7 @@ describe('desktop layout', () => {
     expect(await bad({ items: { a: { x: -1, y: 0, w: 2 } } })).toContain('a.x');
     expect(await bad({ items: { a: { x: 0, y: 0.5, w: 2 } } })).toContain('a.y');
     expect(await bad({ items: { a: { x: 0, y: 0, w: 2, h: 10 } } })).toContain('a.h');
+    expect(await bad({ items: { a: { x: 0, y: 0, w: 2, ph: 5000 } } })).toContain('a.ph');
     expect(await bad({ items: { 'no spaces': { x: 0, y: 0, w: 2 } } })).toContain('not a panel id');
     expect(await bad({ items: [] })).toContain('items');
     expect(await bad({ removed: ['<script>'] })).toContain('not a panel id');
@@ -205,5 +214,24 @@ describe('Claude and the pills', () => {
     await call('POST', '/undo', {});
     expect((await call('GET', '/layout/today')).pills).toEqual(before);
     await tool('set_today_pills', { pills: null, view: { pillAll: true, focusCard: 'compact' } });
+  });
+});
+
+describe('Claude and page layouts', () => {
+  it('reads and replaces a page’s layout and a pill’s, undoably', async () => {
+    const before = await tool('get_page_layout', { page: 'project' });
+    const grid = { items: { board: { x: 0, y: 0, w: 12 }, notes: { x: 0, y: 10, w: 6, h: 320, ph: 200 } }, removed: ['criteria'] };
+    const out = await tool('set_page_layout', { page: 'project', grid });
+    expect(out.grid).toEqual(grid);
+    expect((await call('GET', '/layout/project')).grid).toEqual(grid);
+    expect(await toolError('set_page_layout', { page: 'project', grid: { items: { a: { x: 10, y: 0, w: 6 } } } })).toContain('right edge');
+    await call('POST', '/undo', {});
+    expect((await tool('get_page_layout', { page: 'project' })).grid).toEqual(before.grid);
+
+    const pill = await tool('set_page_layout', { page: 'today', pill: 'today', grid: { items: { habits: { x: 6, y: 0, w: 6, ph: 150 } }, removed: ['x'] } });
+    expect(pill.grid).toEqual({ items: { habits: { x: 6, y: 0, w: 6, ph: 150 } }, removed: [] });
+    expect((await tool('get_page_layout', { page: 'today', pill: 'today' })).grid.items.habits.ph).toBe(150);
+    await tool('set_page_layout', { page: 'today', pill: 'today', grid: null });
+    expect((await tool('get_page_layout', { page: 'today', pill: 'today' })).grid).toBeNull();
   });
 });

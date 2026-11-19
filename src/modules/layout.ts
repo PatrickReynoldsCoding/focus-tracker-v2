@@ -1,7 +1,8 @@
 // How pages are laid out in the web app: where panels sit on a desktop (Today, a project's page),
 // which are removed, Today's pills (tabs, on every screen) and their switches. Stored per mode in
 // settings rows, so every device shows the same:
-//   layout.<page>        { items: { <panel id>: { x, y, w, h? } }, removed: [<panel id>] }  (desktop grid; Today's "All" pill)
+//   layout.<page>        { items: { <panel id>: { x, y, w, h?, ph? } }, removed: [<panel id>] }  (desktop grid; Today's "All" pill;
+//                        h: fixed height on a computer, ph: on a phone; y also sets the phone's order)
 //   layout.<page>.pills  [{ id, name, icon, panels: [<panel id>] }]                       (pills, undoable)
 //   layout.<page>.grids  { <pill id>: { items, removed: [] } }                              (each pill's own desktop grid)
 //   layout.<page>.view   { focusCard, pillCounts, pillSwipe, pillLast, pillAll }           (switches)
@@ -28,7 +29,7 @@ const PANEL_ID = /^[A-Za-z0-9_:.-]{1,60}$/;
 const PILL_ID = /^[A-Za-z0-9_-]{1,40}$/;
 const MAX_ITEMS = 200;
 
-export type GridItem = { x: number; y: number; w: number; h?: number | null };
+export type GridItem = { x: number; y: number; w: number; h?: number | null; ph?: number | null };
 export type Grid = { items: Record<string, GridItem>; removed: string[] };
 export type Pill = { id: string; name: string; icon: string | null; panels: string[] };
 export type View = { focusCard?: (typeof FOCUS_CARD)[number]; pillCounts?: boolean; pillSwipe?: boolean; pillLast?: boolean; pillAll?: boolean };
@@ -74,6 +75,7 @@ export function cleanGrid(body: unknown): Grid {
       const y = int(p.y, `${id}.y`, 0, 9999);
       const item: GridItem = { x, y, w };
       if (p.h != null) item.h = int(p.h, `${id}.h`, 60, 4000);
+      if (p.ph != null) item.ph = int(p.ph, `${id}.ph`, 60, 4000);
       items[id] = item;
     }
   }
@@ -174,7 +176,8 @@ export const layoutModule: Module = {
     {
       id: 'movable-panels',
       label: 'Move and resize panels',
-      description: 'On a wide screen, drag a panel on Today or a project’s page by its title, and use Edit layout to resize, remove and add panels. Saved for every device. Off: panels stay in their usual order.',
+      description:
+        'Move and resize panels on Today and a project’s page, straight on the page: on a computer drag a panel by its title, resize it from its corner and use its ⋯ menu to remove it; on a phone press and hold a panel to move it, change its height or remove it. Saved for every device. Off: panels stay in their usual order.',
       default: true,
     },
     {
@@ -288,6 +291,42 @@ export const layoutModule: Module = {
         await savePills(ctx, 'today', pills);
         if (change) await ctx.setSetting('layout.today.view', JSON.stringify({ ...(await ctx.jsonSetting<View>('layout.today.view', {})), ...change }));
         return readLayout(ctx, 'today').then(({ pills, view }) => ({ pills, view }));
+      },
+    },
+    {
+      name: 'get_page_layout',
+      description:
+        'Where panels sit on Today or on project pages (one layout for every project page): each panel id with its column x (0–11), width w in columns (1–12), order y, and optional fixed heights h (computer) and ph (phone), in pixels; and removed (panels taken off the page). ' +
+        'With pill (a pill id from get_today_pills), the layout inside that pill of Today. grid null means the usual layout. The phone shows panels in y order.',
+      readOnly: true,
+      feature: 'movable-panels',
+      input: z.object({ page: z.enum(['today', 'project']), pill: z.string().optional() }),
+      run: async (ctx, a) => {
+        const l = await readLayout(ctx, a.page);
+        if (a.pill) return { page: a.page, pill: a.pill, grid: l.grids[pillId(a.pill)] ?? null };
+        return { page: a.page, grid: l.grid };
+      },
+    },
+    {
+      name: 'set_page_layout',
+      description:
+        'Replace the layout of Today, of project pages or of one of Today’s pills (pill id): the whole grid as get_page_layout returns it (items and removed; null = back to the usual layout). x + w may not pass 12; h and ph are 60–4000 or left out for “follow the content”. Can be undone.',
+      feature: 'movable-panels',
+      input: z.object({
+        page: z.enum(['today', 'project']),
+        pill: z.string().optional(),
+        grid: z.object({ items: z.record(z.string(), z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number().nullable().optional(), ph: z.number().nullable().optional() })), removed: z.array(z.string()).optional() }).nullable(),
+      }),
+      run: async (ctx, a) => {
+        const grid = a.grid ? cleanGrid(a.grid) : null;
+        ctx.label = 'change a page’s layout';
+        if (a.pill) {
+          await requireFeature(ctx, 'today-pills');
+          await savePillGrid(ctx, a.page, pillId(a.pill), grid && { ...grid, removed: [] }, true);
+          return { page: a.page, pill: a.pill, grid: (await readLayout(ctx, a.page)).grids[a.pill] ?? null };
+        }
+        await setSettingWithUndo(ctx, `layout.${a.page}`, grid ? JSON.stringify(grid) : null);
+        return { page: a.page, grid: (await readLayout(ctx, a.page)).grid };
       },
     },
   ],
