@@ -58,7 +58,7 @@ export function PillsLayout({ place, props, panels, next }: PanelLayoutProps) {
 }
 
 /** Where a swipe means something else (the same places the tab swipe leaves alone). */
-const BLOCKED = '.board, .ed, .ProseMirror, dialog, [popover], .wb-full, input, textarea, select, [contenteditable], .sortable-chosen, .sortable-drag';
+const BLOCKED = '.lg-arranging, .board, .ed, .ProseMirror, dialog, [popover], .wb-full, input, textarea, select, [contenteditable], .sortable-chosen, .sortable-drag';
 function blockedAt(el: Element | null, stop: Element): boolean {
   for (let e = el; e && e !== stop; e = e.parentElement) {
     if (e.matches(BLOCKED)) return true;
@@ -214,7 +214,7 @@ function Pills({ place, props, panels, next }: PanelLayoutProps) {
       .filter((c) => c !== null && c !== undefined && c !== '')
       .join(' · ');
 
-  /** Inside a pill the grid keeps the pill's own layout; Remove takes a panel out of the pill. */
+  /** Inside a pill the grid (or the phone's stack) keeps the pill's own layout; Remove takes a panel out of the pill. */
   const scopeFor = (pill: Pill): GridStore => ({
     key: `pill-${pill.id}`,
     label: `the pill “${pill.name}”`,
@@ -225,10 +225,12 @@ function Pills({ place, props, panels, next }: PanelLayoutProps) {
       const list = pillsNow.current.map((x) => (x.id === pill.id ? { ...x, panels: x.panels.filter((id) => id !== p.id) } : x));
       savePills(place, list).then((ok) => ok && say(`${titleOf(p)} is out of “${pill.name}”. All still has it if it is on Today.`, 'info', { label: 'Undo', run: undo }));
     },
+    removeLabel: 'Remove from this pill',
+    // For now the pill's sheet puts panels in it (a coming "Add panel" button will do it in place).
     add: () => setSheet({ pill, isNew: false }),
-    addLabel: '+ Add panels',
+    addLabel: 'Add panels…',
     reset: () => resetPillGrid(place, pill.id),
-    resetLabel: 'Reset this pill',
+    resetLabel: 'Reset this pill’s layout',
   });
   const editable = current && current.pill.id !== ALL ? current.pill : null;
 

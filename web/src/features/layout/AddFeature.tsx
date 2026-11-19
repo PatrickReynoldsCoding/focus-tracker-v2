@@ -1,5 +1,7 @@
-// "+ Add feature" in Edit layout: what can be put on this page (panels removed from it, then the
-// notes, lists and whiteboards its sources offer), and below them what is on it already, greyed.
+// "Add panels…" (a panel's ⋯ menu on a computer, the Arrange bar on a phone): what can be put on
+// this page (panels removed from it, then the notes, lists and whiteboards its sources offer), and
+// below them what is on it already, greyed. Temporary: the owner's next item adds an "Add panel"
+// button in its place.
 
 import { useEffect, useState } from 'preact/hooks';
 import { useSources, type Addable, type PanelDef } from '../../core/registry';
@@ -65,7 +67,7 @@ export function AddFeature({ place, all, onClose }: { place: string; all: PanelD
     </li>
   );
   return (
-    <Dialog title="Add feature" onClose={onClose} wide>
+    <Dialog title="Add panels" onClose={onClose} wide>
       <div class="lg-add">
         {back.length > 0 && (
           <>

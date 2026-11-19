@@ -1,6 +1,6 @@
 // The saved layout of a page (GET /api/layout/<place>): the desktop grid, Today's pills, each
 // pill's own grid and the switches. One copy per mode and place, shared by every component that
-// needs it (the grid, the Edit layout button, the pills, Today settings). A change shows at once and is saved behind;
+// needs it (the grid, the phone's stack, the pills, Today settings). A change shows at once and is saved behind;
 // a refused save puts the old one back with a message.
 
 import { useEffect, useReducer } from 'preact/hooks';
@@ -8,7 +8,8 @@ import { del, get, HttpError, mode, newId, put, say, undo, version } from '../..
 import * as offline from '../../core/offline';
 import { signal, useSignal } from '../../core/signal';
 
-export type Pos = { x: number; y: number; w: number; h?: number | null };
+/** A panel's place: column, width, order, a fixed height on a computer (h) and on a phone (ph). */
+export type Pos = { x: number; y: number; w: number; h?: number | null; ph?: number | null };
 export type Grid = { items: Record<string, Pos>; removed: string[] };
 export type Pill = { id: string; name: string; icon: string | null; panels: string[] };
 export type View = { focusCard?: 'compact' | 'full' | 'hidden'; pillCounts?: boolean; pillSwipe?: boolean; pillLast?: boolean; pillAll?: boolean };

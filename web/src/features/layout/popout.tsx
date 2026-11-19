@@ -120,6 +120,8 @@ export function PopoutLayout({ place, props, panels, next }: PanelLayoutProps) {
         };
       return {
         ...p,
+        // In the desktop grid the button is in the panel's ⋯ menu instead.
+        menu: (pr: any) => [...(p.menu?.(pr) ?? []), { label: 'Pop out', icon: '⧉', run: () => popOut(place, key, p, pr) }],
         render: (pr: any) => {
           const node = p.render(pr);
           if (!node) return null;

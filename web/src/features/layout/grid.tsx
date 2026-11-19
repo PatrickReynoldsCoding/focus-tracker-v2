@@ -1,5 +1,6 @@
-// The desktop grid (V1-GAPS 39): panels in 12 columns, dragged by their title (or the ⠿ grip),
-// resized in Edit layout, heights following their content. Hand-made rather than a library: the
+// The desktop grid (V1-GAPS 39): panels in 12 columns, moved and resized straight on the page:
+// dragged by their title (or the ⠿ grip), resized from their corner, removed from their ⋯ menu;
+// heights follow their content unless set. Narrower screens stack the panels (stack.tsx). Hand-made rather than a library: the
 // panels are Preact components that must not be moved in the DOM behind Preact's back, the
 // packing rule is small, and E-ink needs it to jump rather than slide.
 //
@@ -11,11 +12,12 @@
 import type { VNode } from 'preact';
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { del, say, undo } from '../../core/api';
+import { Menu, MenuItem } from '../../core/menu';
 import type { PanelDef, PanelLayoutProps } from '../../core/registry';
-import { signal, useSignal } from '../../core/signal';
 import { isEink } from '../../core/theme';
 import { AddFeature } from './AddFeature';
 import { GridScope, type GridStore } from './scope';
+import { Stack } from './stack';
 import { COLS, DESKTOP, layoutNow, saveGrid, saveLayout, titleOf, useLayout, useMedia, type Grid as GridData, type Pos } from './store';
 
 const GAP = 14;
@@ -23,12 +25,7 @@ const MIN_W = 2;
 const MIN_H = 60;
 const DRAG_START = 5; // px a pointer must move before a press on a title becomes a drag
 
-/** The place whose grid is on screen (for the Edit layout button in the header), and the one being edited. */
-export const gridOn = signal<string | null>(null);
-export const editing = signal<string | null>(null);
-const onScreen = new Map<string, number>();
-
-type Placed = Pos & { auto?: boolean };
+export type Placed = Pos & { auto?: boolean };
 
 /** Where every drawn panel goes: its saved place, or (new or never saved) the end, in a column chosen when packed. */
 export function places(list: PanelDef<any>[], saved: GridData | null): Record<string, Placed> {
@@ -39,7 +36,7 @@ export function places(list: PanelDef<any>[], saved: GridData | null): Record<st
     const s = saved?.items[p.id] ?? (p.replaces ?? []).map((r) => saved?.items[r]).find(Boolean);
     if (!s) continue;
     const w = Math.min(COLS, Math.max(1, s.w));
-    out[p.id] = { x: Math.min(s.x, COLS - w), y: s.y, w, h: s.h ?? null };
+    out[p.id] = { x: Math.min(s.x, COLS - w), y: s.y, w, h: s.h ?? null, ph: s.ph ?? null };
     maxY = Math.max(maxY, s.y);
   }
   let k = 0;
@@ -48,7 +45,7 @@ export function places(list: PanelDef<any>[], saved: GridData | null): Record<st
 }
 
 /** The order panels are packed in: by y, then x, then their usual order. */
-function sortedIds(ids: string[], pos: Record<string, Placed>): string[] {
+export function sortedIds(ids: string[], pos: Record<string, Placed>): string[] {
   const idx = new Map(ids.map((id, i) => [id, i]));
   return [...ids].sort((a, b) => pos[a].y - pos[b].y || (pos[a].auto ? 0 : pos[a].x) - (pos[b].auto ? 0 : pos[b].x) || idx.get(a)! - idx.get(b)!);
 }
@@ -110,10 +107,10 @@ export function readingOrder(ids: string[], saved: GridData | null): string[] {
   return sortedIds(ids, places(list, saved));
 }
 
-/** The layout for 'today' and 'project': the grid on a desktop; on a narrower screen the panels in
- *  the desktop's reading order without the removed ones. Inside one of Today's pills the grid is
- *  the pill's own (GridScope). */
-export function GridLayout({ place, props, panels, next }: PanelLayoutProps) {
+/** The layout for 'today' and 'project': the grid on a desktop; on a narrower screen the panels
+ *  stacked in the desktop's reading order without the removed ones (a long press arranges them).
+ *  Inside one of Today's pills the layout is the pill's own (GridScope). */
+export function GridLayout({ place, props, panels }: PanelLayoutProps) {
   const desktop = useMedia(DESKTOP);
   const data = useLayout(place);
   const scope = useContext(GridScope);
@@ -126,32 +123,24 @@ export function GridLayout({ place, props, panels, next }: PanelLayoutProps) {
     read: () => layoutNow(place).grid,
     save: (g) => saveGrid(place, g),
     remove: (p, base) => removeFromPage(place, p, base),
+    removeLabel: place === 'project' ? 'Remove from project pages' : 'Remove from Today',
     add: () => {},
-    addLabel: '+ Add feature',
+    addLabel: 'Add panels…',
     reset: () => resetPage(place),
-    resetLabel: 'Reset this page',
+    resetLabel: 'Reset this page’s layout',
   };
-  if (!desktop) {
-    const movable = shown.filter((p) => !p.fixed);
-    const pos = places(movable, store.saved);
-    const order = sortedIds(
-      movable.map((p) => p.id),
-      pos,
-    );
-    const byId = new Map(movable.map((p) => [p.id, p]));
-    return next([...shown.filter((p) => p.fixed === 'top'), ...order.map((id) => byId.get(id)!), ...shown.filter((p) => p.fixed === 'bottom')]);
-  }
+  if (!desktop) return <Stack key={store.key} place={place} props={props} panels={shown} all={panels} store={store} own={!scope} />;
   return <Grid key={store.key} place={place} props={props} panels={shown} all={panels} store={store} own={!scope} />;
 }
 
-/** Edit layout's Remove on a page's own grid: a note or list leaves Today; another panel is stored in `removed`. */
+/** Remove on a page's own grid: a note or list leaves Today; another panel is stored in `removed`. */
 function removeFromPage(place: string, p: PanelDef<any>, base?: GridData) {
   if (p.onRemove) return p.onRemove();
   const g = base ?? layoutNow(place).grid ?? { items: {}, removed: [] };
   saveGrid(place, { ...g, removed: [...g.removed.filter((x) => x !== p.id), p.id] }).then(
     (ok) =>
       ok &&
-      say(`${titleOf(p)} removed. + Add feature brings it back.`, 'info', {
+      say(`${titleOf(p)} removed. Add panels (⋯ on a computer, a long press on a phone) brings it back.`, 'info', {
         label: 'Undo',
         run: () => {
           const g2 = layoutNow(place).grid ?? g;
@@ -163,8 +152,8 @@ function removeFromPage(place: string, p: PanelDef<any>, base?: GridData) {
 
 function Grid({ place, props, panels, all, store, own }: { place: string; props: any; panels: PanelDef<any>[]; all: PanelDef<any>[]; store: GridStore; own: boolean }) {
   const saved = store.saved;
-  const edit = useSignal(editing) === place;
   const [adding, setAdding] = useState(false);
+  const [menu, setMenu] = useState<{ anchor: HTMLElement; p: PanelDef<any> } | null>(null);
   const box = useRef<HTMLDivElement>(null);
   const top = panels.filter((p) => p.fixed === 'top');
   const bottom = panels.filter((p) => p.fixed === 'bottom');
@@ -252,24 +241,6 @@ function Grid({ place, props, panels, all, store, own }: { place: string; props:
     return () => (ro.disconnect(), mo.disconnect(), cancelAnimationFrame(t), cancelAnimationFrame(frame.current));
   }, []);
 
-  useEffect(() => {
-    // Counted, so a grid drawn again before the old one is gone does not hide the button.
-    onScreen.set(place, (onScreen.get(place) ?? 0) + 1);
-    gridOn.value = place;
-    // Edit layout stays on while the grid is drawn again (a window resized for a moment); a new page ends it (index.tsx).
-    return () => {
-      const n = (onScreen.get(place) ?? 1) - 1;
-      onScreen.set(place, n);
-      if (n <= 0 && gridOn.value === place) gridOn.value = null;
-    };
-  }, [place]);
-  useEffect(() => {
-    if (!edit) return;
-    const key = (e: KeyboardEvent) => e.key === 'Escape' && !document.querySelector('dialog[open]') && (editing.value = null);
-    window.addEventListener('keydown', key);
-    return () => window.removeEventListener('keydown', key);
-  }, [edit]);
-
   /** The grid with every drawn panel in this order (panels not drawn now keep their place). */
   const gridFor = (order: string[], change: Record<string, Partial<Pos>> = {}): GridData => {
     const cur = store.read();
@@ -282,6 +253,7 @@ function Grid({ place, props, panels, all, store, own }: { place: string; props:
       const it: Pos = { x: c.x ?? (p.auto ? Number(els.get(id)?.dataset.x ?? 0) : p.x), y: i * 10, w: c.w ?? p.w };
       const h = 'h' in c ? c.h : p.h;
       if (h) it.h = h;
+      if (p.ph) it.ph = p.ph;
       items_[id] = it;
     });
     for (const [id, it] of Object.entries(cur?.items ?? {})) if (!items_[id]) items_[id] = { ...it };
@@ -394,16 +366,13 @@ function Grid({ place, props, panels, all, store, own }: { place: string; props:
     };
   }, []);
 
-  /** A press inside a panel: on its title (or anywhere while editing) it may become a drag. */
+  /** A press inside a panel: on its title it may become a drag; on its corner, a resize. */
   const press = (e: PointerEvent, id: string) => {
     const t = e.target as HTMLElement;
     if (t.closest('.lg-resize')) return begin(e, id, 'resize');
     if (t.closest('.lg-grip')) return begin(e, id, 'move');
+    if (t.closest('.lg-more')) return;
     if (e.pointerType === 'touch') return; // a finger scrolls; it moves a panel only by its grip
-    if (edit) {
-      if (t.closest('.lg-edit-bar button, dialog')) return;
-      return begin(e, id, 'move');
-    }
     if (t.closest(NO_DRAG)) return;
     // The title: the panel's heading (links and buttons in it too: a press that does not move is still a click).
     const h2 = t.closest('h2');
@@ -438,27 +407,21 @@ function Grid({ place, props, panels, all, store, own }: { place: string; props:
 
   const autoHeight = (id: string) => save(sortedIds(now.current.ids, now.current.pos), { [id]: { h: null } });
 
-  const titleOfPanel = (p: PanelDef<any>) => titleOf(p);
+  const addPanels = () => (own ? setAdding(true) : store.add());
   return (
-    <div class={`lg-page ${edit ? 'lg-editing' : ''}`}>
+    <div class="lg-page">
       {top.map((p) => (
         <Fixed key={p.id} node={p.render(props)} />
       ))}
-      {edit && (
-        <div class="lg-bar card" role="region" aria-label="Edit layout">
-          <p>
-            <strong>Edit layout</strong>
-            <span class="muted"> · {store.label}: drag a panel to move it, its corner to resize it.</span>
-          </p>
+      {!drawn.length && (
+        <div class="card lg-none">
+          <p class="muted">No panels here.</p>
           <div class="row">
-            <button class="primary small" onClick={() => (own ? setAdding(true) : store.add())}>
+            <button class="primary small" onClick={addPanels}>
               {store.addLabel}
             </button>
             <button class="ghost small" onClick={store.reset}>
               {store.resetLabel}
-            </button>
-            <button class="ghost small" onClick={() => (editing.value = null)}>
-              Done
             </button>
           </div>
         </div>
@@ -473,32 +436,22 @@ function Grid({ place, props, panels, all, store, own }: { place: string; props:
               </div>
               <button
                 class="lg-grip"
-                aria-label={`Move ${titleOfPanel(p)}`}
+                aria-label={`Move ${titleOf(p)}`}
                 title="Drag to move. Arrow keys move it; Shift + arrow keys change its size."
                 onKeyDown={(e) => keys(e, p.id)}
               >
                 ⠿
               </button>
-              {edit && (
-                <div class="lg-edit">
-                  <div class="lg-edit-bar">
-                    <span class="lg-edit-name">{titleOfPanel(p)}</span>
-                    <span class="lg-edit-acts">
-                      {h ? (
-                        <button class="small" onClick={() => autoHeight(p.id)}>
-                          Auto height
-                        </button>
-                      ) : null}
-                      {!p.alwaysShown && (
-                        <button class="small danger" onClick={() => remove(p)} aria-label={`Remove ${titleOfPanel(p)}`}>
-                          Remove
-                        </button>
-                      )}
-                    </span>
-                  </div>
-                  <span class="lg-resize" aria-hidden="true" title="Drag to resize" />
-                </div>
-              )}
+              <button
+                class={`lg-more ${menu?.p.id === p.id ? 'open' : ''}`}
+                aria-label={`More for ${titleOf(p)}`}
+                aria-haspopup="menu"
+                title="Remove, height, pop out"
+                onClick={(e) => setMenu(menu?.p.id === p.id ? null : { anchor: e.currentTarget as HTMLElement, p })}
+              >
+                ⋯
+              </button>
+              <span class="lg-resize" aria-hidden="true" title="Drag to resize" />
             </div>
           );
         })}
@@ -507,6 +460,32 @@ function Grid({ place, props, panels, all, store, own }: { place: string; props:
       {bottom.map((p) => (
         <Fixed key={p.id} node={p.render(props)} />
       ))}
+      {menu && (
+        <Menu anchor={menu.anchor} label={titleOf(menu.p)} onClose={() => setMenu(null)}>
+          {pos[menu.p.id]?.h ? (
+            <MenuItem icon="↕" onClick={() => autoHeight(menu.p.id)}>
+              Auto height
+            </MenuItem>
+          ) : null}
+          {(menu.p.menu?.(props) ?? []).map((a) => (
+            <MenuItem key={a.label} icon={a.icon} onClick={a.run}>
+              {a.label}
+            </MenuItem>
+          ))}
+          {!menu.p.alwaysShown && (
+            <MenuItem icon="✕" danger onClick={() => remove(menu.p)}>
+              {store.removeLabel}
+            </MenuItem>
+          )}
+          <div class="files-menu-line" role="separator" />
+          <MenuItem icon="+" onClick={addPanels}>
+            {store.addLabel}
+          </MenuItem>
+          <MenuItem icon="↺" onClick={store.reset}>
+            {store.resetLabel}
+          </MenuItem>
+        </Menu>
+      )}
       {adding && <AddFeature place={place} all={all} onClose={() => setAdding(false)} />}
     </div>
   );

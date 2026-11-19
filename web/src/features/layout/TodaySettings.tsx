@@ -123,7 +123,7 @@ export function TodaySettings({ place, panels, pills, saved, view, onClose }: { 
       <div class="pl-settings">
         <section>
           <h3>Pills</h3>
-          <p class="muted small">Each pill is a tab of Today with the panels you put in it, the same on every device. On a computer each pill has its own layout; on a phone its panels stack, and a swipe on them goes to the next pill.</p>
+          <p class="muted small">Each pill is a tab of Today with the panels you put in it, the same on every device. On a computer each pill has its own layout: drag a panel by its title, resize it from its corner, ⋯ for more. On a phone its panels stack: press and hold one to move it, change its height or remove it, and swipe on them to go to the next pill.</p>
           <ul class="pl-cards">
             {pills.map((pill, i) => (
               <li key={pill.id} class="pl-card">
