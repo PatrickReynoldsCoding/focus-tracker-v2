@@ -25,7 +25,7 @@ Modular first: a feature lives in its own files on the server and in the browser
 **Browser** (`web/src/`)
 - `core/`: `api.ts` (fetch, `optimistic`, `change`, undo, toast), `signal.ts`, `ui.tsx` (shared components), `features.ts` (flags in the browser: `useFlag(id)`), `registry.tsx` (the plug-in points).
 - `features/<name>/`: one feature each, registering what it adds; `features/index.ts` imports each one once. Plug-in points (all take an optional `feature` flag id and an `order`):
-  - `registerTab` (side bar, and the phone's bottom bar when `phone: true`, at most 5), `registerRoute` (a page that is not a tab, such as `/p/<id>`),
+  - `registerTab` (side bar, and the phone's bottom bar when `phone: true`, at most 5; `hideWith: '<flag>'` hides the tab while that flag is on, for a tab that takes another's place), `registerRoute` (a page that is not a tab, such as `/p/<id>`),
   - `registerPanel('today', …)` gets `{ today, setToday }` (GET /api/today),
   - `registerPanel('project', …)` gets `{ project, setProject }` (GET /api/projects/:id/full),
   - `registerPanel('projects', …)` is a section of the Projects tab (under the table), gets `{ category }` (the tab's category filter),

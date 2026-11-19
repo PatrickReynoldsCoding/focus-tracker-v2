@@ -19,3 +19,4 @@ import './android-app';
 import './editor';
 import './whiteboards';
 import './stickies';
+import './insights';
