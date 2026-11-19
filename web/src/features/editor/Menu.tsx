@@ -143,7 +143,7 @@ export function Menu({
                   {it.kind ? (it.checked ? '✓' : '') : ''}
                 </span>
                 <span class="ed-item-label">{it.label}</span>
-                {it.hint && <kbd class="ed-hint">{it.hint}</kbd>}
+                {it.hint && <kbd class={`ed-hint ${/Ctrl|⌘|Tab|Esc/.test(it.hint) ? 'ed-key' : ''}`}>{it.hint}</kbd>}
               </button>
             ),
           )}

@@ -269,9 +269,26 @@ const isWs = (c: string | undefined) => c === undefined || /\s/.test(c);
 const isAlnum = (c: string | undefined) => c !== undefined && /[\p{L}\p{N}]/u.test(c);
 
 function escapeText(s: string, full: boolean, before: string | undefined, after: string | undefined): string {
+  // Plain-text web addresses become links when read (GFM), and a backslash inside one is kept
+  // as part of the address. So: no escapes inside an address; with full escaping, stop it being
+  // an address at all (http\://) so the escapes after it work.
+  const url = new Uint8Array(s.length);
+  for (const mt of s.matchAll(/(?:https?:\/\/|www\.)[^\s<]*/gi)) url.fill(1, mt.index!, mt.index! + mt[0].length);
   let out = '';
   for (let i = 0; i < s.length; i++) {
     const c = s[i];
+    if (url[i] && (!i || !url[i - 1])) {
+      const m = /^(https?:|www)([./]+)/i.exec(s.slice(i))!;
+      if (full) {
+        out += `${m[1]}\\${m[2]}`;
+        i += m[0].length - 1;
+        continue;
+      }
+    }
+    if (url[i] && !full) {
+      out += c;
+      continue;
+    }
     const prev = i ? s[i - 1] : before;
     const next = i + 1 < s.length ? s[i + 1] : after;
     let esc = false;
@@ -314,7 +331,8 @@ function inlineMd(b: PMNode, full: boolean, inHeading = false): string {
     if (mk.type === m.link) {
       if (!isAutoLink(mk, runs, i)) return '[';
       // A bare address only links after a space, the line start or ( * _ ~; otherwise use <...>.
-      return mk.attrs.auto === 'bare' && (out === '' || /[\s(*_~]$/.test(out)) ? '' : '<';
+      // ... and text straight after it would be read as part of the address.
+      return mk.attrs.auto === 'bare' && (out === '' || /[\s(*_~]$/.test(out)) && /^\s?$/.test(charAfter(mk, runs, i)) ? '' : '<';
     }
     return delim(mk, full);
   };
@@ -443,6 +461,14 @@ function codeText(runs: Run[], i: number, text: string): string {
   const endsHere = !runs[i + 1] || !runs[i + 1].node.isText || !runs[i + 1].marks.some((x) => x.type === m.code);
   if (needPad && endsHere) s = s + ' ';
   return s.replace(/\n/g, ' ');
+}
+
+/** The first character after the run of mark `mk` that starts at run i ('' at the end). */
+function charAfter(mk: Mark, runs: Run[], i: number): string {
+  let j = i;
+  while (j < runs.length && mk.isInSet(runs[j].marks)) j++;
+  const n2 = runs[j]?.node;
+  return !n2 ? '' : n2.isText ? n2.text![0] : n2.type === n.hard_break ? '\n' : 'x';
 }
 
 function isAutoLink(mk: Mark, runs: Run[], i: number): boolean {

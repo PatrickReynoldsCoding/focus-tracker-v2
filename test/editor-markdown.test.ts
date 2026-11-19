@@ -122,4 +122,49 @@ describe('editor Markdown round trip', () => {
     expect(rt(big)).toBe(big);
     expect(Date.now() - t).toBeLessThan(3000);
   });
+
+  it('keeps random text with Markdown characters and marks (300 random notes)', () => {
+    const { schema } = parseMarkdown('').type;
+    let seed = 42;
+    const rnd = (n: number) => ((seed = (seed * 1103515245 + 12345) % 2147483648), seed % n);
+    const pieces = ['a', 'word', ' ', ' ', '*', '_', '`', '~', '[', ']', '(', ')', '<', '>', '#', '-', '+', '1.', '!', '&amp;', '|', '\\', 'x_y', '2 * 3', 'http://e.com', ':', '"'];
+    const markSets = [[], [], ['strong'], ['em'], ['strike'], ['code'], ['strong', 'em'], ['link']];
+    const text = () => Array.from({ length: 1 + rnd(6) }, () => pieces[rnd(pieces.length)]).join('');
+    const inline = () =>
+      Array.from({ length: 1 + rnd(4) }, () => {
+        const t = text();
+        const names = markSets[rnd(markSets.length)];
+        const marks = names.map((n) => (n === 'link' ? schema.marks.link.create({ href: 'https://example.com/x' }) : schema.marks[n].create()));
+        return schema.text(t, marks);
+      });
+    const block = () => {
+      const k = rnd(4);
+      const para = schema.node('paragraph', null, inline());
+      if (k === 0) return schema.node('heading', { level: 1 + rnd(3) }, inline());
+      if (k === 1) return schema.node('bullet_list', null, [schema.node('list_item', { checked: rnd(2) ? null : false }, [para])]);
+      if (k === 2) return schema.node('blockquote', null, [para]);
+      return para;
+    };
+    const visible = (d: any) => {
+      const out: string[] = [];
+      d.descendants((n: any) => {
+        if (n.isTextblock) out.push(n.textContent.replace(/\s+/g, ' ').trim());
+      });
+      return out.filter(Boolean).join('|');
+    };
+    const bad: string[] = [];
+    for (let i = 0; i < 300; i++) {
+      const doc = schema.node('doc', null, Array.from({ length: 1 + rnd(3) }, block));
+      const md = serializeMarkdown(doc);
+      const back = parseMarkdown(md);
+      if (visible(back) !== visible(doc)) bad.push(`${JSON.stringify(visible(doc))}\n  → ${JSON.stringify(md)}\n  → ${JSON.stringify(visible(back))}`);
+      else {
+        // Settles: odd text glued to an address can take one more pass to reach its final form.
+        const p2 = serializeMarkdown(back);
+        const p3 = serializeMarkdown(parseMarkdown(p2));
+        expect(serializeMarkdown(parseMarkdown(p3))).toBe(p3);
+      }
+    }
+    expect(bad.slice(0, 5).join('\n')).toBe('');
+  });
 });
