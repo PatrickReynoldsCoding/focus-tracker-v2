@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import { change, del, localStorageSet, post } from '../../core/api';
+import { Panels, type ProjectsPanelProps } from '../../core/registry';
 import { AddInput, daysAgo, go, Loading, todayLocal, useData } from '../../core/ui';
 
 type Project = { id: string; name: string; category_id: string | null; status: string; last_touched: string | null; locked_until: string | null };
@@ -108,6 +109,8 @@ export function Projects() {
         </tbody>
       </table>
       {!rows.length && <p class="empty">No projects match.</p>}
+
+      <Panels<ProjectsPanelProps> place="projects" props={{ category: cat }} />
 
       <section class="card">
         <div class="card-head">

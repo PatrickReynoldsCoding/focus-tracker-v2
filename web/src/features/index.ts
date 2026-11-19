@@ -6,6 +6,7 @@ import './habits/TodayHabits';
 import './habits/Habits';
 import './projects/Projects';
 import './projects/ProjectPage';
+import './resources';
 import './notes/Notes';
 import './log/Log';
 import './settings/Settings';
