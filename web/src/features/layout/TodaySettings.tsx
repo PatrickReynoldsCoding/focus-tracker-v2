@@ -6,7 +6,7 @@
 import { useState } from 'preact/hooks';
 import { del, undo } from '../../core/api';
 import { useFlags } from '../../core/features';
-import { lookupPanel, type PanelDef } from '../../core/registry';
+import { lookupPanel, standIn, type PanelDef } from '../../core/registry';
 import { Dialog } from '../../core/ui';
 import { groupByKind, useAddable } from './AddFeature';
 import { readingOrder } from './grid';
@@ -60,7 +60,10 @@ export function PillSheet({
 }) {
   const { options, nameOf, loading } = usePillOptions(place, panels);
   const grid = layoutNow(place).grids[start.id];
-  const first = grid ? { ...start, panels: readingOrder(start.panels, grid) } : start;
+  const ordered = grid ? readingOrder(start.panels, grid) : start.panels;
+  // An old id a newer panel replaces (PanelDef.replaces) is edited as that panel.
+  const ids = ordered.map((id) => standIn(panels, id)?.id ?? id).filter((id, i, all) => all.indexOf(id) === i);
+  const first = { ...start, panels: ids };
   return (
     <PillEditor
       start={first}

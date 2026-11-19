@@ -35,7 +35,8 @@ export function places(list: PanelDef<any>[], saved: GridData | null): Record<st
   const out: Record<string, Placed> = {};
   let maxY = -1;
   for (const p of list) {
-    const s = saved?.items[p.id];
+    // A panel that replaces an older one (PanelDef.replaces) takes its place until it has its own.
+    const s = saved?.items[p.id] ?? (p.replaces ?? []).map((r) => saved?.items[r]).find(Boolean);
     if (!s) continue;
     const w = Math.min(COLS, Math.max(1, s.w));
     out[p.id] = { x: Math.min(s.x, COLS - w), y: s.y, w, h: s.h ?? null };

@@ -10,7 +10,7 @@ import { Fragment, type VNode } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { localStorageSet, mode, say, undo } from '../../core/api';
 import { useFlags } from '../../core/features';
-import { lookupPanel, type PanelDef, type PanelLayoutProps } from '../../core/registry';
+import { lookupPanel, standIn, type PanelDef, type PanelLayoutProps } from '../../core/registry';
 import { useSignal } from '../../core/signal';
 import { isEink } from '../../core/theme';
 import { GridScope, type GridStore } from './scope';
@@ -19,14 +19,18 @@ import { layoutNow, MAX_PILLS, newPill, PHONE, PINNED, resetPillGrid, savePillGr
 
 /** The id of the built-in "All" pill (every panel on Today, the page's own grid). Never saved. */
 export const ALL = '_all';
-/** The usual "Today" pill: the focus card's companions. */
-const MAIN = ['todos', 'habits', 'plan-week'];
+/** The usual "Today" pill: the focus card's companions (the Today list, when its flag is on, replaces
+ *  To do today and covers Habits). */
+const MAIN = ['today-list', 'todos', 'habits', 'plan-week'];
 const NOTE_KINDS = new Set(['note', 'list', 'todo', 'whiteboard']);
 
 /** With no pills saved: Today (to-dos, habits, this week), Notes (notes, lists, whiteboards on
  *  Today) and More (the rest), leaving out panels removed from the page and empty pills. */
 export function usualPills(panels: PanelDef<any>[], removed: string[]): Pill[] {
-  const list = panels.filter((p) => !p.fixed && p.id !== PINNED && !removed.includes(p.id));
+  const shown = panels.filter((p) => !p.fixed && p.id !== PINNED && !removed.includes(p.id));
+  // A panel that shows another's content (PanelDef.covers) keeps that one out of the usual pills.
+  const covered = new Set(shown.flatMap((p) => p.covers ?? []));
+  const list = shown.filter((p) => !covered.has(p.id));
   const main = MAIN.filter((id) => list.some((p) => p.id === id));
   const notes = list.filter((p) => NOTE_KINDS.has(p.kind ?? '')).map((p) => p.id);
   const rest = list.map((p) => p.id).filter((id) => !main.includes(id) && !notes.includes(id));
@@ -80,9 +84,12 @@ function Pills({ place, props, panels, next }: PanelLayoutProps) {
   const byId = new Map(panels.map((p) => [p.id, p]));
   const movable = panels.filter((p) => !p.fixed && p.id !== PINNED);
 
-  /** A pill's panels: Today's own, else drawn on their own (a list not on Today). */
+  /** A pill's panels: Today's own (or the panel that replaced an old id), else drawn on their own
+   *  (a list not on Today). A panel named twice (an old id and its replacement) is drawn once. */
   const panelsOf = (pill: Pill) =>
-    pill.panels.map((id) => byId.get(id) ?? lookupPanel(place, id, flags)).filter((p): p is PanelDef<any> => !!p && !p.fixed && p.id !== PINNED);
+    pill.panels
+      .map((id) => standIn(panels, id) ?? lookupPanel(place, id, flags))
+      .filter((p, i, all): p is PanelDef<any> => !!p && !p.fixed && p.id !== PINNED && all.findIndex((q) => q?.id === p.id) === i);
   const entries = pills.map((pill) => ({ pill, list: panelsOf(pill) }));
   if (view.pillAll !== false) entries.push({ pill: { id: ALL, name: 'All', icon: null, panels: movable.map((p) => p.id) }, list: movable });
   // A pill whose panels have nothing to show now is left out of the row (an empty pill stays: it says so).
