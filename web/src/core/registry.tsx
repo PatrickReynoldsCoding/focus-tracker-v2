@@ -68,6 +68,12 @@ export interface PanelDef<P> {
   /** What it edits that may be on screen only once (a note: 'note:project:<id>'); while it is in a
    *  window, every other panel with the same key shows a placeholder. */
   oneCopy?: (props: P) => string | null;
+  /** Panels this one takes the place of (old ids): while this one is shown they are hidden, and a
+   *  saved pill, grid place or window that names one of them shows this panel there instead. */
+  replaces?: string[];
+  /** Panels whose content this one also shows: Today's usual pills leave them out while this one
+   *  is there. They can still be added by hand. */
+  covers?: string[];
 }
 
 /** A page whose panels can be drawn away from it (a pop-out window): how to load the props its
@@ -240,6 +246,16 @@ export function registerPanel(place: string, p: PanelDef<any>) {
 }
 
 const visible = <T extends { feature?: string }>(items: T[], flags: Record<string, boolean>) => items.filter((x) => !x.feature || flags[x.feature]);
+/** The panels whose flag is on, without those another shown panel replaces (PanelDef.replaces). */
+function shownPanels<P>(items: PanelDef<P>[], flags: Record<string, boolean>): PanelDef<P>[] {
+  const on = visible(items, flags);
+  const gone = new Set(on.flatMap((p) => p.replaces ?? []));
+  return gone.size ? on.filter((p) => !gone.has(p.id)) : on;
+}
+/** The shown panel that stands for an id: the panel itself, or the one that replaces it. */
+export function standIn<P>(list: PanelDef<P>[], id: string): PanelDef<P> | undefined {
+  return list.find((p) => p.id === id) ?? list.find((p) => p.replaces?.includes(id));
+}
 
 export function useTabs(): TabDef[] {
   const flags = useFlags();
@@ -252,7 +268,7 @@ export function useRoutes(): RouteDef[] {
 }
 export function usePanels<P>(place: string): PanelDef<P>[] {
   const flags = useFlags();
-  return visible(panels[place] ?? [], flags).sort((a, b) => a.order - b.order) as PanelDef<P>[];
+  return shownPanels(panels[place] ?? [], flags).sort((a, b) => a.order - b.order) as PanelDef<P>[];
 }
 /** The sources of a place whose flag is on (for "+ Add feature" and the pills). */
 export function useSources(place: string): PanelSourceDef<any>[] {
@@ -260,8 +276,9 @@ export function useSources(place: string): PanelSourceDef<any>[] {
 }
 /** A panel of a place by id, outside its page: a registered one, else one a source can draw. */
 export function lookupPanel(place: string, id: string, flags: Record<string, boolean>): PanelDef<any> | null {
-  const own = visible(panels[place] ?? [], flags).find((p) => p.id === id && !p.attachTo);
-  if (own) return withAttached(own, visible(panels[place] ?? [], flags));
+  const all = shownPanels(panels[place] ?? [], flags);
+  const own = standIn(all.filter((p) => !p.attachTo), id);
+  if (own) return withAttached(own, all);
   for (const s of visible(sources[place] ?? [], flags)) {
     const p = s.resolve?.(id);
     if (p) return p;
@@ -310,7 +327,7 @@ type Wrap<P> = (p: PanelDef<P>, node: VNode) => ComponentChildren;
  *  that has layouts (registerPanelLayout) is arranged by them. */
 export function Panels<P extends object>({ place, props, wrap }: { place: string; props: P; wrap?: Wrap<P> }) {
   const flags = useFlags();
-  const list = visible(panels[place] ?? [], flags).sort((a, b) => a.order - b.order) as PanelDef<P>[];
+  const list = shownPanels(panels[place] ?? [], flags).sort((a, b) => a.order - b.order) as PanelDef<P>[];
   const srcs = visible(sources[place] ?? [], flags).sort((a, b) => a.order - b.order);
   const lays = visible(layouts, flags)
     .filter((l) => l.places.includes(place))
