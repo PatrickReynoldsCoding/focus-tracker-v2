@@ -20,6 +20,8 @@ export interface TabDef {
   icon: string;
   order: number;
   feature?: string;
+  /** Hidden while this flag is on (a tab that another feature's tab takes over from, such as Log → Insights). */
+  hideWith?: string;
   /** Shown in the phone's bottom bar (max 5); the rest only in the side bar. */
   phone?: boolean;
   /** Where the tab's link goes, given the current route (default: `path`). */
@@ -143,7 +145,9 @@ const visible = <T extends { feature?: string }>(items: T[], flags: Record<strin
 
 export function useTabs(): TabDef[] {
   const flags = useFlags();
-  return visible(tabs, flags).sort((a, b) => a.order - b.order);
+  return visible(tabs, flags)
+    .filter((t) => !t.hideWith || !flags[t.hideWith])
+    .sort((a, b) => a.order - b.order);
 }
 export function useRoutes(): RouteDef[] {
   return visible(routes, useFlags());

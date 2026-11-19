@@ -3,9 +3,9 @@ import { change, del, patch } from '../../core/api';
 import './log.css';
 import { Dialog, Linkify, Loading, fmtDay, fmtMinutes, useData } from '../../core/ui';
 
-type Entry = { id: string; date: string; project_id: string | null; minutes: number | null; where_stopped: string | null };
+export type Entry = { id: string; date: string; project_id: string | null; minutes: number | null; where_stopped: string | null };
 
-function EditEntry({ entry, onClose }: { entry: Entry; onClose: () => void }) {
+export function EditEntry({ entry, onClose }: { entry: Entry; onClose: () => void }) {
   const [date, setDate] = useState(entry.date);
   const [where, setWhere] = useState(entry.where_stopped ?? '');
   const [minutes, setMinutes] = useState(entry.minutes == null ? '' : String(entry.minutes));
@@ -97,4 +97,5 @@ export function Log() {
 }
 
 import { registerTab } from '../../core/registry';
-registerTab({ id: 'log', path: '/log', label: 'Log', icon: '⏱', order: 50, render: () => <Log /> });
+// While the Insights feature is on, the Log is its Logs sub-tab (features/insights).
+registerTab({ id: 'log', path: '/log', label: 'Log', icon: '⏱', order: 50, hideWith: 'insights', render: () => <Log /> });
