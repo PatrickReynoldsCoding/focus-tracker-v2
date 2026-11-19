@@ -147,7 +147,6 @@ export function Notes() {
         <div class="chips">
           {['', 'note', 'todo', 'list'].map((k) => (
             <button key={k} class={`chip ${kind === k ? 'on' : ''}`} aria-pressed={kind === k} onClick={() => setKind(k)}>
-              {kind === k && <span aria-hidden="true" class="tick-mark">✓ </span>}
               {k ? KIND_LABEL[k as keyof typeof KIND_LABEL] : 'All'}
             </button>
           ))}

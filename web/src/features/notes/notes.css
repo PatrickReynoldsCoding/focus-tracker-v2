@@ -10,11 +10,11 @@
 .note-card ul { margin: 0 0 6px; padding: 0; list-style: none; font-size: 0.9rem; color: var(--muted); }
 .note-card .preview { font-size: 0.88rem; color: var(--muted); max-height: 9em; overflow: hidden; margin: 0 0 6px; }
 .note-card .tag + .tag { margin-left: 4px; }
-.note-card.sortable-chosen { box-shadow: 0 6px 18px rgb(0 0 0 / 0.18); }
+.note-card.sortable-chosen { box-shadow: var(--shadow-pop); }
 .note-card .card-todos { color: var(--fg); display: flex; flex-direction: column; }
 .note-card .card-todos label { flex-direction: row; align-items: flex-start; gap: 8px; color: var(--fg); font-size: 0.9rem; padding: 4px 0; min-height: 32px; cursor: pointer; }
 .note-card .card-todos li.done span { text-decoration: line-through; color: var(--muted); }
 .note-grid[data-draggable='true'] .note-card { cursor: grab; }
+.note-card > .small { display: block; }
 .section-title { margin-top: 6px; color: var(--muted); font-size: 0.9rem; }
 .project-switch { margin-left: 4px; }
-.chip .tick-mark { display: none; }
