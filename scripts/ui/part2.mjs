@@ -20,7 +20,7 @@ const themes = [
   ['system', { colorScheme: 'dark', theme: null }],
 ];
 const views = [['phone', { width: 390, height: 844 }], ['desk', { width: 1280, height: 860 }]];
-const routes = [['today', '/today'], ['projects', '/projects'], ['project', `/p/${p1}`], ['notes', '/notes'], ['habits', '/habits'], ['insights', '/insights'], ['whiteboards', '/whiteboards'], ['settings', '/settings']];
+const routes = [['today', '/today'], ['projects', '/projects'], ['project', `/p/${p1}`], ['files', '/files'], ['habits', '/habits'], ['insights', '/insights'], ['whiteboards', '/files?type=whiteboards'], ['settings', '/settings']];
 
 const checkEink = (page) => page.evaluate(() => {
   const bad = { colour: new Set(), shadow: 0, motion: 0, small: [] };
@@ -104,6 +104,10 @@ for (const [tname, t] of themes) {
   for (const th of ['light', 'dark']) {
     const { page } = await open(browser, { width: 390, height: 844 }, errors, { name: 'accent-' + th, init: `try{localStorage.setItem('ft.theme','${th}')}catch(e){}` });
     page.on('response', (r) => r.status() === 404 && console.log('404', r.url()));
+    // During the session started above the app opens on the project's page (Settings → When the app opens);
+    // switch modes from Settings, so the Personal project is not asked for in Work (a 404).
+    await page.goto(`${B}/#/settings`);
+    await page.waitForTimeout(300);
     await page.click('.mode-switch button >> text=Work');
     await page.waitForTimeout(800);
     const acc = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim());
@@ -111,9 +115,9 @@ for (const [tname, t] of themes) {
     await page.goto(`${B}/#/settings`);
     await page.waitForTimeout(500);
     await page.screenshot({ path: `${OUT}/p2-accent-${th}-settings.png`, fullPage: true });
-    await page.goto(`${B}/#/notes`);
+    await page.goto(`${B}/#/files`);
     await page.waitForTimeout(500);
-    await page.screenshot({ path: `${OUT}/p2-accent-${th}-notes.png` });
+    await page.screenshot({ path: `${OUT}/p2-accent-${th}-files.png` });
     // change theme through the UI
     await page.goto(`${B}/#/settings`);
     await page.click('.theme-option >> text=E-ink');

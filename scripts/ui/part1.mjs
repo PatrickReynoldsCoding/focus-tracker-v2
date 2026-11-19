@@ -4,6 +4,8 @@ mkdirSync(OUT, { recursive: true });
 const browser = await launch();
 const errors = [];
 const api = await apiCtx(browser);
+// The Notes tab's cards: shown while the Files tab is off (flag files-tab); switched back on at the end.
+await api.put('/features/files-tab', { enabled: false });
 const order = async () => (await api.get('/lists/overview')).map((l) => l.name);
 const fail = (m) => { errors.push('ASSERT: ' + m); console.log('FAIL', m); };
 
@@ -107,6 +109,7 @@ const fail = (m) => { errors.push('ASSERT: ' + m); console.log('FAIL', m); };
   if (names0.join() === names1.join()) fail('phone long-press drag did not change order');
   await page.screenshot({ path: `${OUT}/p1-phone-after-drag.png`, fullPage: true });
 }
+await api.put('/features/files-tab', { enabled: true });
 await browser.close();
 const bad = errors;
 if (bad.length) { console.error('ERRORS:\n' + bad.join('\n')); process.exit(1); }

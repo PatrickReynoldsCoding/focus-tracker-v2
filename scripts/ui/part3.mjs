@@ -41,9 +41,9 @@ async function swipe(page, cdp, { from, to, y = 400, hold, steps = 10, end = tru
   await page.waitForTimeout(500);
   if (await page.locator('.back-btn').count()) fail('Back button shown with nothing to go back to');
   else ok('no Back button at the start');
-  await page.goto(`${B}/#/notes`);
-  await page.waitForSelector('.note-card');
-  await page.locator('.note-card.kind-note').first().click({ position: { x: 20, y: 40 } });
+  await page.goto(`${B}/#/files`);
+  await page.waitForSelector('.files .files-open');
+  await page.locator('.files .files-open[href^="#/n/"]').first().click();
   await page.waitForSelector('.ed, .ed-view');
   await page.waitForSelector('.back-btn');
   await page.screenshot({ path: `${OUT}/p3-phone-back-visible.png` });
@@ -52,11 +52,11 @@ async function swipe(page, cdp, { from, to, y = 400, hold, steps = 10, end = tru
   await page.waitForSelector('.back-btn', { timeout: 5000 }).then(() => ok('Back survives a reload')).catch(() => fail('Back lost on reload'));
   await page.click('.back-btn');
   await page.waitForTimeout(400);
-  if ((await hash(page)) !== '#/notes') fail('Back went to ' + (await hash(page)));
-  else ok('Back returns to Notes');
+  if ((await hash(page)) !== '#/files') fail('Back went to ' + (await hash(page)));
+  else ok('Back returns to Files');
   // deleted pages are skipped
   const tmp = await api.post('/lists', { name: 'Temporary', kind: 'note' });
-  await page.reload(); await page.waitForSelector('.note-card');
+  await page.reload(); await page.waitForSelector('.files .files-open');
   await page.goto(`${B}/#/n/${tmp.id}`);
   await page.waitForSelector('.page-head h1');
   await page.goto(`${B}/#/habits`);
@@ -69,7 +69,7 @@ async function swipe(page, cdp, { from, to, y = 400, hold, steps = 10, end = tru
   // dialogs close first with the phone's own back
   await page.goto(`${B}/#/p/${p1}`);
   await page.waitForSelector('.kcard');
-  await page.click('.kcard >> nth=0');
+  await page.click('.kcard >> nth=0', { position: { x: 12, y: 12 } }); // the seeded sticky notes cover its middle on a phone
   await page.waitForSelector('dialog[open]');
   await page.goBack();
   await page.waitForTimeout(500);
@@ -77,8 +77,8 @@ async function swipe(page, cdp, { from, to, y = 400, hold, steps = 10, end = tru
   if (!(await hash(page)).startsWith('#/p/')) fail('phone back left the page: ' + (await hash(page)));
 
   // 2. Swipe
-  await page.goto(`${B}/#/notes`);
-  await page.waitForSelector('.note-card');
+  await page.goto(`${B}/#/files`);
+  await page.waitForSelector('.files .files-open');
   await page.waitForTimeout(400);
   let mid = await swipe(page, cdp, { from: 300, to: 60, y: 330, hold: 0, end: false });
   console.log('   transform mid-swipe:', mid);
@@ -87,13 +87,13 @@ async function swipe(page, cdp, { from, to, y = 400, hold, steps = 10, end = tru
   await page.screenshot({ path: `${OUT}/p3-phone-swipe-mid.png` });
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   await page.waitForTimeout(800);
-  if ((await hash(page)) !== '#/habits') fail('swipe left from Notes went to ' + (await hash(page))); else ok('swipe left: Notes -> Habits');
+  if ((await hash(page)) !== '#/habits') fail('swipe left from Files went to ' + (await hash(page))); else ok('swipe left: Files -> Habits');
   if ((await transform(page)) !== '') fail('transform not cleared: ' + (await transform(page)));
   await swipe(page, cdp, { from: 60, to: 320, y: 330 });
-  if ((await hash(page)) !== '#/notes') fail('swipe right went to ' + (await hash(page))); else ok('swipe right: back to Notes');
+  if ((await hash(page)) !== '#/files') fail('swipe right went to ' + (await hash(page))); else ok('swipe right: back to Files');
   // short swipe springs back
   await swipe(page, cdp, { from: 200, to: 160, y: 330, steps: 5 });
-  if ((await hash(page)) !== '#/notes') fail('short swipe changed the page'); else ok('short swipe springs back');
+  if ((await hash(page)) !== '#/files') fail('short swipe changed the page'); else ok('short swipe springs back');
   // first tab: swipe right does nothing and springs back
   await page.goto(`${B}/#/today`);
   await page.waitForTimeout(500);
@@ -101,7 +101,7 @@ async function swipe(page, cdp, { from, to, y = 400, hold, steps = 10, end = tru
   console.log('   transform at the end of the tabs (mid):', mid);
   if ((await hash(page)) !== '#/today' || (await transform(page)) !== '') fail('end of tabs: ' + (await hash(page)) + ' ' + (await transform(page))); else ok('springs back at the first tab');
   // from the edge is left to the phone
-  await page.goto(`${B}/#/notes`); await page.waitForTimeout(400);
+  await page.goto(`${B}/#/files`); await page.waitForTimeout(400);
   await swipe(page, cdp, { from: 8, to: 300, y: 330 });
   if ((await hash(page)) === '#/projects') fail('edge swipe taken: ' + (await hash(page))); else ok('edge swipe left alone');
 
@@ -116,7 +116,7 @@ async function swipe(page, cdp, { from, to, y = 400, hold, steps = 10, end = tru
   };
   await stays('a board', async () => { const b = await page.locator('.board').boundingBox(); return { x: 330, y: b.y + 30 }; }, `/p/${p1}`);
   await stays('a sticky note', async () => { const b = await page.locator('.sticky-wrap >> nth=0').boundingBox(); return { x: b.x + b.width - 30, y: b.y + 70 }; }, `/p/${p1}`);
-  await stays('a text field', async () => { const b = await page.locator('input[type=search]').boundingBox(); return { x: b.x + b.width - 30, y: b.y + 10 }; }, '/notes');
+  await stays('a text field', async () => { const b = await page.locator('input[type=search]').boundingBox(); return { x: b.x + b.width - 30, y: b.y + 10 }; }, '/files');
   await stays('a slider', async () => {
     await page.evaluate(() => { const i = document.createElement('input'); i.type = 'range'; i.id = 'test-range'; i.style.cssText = 'position:fixed;top:300px;left:20px;width:340px;z-index:5'; document.body.appendChild(i); });
     return { x: 330, y: 310 };
@@ -138,7 +138,7 @@ async function swipe(page, cdp, { from, to, y = 400, hold, steps = 10, end = tru
   await page.locator('.ed-head button, .ed-foot button').filter({ hasText: 'Done' }).first().click().catch(() => {});
   // a dialog
   await page.goto(`${B}/#/p/${p1}`); await page.waitForSelector('.kcard');
-  await page.click('.kcard >> nth=0'); await page.waitForSelector('dialog[open]');
+  await page.click('.kcard >> nth=0', { position: { x: 12, y: 12 } }); // the seeded sticky notes cover its middle on a phone await page.waitForSelector('dialog[open]');
   await swipe(page, cdp, { from: 330, to: 100, y: 400 });
   if (!(await hash(page)).startsWith('#/p/')) fail('swipe in a dialog changed the page'); else ok('swipe ignored in a dialog');
   await page.keyboard.press('Escape');
@@ -152,9 +152,9 @@ async function swipe(page, cdp, { from, to, y = 400, hold, steps = 10, end = tru
 
   // 3. flag off
   await api.put('/features/swipe-tabs', { enabled: false });
-  await page.goto(`${B}/#/notes`); await page.reload(); await page.waitForSelector('.note-card'); await page.waitForTimeout(600);
+  await page.goto(`${B}/#/files`); await page.reload(); await page.waitForSelector('.files .files-open'); await page.waitForTimeout(600);
   await swipe(page, cdp, { from: 330, to: 60, y: 330 });
-  if ((await hash(page)) !== '#/notes') fail('swipe worked with the flag off'); else ok('flag off: no swipe');
+  if ((await hash(page)) !== '#/files') fail('swipe worked with the flag off'); else ok('flag off: no swipe');
   await api.put('/features/swipe-tabs', { enabled: true });
   await page.close();
 }
@@ -163,7 +163,7 @@ async function swipe(page, cdp, { from, to, y = 400, hold, steps = 10, end = tru
 for (const [name, opts] of [['eink', { init: "try{localStorage.setItem('ft.theme','eink')}catch(e){}" }], ['reduced', { reducedMotion: 'reduce' }]]) {
   const { page, ctx } = await open(browser, { width: 390, height: 844 }, errors, { name: 'calm-' + name, touch: true, ...opts });
   const cdp = await ctx.newCDPSession(page);
-  await page.goto(`${B}/#/notes`); await page.waitForSelector('.note-card'); await page.waitForTimeout(500);
+  await page.goto(`${B}/#/files`); await page.waitForSelector('.files .files-open'); await page.waitForTimeout(500);
   const mid = await swipe(page, cdp, { from: 330, to: 60, y: 330, end: false });
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   await page.waitForTimeout(500);
@@ -176,13 +176,13 @@ for (const [name, opts] of [['eink', { init: "try{localStorage.setItem('ft.theme
 // ---------------- desktop 1280: Back button, no swipe
 {
   const { page } = await open(browser, { width: 1280, height: 860 }, errors, { name: 'desk' });
-  await page.goto(`${B}/#/notes`); await page.waitForSelector('.note-card');
-  await page.locator('.note-card.kind-note').first().click({ position: { x: 20, y: 40 } });
+  await page.goto(`${B}/#/files`); await page.waitForSelector('.files .files-open');
+  await page.locator('.files .files-open[href^="#/n/"]').first().click();
   await page.waitForSelector('.back-btn');
   await page.screenshot({ path: `${OUT}/p3-desk-back.png` });
   await page.click('.back-btn');
   await page.waitForTimeout(400);
-  if ((await hash(page)) !== '#/notes') fail('desktop Back: ' + (await hash(page))); else ok('desktop Back works');
+  if ((await hash(page)) !== '#/files') fail('desktop Back: ' + (await hash(page))); else ok('desktop Back works');
   await page.goto(`${B}/#/projects`); await page.waitForTimeout(300);
   await page.goBack(); await page.waitForTimeout(300);
   ok('browser back at desktop: ' + (await hash(page)) + ', button ' + (await page.locator('.back-btn').count()));
