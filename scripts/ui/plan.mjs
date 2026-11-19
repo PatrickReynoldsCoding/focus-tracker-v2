@@ -33,9 +33,7 @@ for (const [tname, theme] of themes) {
     const sideways = async (where) => { if ((await page.evaluate(() => document.documentElement.scrollWidth)) > vp.width + 1) fail(`${tname} ${vname} ${where}: sideways scroll`); };
 
     await page.goto(`${B}/#/today`);
-    // On a phone Today shows one pill at a time (V1-GAPS 40): the week is the "This week" pill.
-    await page.waitForSelector('.plan-strip, .pl-pill');
-    if (await page.$('.pl-pill')) await page.click('.pl-pill:has-text("This week")');
+    // Today shows one pill at a time: the week is in the first pill, Today.
     await page.waitForSelector('.plan-strip');
     await page.waitForTimeout(400);
     await shot('today');
