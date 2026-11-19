@@ -95,7 +95,7 @@ export const systemModule: Module = {
     api.post('/import/:kind', async (c) => {
       const ctx = c.get('ctx');
       const e = entity(c.req.param('kind'));
-      if (['accounts', 'drive_links', 'modes'].includes(e.name)) throw bad(`${e.name} cannot be imported`);
+      if (e.name === 'modes') throw bad(`${e.name} cannot be imported`);
       const { rows } = await c.req.json<{ rows: Record<string, unknown>[] }>();
       if (!Array.isArray(rows) || rows.length > 500) throw bad('Send rows as an array of at most 500');
       const out = { created: 0, skipped: 0, errors: [] as { id: unknown; error: string }[] };

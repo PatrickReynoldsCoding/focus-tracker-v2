@@ -25,27 +25,32 @@ export function ListSettings({ list, setList }: { list: ListPage; setList: (fn: 
   };
   const oneAtATime = oneFlag && list.kind !== 'note';
   const linked = projects?.find((p) => p.id === list.project_id);
+  const linkedSelect = (
+    <label>
+      Linked project
+      <select value={list.project_id ?? ''} onChange={(e) => save({ project_id: (e.target as HTMLSelectElement).value || null })}>
+        <option value="">None</option>
+        {(projects ?? [])
+          .filter((p) => p.status === 'active' || p.id === list.project_id)
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+      </select>
+      <span class="muted small">A linked {list.kind === 'note' ? 'note' : 'list'} also shows on that project’s page.</span>
+    </label>
+  );
+  // Only the project link applies (a note, or one-at-a-time is off): show it as a plain card, not a collapsed one that looks empty.
+  if (!oneAtATime) return <section class="card tp-settings">{linkedSelect}</section>;
   return (
     <details class="card tp-settings">
       <summary>
-        List settings <span class="muted small">{[linked && `linked to ${linked.name}`, oneAtATime && list.display === 'one' && 'one at a time'].filter(Boolean).join(' · ')}</span>
+        List settings <span class="muted small">{[linked && `linked to ${linked.name}`, list.display === 'one' && 'one at a time'].filter(Boolean).join(' · ')}</span>
       </summary>
       <div class="stack">
-        <label>
-          Linked project
-          <select value={list.project_id ?? ''} onChange={(e) => save({ project_id: (e.target as HTMLSelectElement).value || null })}>
-            <option value="">None</option>
-            {(projects ?? [])
-              .filter((p) => p.status === 'active' || p.id === list.project_id)
-              .sort((a, b) => a.name.localeCompare(b.name))
-              .map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-          </select>
-          <span class="muted small">A linked list also shows on that project’s page.</span>
-        </label>
+        {linkedSelect}
         {oneAtATime && (
           <>
             <label>

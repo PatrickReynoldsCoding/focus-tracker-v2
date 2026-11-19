@@ -74,9 +74,10 @@ class TodayWidget : AppWidgetProvider() {
         fun refresh(context: Context) {
             val manager = AppWidgetManager.getInstance(context)
             val ids = manager.getAppWidgetIds(ComponentName(context, TodayWidget::class.java))
-            if (ids.isEmpty()) return
             val prefs = Prefs(context)
             val status = if (prefs.ready) runCatching { Api(prefs).status() } else Result.failure(IllegalStateException("Open the app to connect"))
+            status.getOrNull()?.let { runCatching { AlarmScheduler.schedule(context, it) } } // also when no widget is placed
+            if (ids.isEmpty()) return
             for (id in ids) manager.updateAppWidget(id, views(context, id, status))
         }
 

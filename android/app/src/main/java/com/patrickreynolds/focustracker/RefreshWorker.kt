@@ -16,7 +16,7 @@ import androidx.work.Worker
 import androidx.work.WorkerParameters
 import java.util.concurrent.TimeUnit
 
-/** Every 15 minutes: redraw the widgets and show new reminders as notifications (each once). */
+/** Every 15 minutes (session alerts have their own exact alarm, see AlarmScheduler): redraw the widgets and show new reminders as notifications (each once). */
 class RefreshWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
     override fun doWork(): Result {
         TodayWidget.refresh(applicationContext)
@@ -37,10 +37,11 @@ class RefreshWorker(context: Context, params: WorkerParameters) : Worker(context
         fun notifyNew(context: Context) {
             val prefs = Prefs(context)
             if (!prefs.ready) return
-            if (context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED &&
-                android.os.Build.VERSION.SDK_INT >= 33) return
             val api = Api(prefs)
             val status = runCatching { api.status() }.getOrNull() ?: return
+            runCatching { AlarmScheduler.schedule(context, status) }
+            if (context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED &&
+                android.os.Build.VERSION.SDK_INT >= 33) return
             val nm = context.getSystemService(NotificationManager::class.java)
             nm.createNotificationChannel(NotificationChannel(CHANNEL, "Reminders", NotificationManager.IMPORTANCE_DEFAULT))
             val open = PendingIntent.getActivity(

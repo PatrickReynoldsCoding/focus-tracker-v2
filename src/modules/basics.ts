@@ -22,8 +22,6 @@ export const modesEntity: Entity = {
   orderGroup: [],
   fields: {
     label: { type: 'text', required: true },
-    account_id: { type: 'text', ref: 'accounts', desc: 'Google account used for Drive sync' },
-    drive_folder_id: { type: 'text' },
     color: { type: 'text', desc: 'Accent colour as #rrggbb, used by the web app while this mode is open' },
   },
   beforeUpdate(_ctx, _before, patch) {
@@ -62,8 +60,6 @@ export const categoriesEntity: Entity = {
   fields: {
     label: { type: 'text', required: true },
     color: COLOR,
-    account_id: { type: 'text', ref: 'accounts', desc: 'Overrides the mode’s Google account for Drive sync' },
-    drive_folder_id: { type: 'text' },
   },
   async onDelete(ctx, row) {
     // A category in use cannot be deleted: say what uses it, so the owner can move those first.
