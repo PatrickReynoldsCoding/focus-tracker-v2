@@ -3,7 +3,8 @@
 // app's first load stays small. Flags: 'rich-editor' (off: the plain Markdown box) and
 // 'paper-themes'. Notes stay Markdown (DECISIONS D5).
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { say, version } from '../../core/api';
+import { mode, say, version } from '../../core/api';
+import * as offline from '../../core/offline';
 import { useFlag } from '../../core/features';
 import { registerMarkdownEditor, registerPanel, type MarkdownEditorProps } from '../../core/registry';
 import { useSignal } from '../../core/signal';
@@ -59,13 +60,18 @@ function NoteEditor(props: MarkdownEditorProps) {
 
   const [editing, setEditing] = useState<EditingProps['start'] | null>(null);
   const [Comp, setComp] = useState<EditingComp | null>(() => loaded);
-  const [shown, setShown] = useState(value);
+  // A save made offline that is still waiting shows instead of the (older) saved copy.
+  const net = useSignal(offline.status);
+  const m = useSignal(mode);
+  const waitingText = note ? offline.queuedBody(m, `/notes/of/${note.kind}/${note.id}`)?.body : undefined;
+  const latest = typeof waitingText === 'string' ? waitingText : value;
+  const [shown, setShown] = useState(latest);
   const [draft, setDraftState] = useState<Draft | null>(() => getDraft(key));
   const view = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!editing) setShown(value);
-  }, [value]);
+    if (!editing) setShown(latest);
+  }, [latest, net.waiting]);
   // A draft that matches the note is already saved.
   useEffect(() => {
     const d = getDraft(key);
@@ -74,6 +80,10 @@ function NoteEditor(props: MarkdownEditorProps) {
       setDraftState(null);
     } else setDraftState(d);
   }, [key, value]);
+  // A note's version, read once while online, so an edit made offline later can be checked.
+  useEffect(() => {
+    if (note && !offline.waiting()) target.read().catch(() => {});
+  }, [note?.kind, note?.id]);
   // Fetch the editing chunk when the browser is idle, so the first tap opens at once.
   useEffect(() => {
     if (loaded) return;
@@ -133,9 +143,9 @@ function NoteEditor(props: MarkdownEditorProps) {
     <div class="ed-wrap">
       {draft && draft.text !== shown && !editing && (
         <div class="ed-draft" role="status">
-          <span>Unsaved changes from {when(draft.at)} on this device.</span>
-          <button type="button" class="small primary" onClick={() => open({ text: draft.text, baseText: draft.baseText, base: draft.base })}>
-            Restore
+          <span>{draft.clash ? `Your change from ${when(draft.at)}, made offline, was not saved: the note was changed somewhere else too.` : `Unsaved changes from ${when(draft.at)} on this device.`}</span>
+          <button type="button" class="small primary" onClick={() => open({ text: draft.text, baseText: draft.baseText, base: draft.base, clash: draft.clash })}>
+            {draft.clash ? 'Choose…' : 'Restore'}
           </button>
           <button
             type="button"
@@ -182,6 +192,19 @@ function NoteEditor(props: MarkdownEditorProps) {
 }
 
 registerMarkdownEditor({ id: 'rich', feature: 'rich-editor', component: NoteEditor });
+
+// A note or card note saved offline and refused on sending (changed elsewhere since): keep it as a
+// draft that opens with the usual choice (Keep mine, Use theirs, Keep both).
+offline.registerConflictHandler((e) => {
+  const note = /^\/notes\/of\/(project|list)\/([\w-]+)$/.exec(e.path);
+  const card = /^\/tasks\/([\w-]+)$/.exec(e.path);
+  const text = note ? e.body?.body : card ? e.body?.note : undefined;
+  if (e.method === 'GET' || typeof text !== 'string') return null;
+  const key = note ? `note:${note[1]}:${note[2]}` : `card:${card![1]}`;
+  const base = (note ? e.body?.base : e.body?.base_updated_at) as string | null | undefined;
+  setDraft(key, { text, baseText: '\u0000', base: base ?? null, at: e.at, clash: true });
+  return `Not applied: your offline change to ${e.label}. It was changed on another device too. Open it and choose: Keep mine, Use theirs or Keep both.`;
+});
 
 // The card dialog's note, with a conflict check (replaces the projects feature's plain one).
 registerPanel('card', {

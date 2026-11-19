@@ -1,6 +1,7 @@
 // Where an edited text is read from and saved to. Each save sends the version the edit was
 // based on; a target throws Conflict when the text changed somewhere else since.
-import { mode, signedIn } from '../../core/api';
+import { api, HttpError } from '../../core/api';
+import { isQueued } from '../../core/offline';
 
 export interface Target {
   /** For drafts and remembered heights: 'note:project:<id>', 'card:<id>' … */
@@ -8,8 +9,8 @@ export interface Target {
   /** Kind of place, for the remembered height. */
   place: string;
   read(): Promise<{ text: string; version: string | null }>;
-  /** Save `text` over `base` (the version it started from). `keepalive` when the page is closing. */
-  write(text: string, base: string | null, keepalive?: boolean): Promise<{ version: string | null }>;
+  /** Save `text` over `base` (the version it started from; null: a new text; undefined: unknown, not checked). `keepalive` when the page is closing. */
+  write(text: string, base: string | null | undefined, keepalive?: boolean): Promise<{ version: string | null | undefined }>;
   /** Whether a conflict can be noticed at all (not for a plain onSave). */
   versioned: boolean;
 }
@@ -23,19 +24,14 @@ export class Conflict extends Error {
   }
 }
 
+/** Through the app's API client, so a save made offline waits in the offline queue (core/offline.ts). */
 async function send(method: string, path: string, body?: unknown, keepalive = false): Promise<{ status: number; data: any }> {
-  const res = await fetch(`/api${path}`, {
-    method,
-    headers: { 'X-FT-Client': 'web', 'X-Mode': mode.value, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
-    body: body === undefined ? undefined : JSON.stringify(body),
-    credentials: 'same-origin',
-    keepalive,
-  });
-  if (res.status === 401) signedIn.value = false;
-  const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
-  if (!res.ok && res.status !== 409) throw new Error(data?.error ?? `Request failed (${res.status})`);
-  return { status: res.status, data };
+  try {
+    return { status: 200, data: await api(method, path, body, { keepalive }) };
+  } catch (e) {
+    if (e instanceof HttpError && e.status === 409) return { status: 409, data: e.data };
+    throw e;
+  }
 }
 
 /** A project's notes or a note list's text, with server-side conflict checks (409). */
@@ -50,14 +46,15 @@ export function noteTarget(kind: 'project' | 'list', id: string): Target {
       return { text: String(data.body ?? ''), version: data.updated_at ?? null };
     },
     async write(text, base, keepalive) {
-      const { status, data } = await send('PUT', path, { body: text, base }, keepalive);
+      const { status, data } = await send('PUT', path, base === undefined ? { body: text } : { body: text, base }, keepalive);
       if (status === 409) throw new Conflict(String(data.current?.body ?? ''), data.current?.updated_at ?? null);
-      return { version: data.updated_at ?? null };
+      // Waiting offline: still based on the same version (the queue sends that base).
+      return { version: isQueued(data) ? base : (data.updated_at ?? null) };
     },
   };
 }
 
-/** A card's note (tasks.note). The check is made here: read, compare, then write. */
+/** A card's note (tasks.note). The server checks the version (base_updated_at), also for a save that waited offline. */
 export function cardTarget(id: string, onSaved: (note: string) => void): Target {
   const path = `/tasks/${id}`;
   return {
@@ -69,13 +66,10 @@ export function cardTarget(id: string, onSaved: (note: string) => void): Target 
       return { text: String(data.note ?? ''), version: data.updated_at ?? null };
     },
     async write(text, base, keepalive) {
-      if (!keepalive) {
-        const { data: now } = await send('GET', path);
-        if (base !== null && now.updated_at !== base && String(now.note ?? '') !== text) throw new Conflict(String(now.note ?? ''), now.updated_at ?? null);
-      }
-      const { data } = await send('PATCH', path, { note: text }, keepalive);
+      const { status, data } = await send('PATCH', path, base == null ? { note: text } : { note: text, base_updated_at: base }, keepalive);
+      if (status === 409) throw new Conflict(String(data.current?.note ?? ''), data.current?.updated_at ?? null);
       onSaved(text);
-      return { version: data?.updated_at ?? null };
+      return { version: isQueued(data) ? base : (data?.updated_at ?? null) };
     },
   };
 }

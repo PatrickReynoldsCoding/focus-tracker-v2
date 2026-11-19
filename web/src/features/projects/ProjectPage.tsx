@@ -65,7 +65,7 @@ export function ProjectPage({ id }: { id: string }) {
 
 registerRoute({ id: 'project', prefix: '/p', tab: 'projects', render: ({ params }) => <ProjectPage id={params[0]} /> });
 
-registerPanel('project', { id: 'board', order: 10, wide: true, render: ({ project }) => <Board columns={project.columns} owner={{ project_id: project.id }} /> });
+registerPanel('project', { id: 'board', order: 10, wide: true, render: ({ project, setProject }) => <Board columns={project.columns} owner={{ project_id: project.id }} onColumns={(columns) => setProject((p) => ({ ...p, columns }))} /> });
 registerPanel('project', {
   id: 'notes',
   order: 20,

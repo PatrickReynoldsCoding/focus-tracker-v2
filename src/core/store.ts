@@ -143,7 +143,7 @@ function clean(e: Entity, input: Input, creating: boolean): Record<string, unkno
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(input)) {
     if (v === undefined) continue;
-    if (k === 'id' || k === 'mode' || k === 'created' || k === 'updated_at') continue;
+    if (k === 'id' || k === 'mode' || k === 'created' || k === 'updated_at' || k === 'base_updated_at') continue;
     if (k === 'ord' && e.orderGroup) {
       out.ord = toDb({ type: 'real' }, v, k);
       continue;
@@ -224,10 +224,13 @@ export async function update(ctx: Ctx, e: Entity, id: string, input: Input): Pro
   const beforeRaw = await getRaw(ctx, e, id);
   if (!beforeRaw || (e.modeScoped && beforeRaw.mode !== ctx.mode)) throw notFound(e.singular, id);
   const patch = clean(e, input, false);
+  const asked = Object.keys(patch);
   if (e.beforeUpdate) await asInputError(e.beforeUpdate(ctx, fromDb(e, beforeRaw), patch));
   await checkRefs(ctx, e, patch);
   const changed = Object.keys(patch).filter((k) => patch[k] !== beforeRaw[k]);
   if (!changed.length) return fromDb(e, beforeRaw);
+  const base = input.base_updated_at;
+  if (base !== undefined && base !== null) await checkBase(ctx, e, beforeRaw, base, changed.filter((k) => asked.includes(k)));
   patch.updated_at = ctx.now();
   const cols = [...changed, 'updated_at'];
   await ctx.db
@@ -237,6 +240,47 @@ export async function update(ctx: Ctx, e: Entity, id: string, input: Input): Pro
   const after = { ...beforeRaw, ...Object.fromEntries(cols.map((c) => [c, patch[c] ?? null])) };
   ctx.changes.push({ entity: e.name, table: e.table, rowId: id, before: beforeRaw, after });
   return fromDb(e, after);
+}
+
+/** How far back the undo history reaches (pruneUndo keeps 14 days); older bases cannot be checked field by field. */
+const HISTORY_DAYS = 13;
+
+/**
+ * An edit made from an older copy of the row (`base`: the updated_at it was based on, sent as
+ * `base_updated_at`, for example by a change queued while offline). It goes ahead when the row
+ * has not changed since, or when what changed since (read from the undo history) does not touch
+ * the fields this edit changes. Otherwise 409 with the current row, so the newer version stays.
+ */
+async function checkBase(ctx: Ctx, e: Entity, beforeRaw: Record<string, unknown>, base: unknown, fields: string[]): Promise<void> {
+  if (typeof base !== 'string' || Number.isNaN(Date.parse(base))) throw bad('base_updated_at must be the row’s updated_at, as read');
+  const current = beforeRaw.updated_at as string | null;
+  if (current === base || !fields.length) return;
+  let clash = fields;
+  const oldest = new Date(ctx.nowDate.getTime() - HISTORY_DAYS * 86400_000).toISOString();
+  if (base >= oldest && current && current > base) {
+    const history = (
+      await ctx.db
+        .prepare('SELECT before, after FROM undo WHERE entity = ? AND row_id = ? AND created > ? ORDER BY id')
+        .bind(e.name, beforeRaw.id, base)
+        .all<{ before: string | null; after: string | null }>()
+    ).results;
+    const last = history.length ? JSON.parse(history[history.length - 1].after ?? 'null') : null;
+    // Only trust the history when it explains the row as it is now.
+    if (last && last.updated_at === current && history.every((h) => h.before && h.after)) {
+      const touched = new Set<string>();
+      for (const h of history) {
+        const b = JSON.parse(h.before!) as Record<string, unknown>;
+        const a = JSON.parse(h.after!) as Record<string, unknown>;
+        for (const k of Object.keys(a)) if (k !== 'updated_at' && JSON.stringify(a[k]) !== JSON.stringify(b[k])) touched.add(k);
+      }
+      clash = fields.filter((f) => touched.has(f));
+    }
+  }
+  if (!clash.length) return;
+  throw new ApiError(409, `This ${e.singular} was changed somewhere else since this edit was made (${clash.join(', ')}). The newer version was kept.`, 'conflict', {
+    current: fromDb(e, beforeRaw),
+    fields: clash,
+  });
 }
 
 export async function remove(ctx: Ctx, e: Entity, id: string): Promise<Row> {

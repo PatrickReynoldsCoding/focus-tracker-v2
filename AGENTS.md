@@ -23,7 +23,7 @@ Modular first: a feature lives in its own files on the server and in the browser
 - `migrations/`: D1 schema. A new migration also needs a line in `MIGRATIONS` in `src/core/migrate.ts` (a test checks). Never edit a migration that has shipped; add a new one.
 
 **Browser** (`web/src/`)
-- `core/`: `api.ts` (fetch, `optimistic`, `change`, undo, toast), `signal.ts`, `ui.tsx` (shared components), `features.ts` (flags in the browser: `useFlag(id)`), `registry.tsx` (the plug-in points).
+- `core/`: `api.ts` (fetch, `optimistic`, `change`, undo, toast), `offline.ts` (saved copies of GET answers and the queue of changes made offline; `api.ts` and `useData` use it, so a feature does nothing for it), `signal.ts`, `ui.tsx` (shared components), `features.ts` (flags in the browser: `useFlag(id)`), `registry.tsx` (the plug-in points).
 - `features/<name>/`: one feature each, registering what it adds; `features/index.ts` imports each one once. Plug-in points (all take an optional `feature` flag id and an `order`):
   - `registerTab` (side bar, and the phone's bottom bar when `phone: true`, at most 5; `hideWith: '<flag>'` hides the tab while that flag is on, for a tab that takes another's place), `registerRoute` (a page that is not a tab, such as `/p/<id>`),
   - `registerPanel('today', …)` gets `{ today, setToday }` (GET /api/today),
@@ -39,8 +39,11 @@ Modular first: a feature lives in its own files on the server and in the browser
   - `tabBadges` (a signal) sets a small count beside a tab's name in the side bar and phone bar.
   - `registerMarkdownEditor` supplies the editor behind `MarkdownEditor` (core/ui.tsx); `features/editor` registers the rich one (flag `rich-editor`), otherwise the plain text box is used. Give `MarkdownEditor` a `note={{ kind, id }}` for a project's or list's note so it saves with conflict protection and keeps drafts.
   - A panel with `override: true` replaces another feature's panel of the same id whatever the import order (the editor's card-dialog `note` section does this).
+  - `registerConflictHandler` (core/offline.ts): a change made offline that the server refuses with 409 on sending can be handled by a feature (the editor turns a note into a draft with its Keep mine / Use theirs / Keep both choice).
   A feature that needs a new plug-in point adds it to `core/registry.tsx` in a small, separate commit.
 - React is used only by `features/whiteboards/host.ts` (Excalidraw, loaded on demand); Vite's React-to-Preact aliases are off, so never import `react` anywhere else.
+- **Offline** (DECISIONS D27): change a screen's data with `useData`'s `setData` (or pass it up to the page that loaded it), not only in local state, so the saved copy keeps the change while it waits offline. A create that should work offline sends an id made with `newId()`. Which changes may wait is a list in `core/offline.ts` (`QUEUE_RULES`).
+- `web/public/`: icons, manifest and the service worker `sw.js` (filled in at build time by `web/sw-plugin.ts`).
 - `styles.css` holds shared tokens and base styles; a feature's own styles go in `features/<name>/<name>.css`, imported by the feature.
 - `clients/swiftbar/`, `android/`: the Mac menu bar plugin and the Android app (see their READMEs).
 

@@ -23,3 +23,4 @@ import './insights';
 import './theme';
 import './navigation';
 import './plan';
+import './offline';

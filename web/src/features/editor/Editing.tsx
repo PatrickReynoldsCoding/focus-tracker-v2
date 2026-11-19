@@ -2,7 +2,7 @@
 // drafts on the device and conflict choices, full screen on a phone, resizable on a desktop.
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { useSignal } from '../../core/signal';
-import { getHeight, paper, PAPERS, setDraft, setHeight, setPaper } from './device';
+import { getDraft, getHeight, paper, PAPERS, setDraft, setHeight, setPaper } from './device';
 import * as E from './engine';
 import { Menu, type MenuEntry } from './Menu';
 import { schema } from './schema';
@@ -13,8 +13,9 @@ const MOD = isMac ? '⌘' : 'Ctrl';
 const ALT = isMac ? '⌥' : 'Alt';
 
 export interface EditingProps {
-  /** What to show first, what it was based on and that text's version (undefined: ask the server). */
-  start: { text: string; baseText: string; base: string | null | undefined };
+  /** What to show first, what it was based on and that text's version (undefined: ask the server).
+   *  `clash`: an offline save that was refused; save at once so the choice shows. */
+  start: { text: string; baseText: string; base: string | null | undefined; clash?: boolean };
   target: Target;
   placeholder?: string;
   rows: number;
@@ -64,7 +65,7 @@ export default function Editing({ start, target, placeholder, rows, phone, paper
   const s = useRef({
     seq: start.text === start.baseText ? 0 : 1, // changes made
     savedSeq: 0, // changes saved
-    base: start.base ?? null,
+    base: (start.base ?? null) as string | null | undefined, // undefined: unknown (offline, never read)
     savedText: start.baseText,
     stale: null as Conflict | null, // the server had something else when editing began
     saving: null as Promise<void> | null,
@@ -82,8 +83,9 @@ export default function Editing({ start, target, placeholder, rows, phone, paper
   const writeDraft = () => {
     clearTimeout(s.draftTimer);
     if (!target.key) return;
-    if (!dirty()) return setDraft(target.key, null);
-    setDraft(target.key, { text: text(), baseText: s.savedText, base: s.base, at: Date.now() });
+    // (A clash draft, left by an offline save that was refused while editing, stays until a choice is made.)
+    if (!dirty()) return getDraft(target.key)?.clash ? undefined : setDraft(target.key, null);
+    setDraft(target.key, { text: text(), baseText: s.savedText, base: s.base ?? null, at: Date.now() });
   };
 
   const save = async (keepalive = false): Promise<void> => {
@@ -171,7 +173,11 @@ export default function Editing({ start, target, placeholder, rows, phone, paper
     editor.view.focus();
     // put the cursor at the end
     editor.view.dispatch(editor.view.state.tr.setSelection(E.selectionAtEnd(editor.view.state.doc)));
-    if (start.base === undefined)
+    if (start.clash) {
+      setDraft(target.key, null); // the choice is made here now
+      save();
+    }
+    else if (start.base === undefined)
       target
         .read()
         .then((r) => {
@@ -182,7 +188,10 @@ export default function Editing({ start, target, placeholder, rows, phone, paper
             s.base = r.version;
           } else s.stale = new Conflict(r.text, r.version);
         })
-        .catch(() => {});
+        .catch(() => {
+          // Offline and never read on this device: the version is unknown, so the save cannot be checked.
+          if (s.base === null && s.seq === 0) s.base = undefined;
+        });
     return () => {
       clearTimeout(s.timer);
       writeDraft();

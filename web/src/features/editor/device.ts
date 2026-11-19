@@ -27,6 +27,8 @@ export interface Draft {
   baseText: string;
   base: string | null;
   at: number;
+  /** Saved offline, then refused because the note had changed elsewhere: opening it offers the choice at once. */
+  clash?: boolean;
 }
 
 const DRAFT = 'ft.draft.';

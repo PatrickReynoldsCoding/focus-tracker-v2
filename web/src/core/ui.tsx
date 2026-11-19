@@ -4,6 +4,7 @@ import { marked } from 'marked';
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { get, HttpError, mode, version } from './api';
+import * as offline from './offline';
 import { useMarkdownEditor, type MarkdownEditorProps } from './registry';
 import { signal, useSignal } from './signal';
 
@@ -15,24 +16,62 @@ export const go = (path: string) => (location.hash = path);
 
 // ---------- loading ----------
 
-/** Load a path, again whenever the mode changes or a change lands. */
+/** Load a path, again whenever the mode changes or a change lands. The saved copy on this device
+ *  (core/offline.ts) shows at once while the fresh one loads; changes made with setData are kept
+ *  in it, so they still show offline and after a reload. */
 export function useData<T>(path: string | null): { data: T | undefined; error: string | null; reload: () => void; setData: (fn: (d: T) => T) => void } {
   const v = useSignal(version);
   const m = useSignal(mode);
   const [data, setData] = useState<T>();
   const [error, setError] = useState<string | null>(null);
   const [n, setN] = useState(0);
+  const shown = useRef<string | null>(null);
   useEffect(() => {
     if (!path) return;
     let live = true;
+    let fresh = false;
+    let counted = false;
+    const uncount = () => {
+      if (counted) offline.updating(-1);
+      counted = false;
+    };
+    // A new page (not a reload of the same one): the saved copy first.
+    if (shown.current !== `${m}|${path}` && offline.enabled()) {
+      offline.readCopy(m, path).then((c) => {
+        if (!live || fresh || !c) return;
+        setData(c.data as T);
+        setError(null);
+        if (offline.status.value.online && !offline.waiting()) {
+          counted = true;
+          offline.updating(1);
+        }
+      });
+    }
+    shown.current = `${m}|${path}`;
     get<T>(path)
-      .then((d) => live && (setData(d), setError(null)))
-      .catch((e: Error) => live && !(e instanceof HttpError && e.status === 401) && setError(e.message));
+      .then((d) => {
+        fresh = true;
+        if (live) (setData(d), setError(null));
+      })
+      .catch((e: Error) => live && !(e instanceof HttpError && e.status === 401) && setError(e.message))
+      .finally(uncount);
     return () => {
       live = false;
+      uncount();
     };
   }, [path, v, m, n]);
-  return { data, error, reload: () => setN((x) => x + 1), setData: (fn) => setData((d) => (d === undefined ? d : fn(d))) };
+  return {
+    data,
+    error,
+    reload: () => setN((x) => x + 1),
+    setData: (fn) =>
+      setData((d) => {
+        if (d === undefined) return d;
+        const next = fn(d);
+        if (path) offline.saveCopy(m, path, next);
+        return next;
+      }),
+  };
 }
 
 export function Loading({ error }: { error?: string | null }) {
