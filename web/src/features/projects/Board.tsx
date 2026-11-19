@@ -178,7 +178,8 @@ function ColumnView({
   );
 }
 
-export function Board({ columns, owner }: { columns: Column[]; owner: { project_id?: string; list_id?: string } }) {
+/** `onColumns` hears every change made on the board, so the page's data (and its saved copy for offline use) keeps it. */
+export function Board({ columns, owner, onColumns }: { columns: Column[]; owner: { project_id?: string; list_id?: string }; onColumns?: (cols: Column[]) => void }) {
   const [cols, setColsState] = useState(columns);
   const [open, setOpen] = useState<Card | null>(null);
   const isPhone = typeof matchMedia !== 'undefined' && matchMedia('(max-width: 700px)').matches;
@@ -190,6 +191,9 @@ export function Board({ columns, owner }: { columns: Column[]; owner: { project_
     }
   });
   useEffect(() => setColsState(columns), [columns]);
+  useEffect(() => {
+    if (cols !== columns) onColumns?.(cols);
+  }, [cols]);
   const setCols = (fn: (c: Column[]) => Column[]) => setColsState(fn);
   return (
     <div class="board-wrap">

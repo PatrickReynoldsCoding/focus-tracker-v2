@@ -101,7 +101,7 @@ export function ListPage({ id }: { id: string }) {
           <MarkdownEditor value={l.body ?? ''} note={{ kind: 'list', id: l.id }} rows={14} placeholder="Write…" onSave={(body) => change(() => put(`/notes/of/list/${l.id}`, { body }))} />
         </section>
       )}
-      {l.kind === 'list' && <Board columns={l.columns!} owner={{ list_id: l.id }} />}
+      {l.kind === 'list' && <Board columns={l.columns!} owner={{ list_id: l.id }} onColumns={(columns) => setData((d) => ({ ...d, columns }))} />}
       {l.kind === 'todo' && <TodoList l={l} setData={setData} />}
       <div class="row">
         <button
