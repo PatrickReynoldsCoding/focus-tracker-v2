@@ -2,7 +2,7 @@
 // Keyboard: Enter, Space or ↓ opens it on the first item; ↑ ↓ Home End move; Esc closes and
 // returns to the button; Tab closes. Pointer and touch: tap to open, tap a choice.
 import type { ComponentChildren } from 'preact';
-import { useEffect, useRef } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef } from 'preact/hooks';
 
 export interface MenuItem {
   label: ComponentChildren;
@@ -46,13 +46,15 @@ export function Menu({
 
   const itemsEls = () => [...(list.current?.querySelectorAll<HTMLButtonElement>('[role^=menuitem]:not([disabled])') ?? [])];
 
+  // Opened from the keyboard: focus the current (or first) choice as soon as the list is in the page.
+  useLayoutEffect(() => {
+    if (!isOpen || !focusFirst.current) return;
+    focusFirst.current = false;
+    const els = itemsEls();
+    (els.find((e) => e.getAttribute('aria-checked') === 'true') ?? els[0])?.focus();
+  }, [isOpen]);
   useEffect(() => {
     if (!isOpen) return;
-    if (focusFirst.current) {
-      const els = itemsEls();
-      (els.find((e) => e.getAttribute('aria-checked') === 'true') ?? els[0])?.focus();
-      focusFirst.current = false;
-    }
     const away = (e: PointerEvent) => {
       const t = e.target as Node;
       if (!list.current?.contains(t) && !btn.current?.contains(t)) setOpen(null);
