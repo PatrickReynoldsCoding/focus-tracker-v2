@@ -21,6 +21,9 @@ data class Status(
         val paused: Boolean = false,
         /** The pomodoro period ended and waits for "Start break" / "Start work" (next_phase). */
         val waitingFor: String? = null,
+        /** Planned length: seconds of work left, and whether "Time is up" is already due. Null = no limit. */
+        val plannedSecondsLeft: Long? = null,
+        val plannedTimeUp: Boolean = false,
     )
     data class Item(val id: String, val title: String, val detail: String?)
     data class Notice(val id: String, val title: String, val body: String?, val seen: Boolean)
@@ -33,6 +36,7 @@ data class Status(
             val focus = o.optJSONObject("focus")
             val s = o.optJSONObject("session")
             val pomo = s?.optJSONObject("pomodoro")
+            val planned = s?.optJSONObject("planned")
             return Status(
                 day = o.getString("day"),
                 focusId = focus?.str("id"),
@@ -42,6 +46,8 @@ data class Status(
                         it.str("project_name"), it.optLong("elapsed_seconds"), pomo?.str("phase"), pomo?.optLong("seconds_left"),
                         paused = it.optBoolean("paused"),
                         waitingFor = if (pomo?.optBoolean("waiting") == true) (pomo.str("next_phase") ?: "next") else null,
+                        plannedSecondsLeft = planned?.optLong("seconds_left"),
+                        plannedTimeUp = planned?.optBoolean("time_up") == true,
                     )
                 },
                 todos = o.optJSONArray("todos_due").objects().map { Item(it.getString("id"), it.getString("title"), it.str("day")) },
