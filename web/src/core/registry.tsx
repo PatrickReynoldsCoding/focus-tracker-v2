@@ -77,6 +77,16 @@ export interface PanelDef<P> {
   /** Panels whose content this one also shows: Today's usual pills leave them out while this one
    *  is there. They can still be added by hand. */
   covers?: string[];
+  /** More things to do with the panel, for its ⋯ menu on a computer (added by a layout step: the
+   *  pop-out windows add “Pop out”). */
+  menu?: (props: P) => PanelAction[];
+}
+
+/** One line of a panel's ⋯ menu. */
+export interface PanelAction {
+  label: string;
+  icon?: string;
+  run: () => void;
 }
 
 /** A page whose panels can be drawn away from it (a pop-out window): how to load the props its
