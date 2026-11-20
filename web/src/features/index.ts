@@ -29,3 +29,4 @@ import './offline';
 import './layout';
 import './today-list';
 import './files';
+import './add-panel';

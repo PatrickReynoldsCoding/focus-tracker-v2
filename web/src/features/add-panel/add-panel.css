@@ -1,0 +1,28 @@
+/* Add panel's sheet and its file picker. Colours from the tokens only. */
+.ap { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.ap-where { margin: 0; }
+.ap-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.ap-row { width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; padding: 8px 10px; min-height: 52px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--fg); text-transform: none; font-weight: normal; }
+.ap-row:hover:not(:disabled) { border-color: var(--accent); background: var(--surface-2); }
+.ap-row:disabled { opacity: 0.6; cursor: default; }
+.ap-file { border-style: dashed; }
+.ap-icon { flex: none; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+.ap-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.ap-text strong { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ap-text .small { overflow-wrap: anywhere; }
+.ap-picker .ap-text .small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ap-go { flex: none; color: var(--muted); font-size: 1.1rem; }
+.ap-go.small { font-size: 0.85rem; }
+.ap-row:not(:disabled) .ap-go.small { color: var(--accent); font-weight: 600; }
+.ap-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ap-bar { display: flex; gap: 8px; align-items: center; }
+.ap-bar input { flex: 1; min-width: 0; }
+.ap-bar button { flex: none; }
+.ap-new { display: flex; flex-direction: column; gap: 8px; padding: 10px; }
+.ap-new p { margin: 0; }
+.ap-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 2px 0; }
+.ap-chips::-webkit-scrollbar { display: none; }
+.ap-chips .chip { flex: none; }
+.ap-crumbs { font-size: 0.95rem; }
+.ap-picker section { display: flex; flex-direction: column; gap: 6px; }
+.ap-picker h3 { margin: 4px 0 0; }
