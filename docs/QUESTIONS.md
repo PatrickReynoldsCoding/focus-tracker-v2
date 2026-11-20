@@ -44,3 +44,13 @@ Questions the owner could not be asked while an item was built. Each gives the d
 7. A phone height can be 120–4000 px (room for the Arrange handles); a computer height stays 60–4000. Default: as described.
 8. There is no way to start arranging on a phone without a long press (no button). Default: long press only, as asked.
 
+
+## Add panel and Add file (v0.22.0)
+
+1. "+ Add panel" is under the panels on every screen, and also in the pill bar on a computer (not on a phone, where the bar has no room). Default: as described.
+2. Removing a note, list or whiteboard from a pill takes it off Today and out of every pill, not only out of that pill. Default: off Today and out of every pill, as asked.
+3. On a project page, Add file moves the file into the project's folder (so it becomes the project's and shows in its Lists, Whiteboards or Resources panel); project pages share one layout, so a file cannot be a panel of one project's page. Default: move into the project's folder.
+4. The pill sheet (✎ Edit pill, New pill) still lists the notes and lists already on Today, but not every other one. Default: as described.
+5. Today's picker leaves out links (they have no panel); a project's picker offers links too. Default: as described.
+6. Add file's lists are sorted by last changed (recent first), with a Recent section of six at the top level. Default: as described.
+7. The panel just added goes at the end of the pill or page and is scrolled into view. Default: at the end.
