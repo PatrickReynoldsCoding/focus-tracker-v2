@@ -1,0 +1,19 @@
+/* The Done column (D34): folded into a slim strip while Hide done is on. */
+.column.done-col .column-name::before { content: '✓ '; color: var(--ok); }
+.column.done-strip { padding: 6px; gap: 0; }
+.board.horizontal .column.done-strip { width: 52px; align-self: stretch; min-height: 140px; }
+.done-strip-btn {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  background: transparent; border: 0; color: var(--muted); padding: 4px 6px; font: inherit; cursor: pointer; text-align: left;
+}
+.done-strip-btn:hover { color: var(--fg); }
+.done-strip-tick { color: var(--ok); font-weight: 700; }
+.done-strip-name { font-weight: 600; flex: 1; }
+.done-strip-count { background: var(--surface); border-radius: 999px; padding: 0 8px; font-size: 0.85em; }
+.board.horizontal .done-strip-btn { flex-direction: column; justify-content: flex-start; padding: 6px 0; height: 100%; }
+.board.horizontal .done-strip-name { writing-mode: vertical-rl; flex: none; }
+/* Cards can be dropped on the strip; it holds none on screen. */
+.column.done-strip ul.cards { min-height: 24px; flex: 1; }
+.column.done-strip ul.cards > li:not(.drag-ghost) { display: none; }
+.column-move { opacity: 0.7; }
+.board.vertical .column.done-strip ul.cards { min-height: 6px; }

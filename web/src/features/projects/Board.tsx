@@ -5,10 +5,13 @@ import Sortable from 'sortablejs';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { change, del, localStorageSet, newId, optimistic, patch, post } from '../../core/api';
 import { Panels, registerPanel, type CardSectionProps, type CardTileProps } from '../../core/registry';
+import { useFlag } from '../../core/features';
 import { AddInput, ColorPicker, Dialog, InlineEdit, Linkify, MarkdownEditor, plainPreview } from '../../core/ui';
+import { DONE_FLAG, DoneStripLabel, HideDoneButton, setHideDone } from './done-column';
 
 export type Card = { id: string; title: string; note: string | null; color: string | null; column_id: string; ord: number };
-export type Column = { id: string; name: string; cards: Card[] };
+/** A column is a status; `is_done` marks a project's fixed Done column (D34). */
+export type Column = { id: string; name: string; cards: Card[]; is_done?: boolean };
 
 /** The card dialog; other features open it too (a linked card). */
 export function CardDialog({ card, columns, onClose, onChange }: { card: Card; columns: Column[]; onClose: () => void; onChange: (c: Partial<Card> | null) => void }) {
@@ -37,7 +40,7 @@ registerPanel('card', {
   order: 30,
   render: ({ card, columns, update }) => (
     <label class="inline">
-      Column
+      {columns.some((c) => (c as Column).is_done) ? 'Status' : 'Column'}
       <select
         value={card.column_id}
         onChange={(e) => {
@@ -48,7 +51,7 @@ registerPanel('card', {
       >
         {columns.map((c) => (
           <option key={c.id} value={c.id}>
-            {c.name}
+            {(c as Column).is_done ? `✓ ${c.name}` : c.name}
           </option>
         ))}
       </select>
@@ -80,12 +83,20 @@ function ColumnView({
   onOpen,
   setCols,
   cols,
+  doneOn,
+  folded,
+  onUnfold,
 }: {
   col: Column;
   owner: { project_id?: string; list_id?: string };
   onOpen: (c: Card) => void;
   setCols: (fn: (c: Column[]) => Column[]) => void;
   cols: Column[];
+  /** The board has a fixed Done column (flag done-column): it cannot be moved or deleted. */
+  doneOn?: boolean;
+  /** Hide done is on: draw the column as a slim strip. */
+  folded?: boolean;
+  onUnfold?: () => void;
 }) {
   const listRef = useRef<HTMLUListElement>(null);
   const colsRef = useRef(cols);
@@ -133,8 +144,23 @@ function ColumnView({
     );
   };
 
+  // Reorder: other columns move among themselves; the Done column stays last.
+  const fixedDone = !!doneOn && !!col.is_done;
+  const movable = doneOn ? cols.filter((c) => !c.is_done) : cols;
+  const at = movable.findIndex((c) => c.id === col.id);
+  const moveTo = (index: number) => change(() => post(`/columns/${col.id}/move`, { index }));
+
+  if (folded) {
+    return (
+      <section class="column done-col done-strip">
+        <DoneStripLabel name={col.name} count={col.cards.length} onOpen={() => onUnfold?.()} />
+        <ul class="cards" ref={listRef} data-col={col.id} aria-label={`Drop here to mark done`} />
+      </section>
+    );
+  }
+
   return (
-    <section class="column">
+    <section class={`column${fixedDone ? ' done-col' : ''}`}>
       <header class="column-head">
         <InlineEdit
           value={col.name}
@@ -146,7 +172,17 @@ function ColumnView({
           }}
         />
         <span class="muted">{col.cards.length}</span>
-        <button
+        {!fixedDone && at > 0 && (
+          <button class="icon small column-move" aria-label={`Move ${col.name} earlier`} title="Move earlier" onClick={() => moveTo(at - 1)}>
+            ‹
+          </button>
+        )}
+        {!fixedDone && at >= 0 && at < movable.length - 1 && (
+          <button class="icon small column-move" aria-label={`Move ${col.name} later`} title="Move later" onClick={() => moveTo(at + 1)}>
+            ›
+          </button>
+        )}
+        {!fixedDone && <button
           class="icon small"
           aria-label={`Delete column ${col.name}`}
           onClick={() => {
@@ -155,7 +191,7 @@ function ColumnView({
           }}
         >
           ✕
-        </button>
+        </button>}
       </header>
       <ul class="cards" ref={listRef} data-col={col.id}>
         {col.cards.map((c) => (
@@ -178,8 +214,24 @@ function ColumnView({
   );
 }
 
-/** `onColumns` hears every change made on the board, so the page's data (and its saved copy for offline use) keeps it. */
-export function Board({ columns, owner, onColumns }: { columns: Column[]; owner: { project_id?: string; list_id?: string }; onColumns?: (cols: Column[]) => void }) {
+/**
+ * `onColumns` hears every change made on the board, so the page's data (and its saved copy for offline use) keeps it.
+ * A project's board also gets `hideDone` and `onHideDone` (its Done column folded or not, saved on the project).
+ */
+export function Board({
+  columns,
+  owner,
+  onColumns,
+  hideDone,
+  onHideDone,
+}: {
+  columns: Column[];
+  owner: { project_id?: string; list_id?: string };
+  onColumns?: (cols: Column[]) => void;
+  hideDone?: boolean;
+  onHideDone?: (hide: boolean) => void;
+}) {
+  const doneFlag = useFlag(DONE_FLAG);
   const [cols, setColsState] = useState(columns);
   const [open, setOpen] = useState<Card | null>(null);
   const isPhone = typeof matchMedia !== 'undefined' && matchMedia('(max-width: 700px)').matches;
@@ -195,9 +247,18 @@ export function Board({ columns, owner, onColumns }: { columns: Column[]; owner:
     if (cols !== columns) onColumns?.(cols);
   }, [cols]);
   const setCols = (fn: (c: Column[]) => Column[]) => setColsState(fn);
+  const done = doneFlag && owner.project_id ? cols.find((c) => c.is_done) : undefined;
+  const folded = !!done && !!hideDone;
+  const toggleDone = (hide: boolean) => owner.project_id && onHideDone && setHideDone(owner.project_id, hide, onHideDone);
+  const addColumn = (
+    <div class="column add-column" key="add-column">
+      <AddInput placeholder="Add a column" onAdd={(name) => change(() => post('/columns', { ...owner, name }))} />
+    </div>
+  );
   return (
     <div class="board-wrap">
       <div class="board-tools">
+        {done && onHideDone && <HideDoneButton hidden={folded} count={done.cards.length} onToggle={() => toggleDone(!folded)} />}
         <button
           class="ghost small"
           onClick={() => {
@@ -210,12 +271,22 @@ export function Board({ columns, owner, onColumns }: { columns: Column[]; owner:
         </button>
       </div>
       <div class={`board ${layout === 'h' ? 'horizontal' : 'vertical'}`}>
-        {cols.map((c) => (
-          <ColumnView key={c.id} col={c} owner={owner} cols={cols} setCols={setCols} onOpen={setOpen} />
-        ))}
-        <div class="column add-column">
-          <AddInput placeholder="Add a column" onAdd={(name) => change(() => post('/columns', { ...owner, name }))} />
-        </div>
+        {cols.map((c) => [
+          // New columns go before the Done column, so the box to add one sits there.
+          c === done ? addColumn : null,
+          <ColumnView
+            key={`${c.id}${c === done && folded ? '-folded' : ''}`}
+            col={c}
+            owner={owner}
+            cols={cols}
+            setCols={setCols}
+            onOpen={setOpen}
+            doneOn={!!done}
+            folded={c === done && folded}
+            onUnfold={() => toggleDone(false)}
+          />,
+        ])}
+        {!done && addColumn}
       </div>
       {open && (
         <CardDialog

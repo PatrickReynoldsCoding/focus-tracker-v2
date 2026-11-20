@@ -16,6 +16,8 @@ type Full = {
   last_touched: string | null;
   locked_until: string | null;
   columns: Column[];
+  /** Hide done: the board's Done column folded (D34). */
+  hide_done?: boolean;
   criteria: Criterion[];
   resources: unknown[];
   notes: string;
@@ -76,7 +78,15 @@ registerPlace<ProjectPanelProps>({
 
 registerRoute({ id: 'project', prefix: '/p', tab: 'projects', render: ({ params }) => <ProjectPage id={params[0]} /> });
 
-registerPanel('project', { id: 'board', title: 'Board', description: 'The project’s cards in their columns.', alwaysShown: true, order: 10, wide: true, render: ({ project, setProject }) => <Board columns={project.columns} owner={{ project_id: project.id }} onColumns={(columns) => setProject((p) => ({ ...p, columns }))} /> });
+registerPanel('project', { id: 'board', title: 'Board', description: 'The project’s cards in their columns.', alwaysShown: true, order: 10, wide: true, render: ({ project, setProject }) => (
+    <Board
+      columns={project.columns}
+      owner={{ project_id: project.id }}
+      onColumns={(columns) => setProject((p) => ({ ...p, columns }))}
+      hideDone={!!project.hide_done}
+      onHideDone={(hide_done) => setProject((p) => ({ ...p, hide_done }))}
+    />
+  ) });
 registerPanel('project', {
   id: 'notes',
   icon: '✎',
