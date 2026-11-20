@@ -25,7 +25,7 @@ export const PILL_ICONS = ['🏠', '💼', '🛒', '🧠', '💪', '📚', '🎯
 export const FOCUS_CARD = ['compact', 'full', 'hidden'] as const;
 
 const PAGE = /^[a-z][a-z0-9-]{0,30}$/;
-const PANEL_ID = /^[A-Za-z0-9_:.-]{1,60}$/;
+export const PANEL_ID = /^[A-Za-z0-9_:.-]{1,60}$/;
 const PILL_ID = /^[A-Za-z0-9_-]{1,40}$/;
 const MAX_ITEMS = 200;
 
@@ -128,7 +128,7 @@ export async function readLayout(ctx: Ctx, p: string) {
   return { grid, pills, grids, view };
 }
 
-function pillId(raw: string): string {
+export function pillId(raw: string): string {
   if (!PILL_ID.test(raw)) throw bad('Unknown pill');
   return raw;
 }
@@ -145,12 +145,12 @@ async function savePillGrid(ctx: Ctx, p: string, pill: string, grid: Grid | null
   else await ctx.setSetting(`layout.${p}.grids`, value);
 }
 
-async function savePills(ctx: Ctx, p: string, pills: Pill[] | null) {
+export async function savePills(ctx: Ctx, p: string, pills: Pill[] | null) {
   await setSettingWithUndo(ctx, `layout.${p}.pills`, pills ? JSON.stringify(pills) : null);
 }
 
 /** What Claude needs to make pills: the panel ids Today knows, with names. */
-async function pillPanels(ctx: Ctx) {
+export async function pillPanels(ctx: Ctx) {
   const [lists, boards, projects] = await Promise.all([
     ctx.db.prepare('SELECT id, name, kind, show_today FROM lists WHERE mode = ? ORDER BY ord, name').bind(ctx.mode).all<{ id: string; name: string; kind: string; show_today: number }>(),
     ctx.db.prepare('SELECT id, name, show_today FROM whiteboards WHERE mode = ? ORDER BY name').bind(ctx.mode).all<{ id: string; name: string; show_today: number }>(),

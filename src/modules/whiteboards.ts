@@ -159,7 +159,17 @@ async function boardFiles(ctx: Ctx, like: string | null): Promise<FileItem[]> {
 
 export const whiteboardsModule: Module = {
   id: 'whiteboards',
-  files: [{ type: 'whiteboard', group: 'whiteboards', label: 'Whiteboard', entity: 'whiteboards', feature: FLAG, list: boardFiles }],
+  files: [
+    {
+      type: 'whiteboard',
+      group: 'whiteboards',
+      label: 'Whiteboard',
+      entity: 'whiteboards',
+      feature: FLAG,
+      list: boardFiles,
+      today: { prefix: 'wb-', set: (ctx, id, on) => update(ctx, whiteboardsEntity, id, { show_today: on }) },
+    },
+  ],
   description: 'Excalidraw whiteboards on projects or on their own, with previews, a Today panel and Claude tools to draw.',
   entities: [whiteboardsEntity, whiteboardScenesEntity],
   features: [{ id: FLAG, label: 'Whiteboards', description: 'Excalidraw whiteboards: a Whiteboards tab, boards on project pages and on Today.', default: true }],

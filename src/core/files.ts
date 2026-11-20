@@ -48,6 +48,12 @@ export interface FileSource {
    * `like` (an SQL LIKE pattern, already escaped with \\).
    */
   list(ctx: Ctx, like: string | null): Promise<FileItem[]>;
+  /**
+   * How a file of this type is a panel on Today (Add panel's file picker, Claude's add_panel): its
+   * panel id is `prefix` + the file's id, and `set` puts it on Today or takes it off. None: it
+   * cannot be a panel (a link).
+   */
+  today?: { prefix: string; set(ctx: Ctx, id: string, on: boolean): Promise<unknown> };
 }
 
 /** A LIKE pattern for a search, escaped with \\. */

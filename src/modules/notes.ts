@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import type { Ctx } from '../core/ctx';
 import type { Entity, Row } from '../core/entity';
-import { bad } from '../core/errors';
+import { ApiError, bad } from '../core/errors';
 import type { FileItem } from '../core/files';
 import type { Module } from '../core/registry';
 import { create, list, update } from '../core/store';
@@ -46,6 +46,14 @@ export async function setNote(ctx: Ctx, owner: Owner, body: string, how: 'replac
   return create(ctx, notesEntity, { ...owner, body: next });
 }
 
+/** A project's notes on Today (the panel `pnote-<project id>`), or off it. Made empty on first use. */
+async function projectNoteOnToday(ctx: Ctx, projectId: string, on: boolean) {
+  const p = await ctx.db.prepare('SELECT id FROM projects WHERE id = ? AND mode = ?').bind(projectId, ctx.mode).first();
+  if (!p) throw new ApiError(404, `No project with id ${projectId}`);
+  const note = (await getNote(ctx, { project_id: projectId })) ?? (await setNote(ctx, { project_id: projectId }, ''));
+  return update(ctx, notesEntity, String(note.id), { show_today: on });
+}
+
 /** Each project's notes as a file in the project's folder (they cannot move). Empty ones show
  *  only in the folder itself, not in searches or the Notes filter. */
 async function projectNoteFiles(ctx: Ctx, like: string | null): Promise<FileItem[]> {
@@ -75,7 +83,7 @@ export const notesModule: Module = {
   id: 'notes',
   description: 'Project notes and notes on the Notes tab, as Markdown.',
   entities: [notesEntity],
-  files: [{ type: 'project-note', group: 'notes', label: 'Project notes', list: projectNoteFiles }],
+  files: [{ type: 'project-note', group: 'notes', label: 'Project notes', list: projectNoteFiles, today: { prefix: 'pnote-', set: projectNoteOnToday } }],
   // Read by the web app's note editor (web/src/features/editor).
   features: [
     {

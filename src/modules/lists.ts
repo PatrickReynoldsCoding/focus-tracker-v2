@@ -185,10 +185,12 @@ async function listFiles(ctx: Ctx, kind: (typeof LIST_KINDS)[number], like: stri
   }));
 }
 
+/** A note, list or to-do list on Today is the panel `list-<id>` (show_today on the row). */
+const listOnToday = { prefix: 'list-', set: (ctx: Ctx, id: string, on: boolean) => update(ctx, listsEntity, id, { show_today: on }) };
 const listFileSources: FileSource[] = [
-  { type: 'note', group: 'notes', label: 'Note', entity: 'lists', list: (ctx, like) => listFiles(ctx, 'note', like) },
-  { type: 'todo', group: 'lists', label: 'To-do list', entity: 'lists', list: (ctx, like) => listFiles(ctx, 'todo', like) },
-  { type: 'list', group: 'lists', label: 'List', entity: 'lists', list: (ctx, like) => listFiles(ctx, 'list', like) },
+  { type: 'note', group: 'notes', label: 'Note', entity: 'lists', list: (ctx, like) => listFiles(ctx, 'note', like), today: listOnToday },
+  { type: 'todo', group: 'lists', label: 'To-do list', entity: 'lists', list: (ctx, like) => listFiles(ctx, 'todo', like), today: listOnToday },
+  { type: 'list', group: 'lists', label: 'List', entity: 'lists', list: (ctx, like) => listFiles(ctx, 'list', like), today: listOnToday },
 ];
 
 export const listsModule: Module = {
