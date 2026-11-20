@@ -208,3 +208,8 @@ html[data-theme='eink'] .po-size { width: 26px; height: 26px; background: linear
 html[data-theme='eink'] .pl-tool { min-height: 44px; border: 2px solid #000; }
 @media (min-width: 760px) { .pl-panels { min-height: 0; } }
 html[data-theme='eink'] .pl-switch input[type='checkbox'] { width: 52px; height: 30px; }
+
+/* ---------- "+ Add panel" at the end of the panels, and a panel just added (adding.tsx) ---------- */
+.lg-add-panel { display: flex; justify-content: center; margin-top: 14px; }
+.lg-add-panel button { min-width: 200px; border-style: dashed; }
+.lg-new > .lg-body > *, .lg-row.lg-new > :first-child { outline: 2px solid var(--accent); outline-offset: 2px; transition: outline-color 0.4s; }

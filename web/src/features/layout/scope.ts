@@ -3,7 +3,7 @@
 // inside a pill reads and saves that pill's layout, and Remove, Add and Reset act on the pill.
 
 import { createContext } from 'preact';
-import type { PanelDef } from '../../core/registry';
+import type { PanelAdderTarget, PanelDef } from '../../core/registry';
 import type { Grid } from './store';
 
 export interface GridStore {
@@ -21,6 +21,8 @@ export interface GridStore {
   /** Put panels on (for a pill: its sheet). The page's own grid opens Add panels instead. */
   add: () => void;
   addLabel: string;
+  /** Where Add panel puts things here (adding.tsx). */
+  target?: PanelAdderTarget;
   /** Back to the usual layout, and its text. */
   reset: () => void;
   resetLabel: string;

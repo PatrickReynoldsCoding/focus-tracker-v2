@@ -5,7 +5,7 @@
 
 import { useState } from 'preact/hooks';
 import { del, undo } from '../../core/api';
-import { useFlags } from '../../core/features';
+import { useFlag, useFlags } from '../../core/features';
 import { lookupPanel, standIn, type PanelDef } from '../../core/registry';
 import { Dialog } from '../../core/ui';
 import { groupByKind, useAddable } from './AddFeature';
@@ -17,13 +17,16 @@ type Option = { id: string; title: string; kind?: string; description?: string }
 /** Everything a pill can hold: Today's panels (not the pinned focus card), then what could go on Today. */
 function usePillOptions(place: string, panels: PanelDef<any>[]) {
   const flags = useFlags();
-  const offered = useAddable(place);
+  // With Add panel on, only what is on Today is listed here; other files go in a pill with + Add panel → Add file.
+  const files = useFlag('add-panel');
+  const loaded = useAddable(files ? '' : place);
+  const offered = files ? [] : loaded;
   const options: Option[] = [
     ...panels.filter((p) => !p.fixed && p.id !== PINNED).map((p) => ({ id: p.id, title: titleOf(p), kind: p.kind, description: p.description })),
     ...(offered ?? []).filter((a) => !panels.some((p) => p.id === a.id)),
   ];
   const nameOf = (id: string) => options.find((o) => o.id === id)?.title ?? lookupPanel(place, id, flags)?.title ?? 'Panel';
-  return { options, nameOf, loading: offered === null };
+  return { options, nameOf, loading: offered === null, files };
 }
 
 /** Save a pill made or changed in the sheet. When the pill has its own grid, the sheet's order
@@ -58,7 +61,7 @@ export function PillSheet({
   /** After a save or delete: what can be undone, and the pill to show (a new one). */
   onDone: (undoable: string | null, show?: string) => void;
 }) {
-  const { options, nameOf, loading } = usePillOptions(place, panels);
+  const { options, nameOf, loading, files } = usePillOptions(place, panels);
   const grid = layoutNow(place).grids[start.id];
   const ordered = grid ? readingOrder(start.panels, grid) : start.panels;
   // An old id a newer panel replaces (PanelDef.replaces) is edited as that panel.
@@ -69,6 +72,7 @@ export function PillSheet({
       start={first}
       isNew={isNew}
       options={options}
+      fileHint={files}
       loading={loading}
       nameOf={nameOf}
       onClose={onClose}
@@ -237,11 +241,13 @@ function PillEditor({
   isNew,
   options,
   loading,
+  fileHint,
   nameOf,
   onClose,
   onSave,
   onDelete,
 }: {
+  fileHint?: boolean;
   start: Pill;
   isNew: boolean;
   options: Option[];
@@ -326,6 +332,7 @@ function PillEditor({
           </div>
         ))}
         {loading && <p class="muted small">Loading notes, lists and whiteboards…</p>}
+        {fileHint && <p class="muted small">Other notes, lists and whiteboards: + Add panel on the pill, then Add file.</p>}
         <div class="row pl-editor-foot">
           <button class="primary" type="submit">
             {isNew ? 'Add pill' : 'Save'}

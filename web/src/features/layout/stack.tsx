@@ -12,11 +12,12 @@
 
 import type { VNode } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import type { PanelDef } from '../../core/registry';
+import { usePanelAdder, type PanelDef } from '../../core/registry';
 import { signal, useSignal } from '../../core/signal';
 import { isEink } from '../../core/theme';
 import { route } from '../../core/ui';
 import { AddFeature } from './AddFeature';
+import { AddPanelButton } from './adding';
 import { pack, places, sortedIds, type Placed } from './grid';
 import type { GridStore } from './scope';
 import { titleOf, type Grid as GridData, type Pos } from './store';
@@ -54,6 +55,7 @@ type Drag = {
 export function Stack({ place, props, panels, all, store, own }: { place: string; props: any; panels: PanelDef<any>[]; all: PanelDef<any>[]; store: GridStore; own: boolean }) {
   const on = useSignal(arranging) === store.key;
   const [adding, setAdding] = useState(false);
+  const Adder = usePanelAdder();
   const root = useRef<HTMLDivElement>(null);
   const top = panels.filter((p) => p.fixed === 'top');
   const bottom = panels.filter((p) => p.fixed === 'bottom');
@@ -330,7 +332,7 @@ export function Stack({ place, props, panels, all, store, own }: { place: string
     requestAnimationFrame(() => root.current?.querySelector<HTMLElement>(`.lg-row[data-panel="${CSS.escape(id)}"] .lg-arr-grip`)?.focus());
   };
 
-  const addPanels = () => (own ? setAdding(true) : store.add());
+  const addPanels = () => (own || Adder ? setAdding(true) : store.add());
   const anim = !calm();
   return (
     <div class={`lg-stack ${on ? 'lg-arranging' : ''} ${anim ? 'lg-anim' : ''}`} ref={root} data-place={place} data-no-swipe={on ? '' : undefined}>
@@ -390,10 +392,11 @@ export function Stack({ place, props, panels, all, store, own }: { place: string
           </div>
         );
       })}
+      {Adder && store.target && !on && <AddPanelButton onClick={addPanels} />}
       {bottom.map((p) => (
         <Fixed key={p.id} node={p.render(props)} />
       ))}
-      {adding && <AddFeature place={place} all={all} onClose={() => setAdding(false)} />}
+      {adding && (Adder && store.target ? <Adder.component place={place} {...store.target} onClose={() => setAdding(false)} /> : <AddFeature place={place} all={all} onClose={() => setAdding(false)} />)}
     </div>
   );
 }

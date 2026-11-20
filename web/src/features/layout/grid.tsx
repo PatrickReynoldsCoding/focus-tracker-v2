@@ -13,9 +13,11 @@ import type { VNode } from 'preact';
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { del, say, undo } from '../../core/api';
 import { Menu, MenuItem } from '../../core/menu';
-import type { PanelDef, PanelLayoutProps } from '../../core/registry';
+import { useFlag } from '../../core/features';
+import { usePanelAdder, type PanelDef, type PanelLayoutProps } from '../../core/registry';
 import { isEink } from '../../core/theme';
 import { AddFeature } from './AddFeature';
+import { AddPanelButton, isFilePanel, pageTarget, removeFilePanel } from './adding';
 import { GridScope, type GridStore } from './scope';
 import { Stack } from './stack';
 import { COLS, DESKTOP, layoutNow, saveGrid, saveLayout, titleOf, useLayout, useMedia, type Grid as GridData, type Pos } from './store';
@@ -114,6 +116,7 @@ export function GridLayout({ place, props, panels }: PanelLayoutProps) {
   const desktop = useMedia(DESKTOP);
   const data = useLayout(place);
   const scope = useContext(GridScope);
+  const adder = useFlag('add-panel');
   const removed = new Set(scope ? [] : (data?.grid?.removed ?? []));
   const shown = panels.filter((p) => p.fixed || p.alwaysShown || !removed.has(p.id));
   const store: GridStore = scope ?? {
@@ -122,10 +125,11 @@ export function GridLayout({ place, props, panels }: PanelLayoutProps) {
     saved: data?.grid ?? null,
     read: () => layoutNow(place).grid,
     save: (g) => saveGrid(place, g),
-    remove: (p, base) => removeFromPage(place, p, base),
+    remove: (p, base) => (adder && place === 'today' && isFilePanel(p) ? removeFilePanel(place, p) : removeFromPage(place, p, base)),
     removeLabel: place === 'project' ? 'Remove from project pages' : 'Remove from Today',
     add: () => {},
-    addLabel: 'Add panels…',
+    addLabel: adder ? 'Add panel…' : 'Add panels…',
+    target: pageTarget(place, panels, props),
     reset: () => resetPage(place),
     resetLabel: 'Reset this page’s layout',
   };
@@ -140,7 +144,7 @@ function removeFromPage(place: string, p: PanelDef<any>, base?: GridData) {
   saveGrid(place, { ...g, removed: [...g.removed.filter((x) => x !== p.id), p.id] }).then(
     (ok) =>
       ok &&
-      say(`${titleOf(p)} removed. Add panels (⋯ on a computer, a long press on a phone) brings it back.`, 'info', {
+      say(`${titleOf(p)} removed. Add panel brings it back.`, 'info', {
         label: 'Undo',
         run: () => {
           const g2 = layoutNow(place).grid ?? g;
@@ -153,6 +157,7 @@ function removeFromPage(place: string, p: PanelDef<any>, base?: GridData) {
 function Grid({ place, props, panels, all, store, own }: { place: string; props: any; panels: PanelDef<any>[]; all: PanelDef<any>[]; store: GridStore; own: boolean }) {
   const saved = store.saved;
   const [adding, setAdding] = useState(false);
+  const Adder = usePanelAdder();
   const [menu, setMenu] = useState<{ anchor: HTMLElement; p: PanelDef<any> } | null>(null);
   const box = useRef<HTMLDivElement>(null);
   const top = panels.filter((p) => p.fixed === 'top');
@@ -407,7 +412,7 @@ function Grid({ place, props, panels, all, store, own }: { place: string; props:
 
   const autoHeight = (id: string) => save(sortedIds(now.current.ids, now.current.pos), { [id]: { h: null } });
 
-  const addPanels = () => (own ? setAdding(true) : store.add());
+  const addPanels = () => (own || Adder ? setAdding(true) : store.add());
   return (
     <div class="lg-page">
       {top.map((p) => (
@@ -457,6 +462,7 @@ function Grid({ place, props, panels, all, store, own }: { place: string; props:
         })}
         <div class="lg-shadow" aria-hidden="true" />
       </div>
+      {Adder && store.target && drawn.length > 0 && <AddPanelButton onClick={addPanels} />}
       {bottom.map((p) => (
         <Fixed key={p.id} node={p.render(props)} />
       ))}
@@ -486,7 +492,7 @@ function Grid({ place, props, panels, all, store, own }: { place: string; props:
           </MenuItem>
         </Menu>
       )}
-      {adding && <AddFeature place={place} all={all} onClose={() => setAdding(false)} />}
+      {adding && (Adder && store.target ? <Adder.component place={place} {...store.target} onClose={() => setAdding(false)} /> : <AddFeature place={place} all={all} onClose={() => setAdding(false)} />)}
     </div>
   );
 }

@@ -10,9 +10,10 @@ import { Fragment, type VNode } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { localStorageSet, mode, say, undo } from '../../core/api';
 import { useFlags } from '../../core/features';
-import { lookupPanel, standIn, type PanelDef, type PanelLayoutProps } from '../../core/registry';
+import { lookupPanel, standIn, usePanelAdder, type PanelAdderTarget, type PanelDef, type PanelLayoutProps } from '../../core/registry';
 import { useSignal } from '../../core/signal';
 import { isEink } from '../../core/theme';
+import { isFilePanel, pageTarget, pillTarget, removeFilePanel } from './adding';
 import { GridScope, type GridStore } from './scope';
 import { PillSheet, TodaySettings } from './TodaySettings';
 import { layoutNow, MAX_PILLS, newPill, PHONE, PINNED, resetPillGrid, savePillGrid, savePills, titleOf, useLayout, useMedia, type Pill } from './store';
@@ -76,6 +77,8 @@ function Pills({ place, props, panels, next }: PanelLayoutProps) {
   const data = useLayout(place);
   const [settings, setSettings] = useState(false);
   const [sheet, setSheet] = useState<{ pill: Pill; isNew: boolean } | null>(null);
+  const Adder = usePanelAdder();
+  const [adding, setAdding] = useState<PanelAdderTarget | null>(null);
   const view = data?.view ?? {};
   const removed = data?.grid?.removed ?? [];
   const pills = data?.pills ?? usualPills(panels, removed);
@@ -214,6 +217,7 @@ function Pills({ place, props, panels, next }: PanelLayoutProps) {
       .filter((c) => c !== null && c !== undefined && c !== '')
       .join(' · ');
 
+  const targetOf = (pill: Pill) => pillTarget(place, pill, panels, () => pillsNow.current, !!data?.pills);
   /** Inside a pill the grid (or the phone's stack) keeps the pill's own layout; Remove takes a panel out of the pill. */
   const scopeFor = (pill: Pill): GridStore => ({
     key: `pill-${pill.id}`,
@@ -222,13 +226,15 @@ function Pills({ place, props, panels, next }: PanelLayoutProps) {
     read: () => layoutNow(place).grids[pill.id] ?? null,
     save: (g) => savePillGrid(place, pill.id, g),
     remove: (p) => {
+      if (Adder && isFilePanel(p)) return void removeFilePanel(place, p);
       const list = pillsNow.current.map((x) => (x.id === pill.id ? { ...x, panels: x.panels.filter((id) => id !== p.id) } : x));
       savePills(place, list).then((ok) => ok && say(`${titleOf(p)} is out of “${pill.name}”. All still has it if it is on Today.`, 'info', { label: 'Undo', run: undo }));
     },
     removeLabel: 'Remove from this pill',
-    // For now the pill's sheet puts panels in it (a coming "Add panel" button will do it in place).
-    add: () => setSheet({ pill, isNew: false }),
-    addLabel: 'Add panels…',
+    // Without Add panel (flag add-panel off) the pill's sheet puts panels in it.
+    add: () => (Adder ? setAdding(targetOf(pill)) : setSheet({ pill, isNew: false })),
+    addLabel: Adder ? 'Add panel…' : 'Add panels…',
+    target: Adder ? targetOf(pill) : undefined,
     reset: () => resetPillGrid(place, pill.id),
     resetLabel: 'Reset this pill’s layout',
   });
@@ -266,6 +272,11 @@ function Pills({ place, props, panels, next }: PanelLayoutProps) {
             );
           })}
         </div>
+        {!phone && Adder && current && (
+          <button class="ghost small pl-tool pl-add" title={`Put a panel or a file in “${current.pill.name}”`} onClick={() => setAdding(current.pill.id === ALL ? pageTarget(place, panels, props) : targetOf(current.pill))}>
+            + Add panel
+          </button>
+        )}
         {!phone && editable && (
           <button class="ghost small pl-tool" title={`Rename “${editable.name}” or choose its panels`} onClick={() => setSheet({ pill: editable, isNew: false })}>
             ✎ Edit pill
@@ -292,8 +303,8 @@ function Pills({ place, props, panels, next }: PanelLayoutProps) {
         ) : (
           <div class="card pl-empty">
             <p class="muted">This pill has no panels yet.</p>
-            <button class="primary" onClick={() => setSheet({ pill: current.pill, isNew: false })}>
-              Add panels
+            <button class="primary" onClick={() => (Adder ? setAdding(targetOf(current.pill)) : setSheet({ pill: current.pill, isNew: false }))}>
+              {Adder ? '+ Add panel' : 'Add panels'}
             </button>
           </div>
         )}
@@ -303,6 +314,7 @@ function Pills({ place, props, panels, next }: PanelLayoutProps) {
         .map((p) => (
           <Slot key={p.id} node={p.render(props)} />
         ))}
+      {adding && Adder && <Adder.component place={place} {...adding} onClose={() => setAdding(null)} />}
       {settings && <TodaySettings place={place} panels={panels} pills={pills} saved={!!data?.pills} view={view} onClose={() => setSettings(false)} />}
       {sheet && (
         <PillSheet

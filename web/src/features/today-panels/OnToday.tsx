@@ -4,6 +4,7 @@
 import type { VNode } from 'preact';
 import { useState } from 'preact/hooks';
 import { change, get, optimistic, put } from '../../core/api';
+import { useFlag } from '../../core/features';
 import type { Addable, PanelDef, TodayPanelProps } from '../../core/registry';
 import { Dialog, Loading, MarkdownEditor, useData } from '../../core/ui';
 import { cardsOf, ListPanel, todosOf, type FullList, type SetList } from './ListBody';
@@ -171,9 +172,13 @@ export async function addableOnToday(): Promise<Addable[]> {
   }));
 }
 
-/** "+ Add to Today", under Today's panels. */
+/** "+ Add to Today", under Today's panels. With Add panel on (flag add-panel, and panels that
+ *  move), "+ Add panel" → Add file does this instead. */
 export function AddToToday() {
   const [picking, setPicking] = useState(false);
+  const adder = useFlag('add-panel');
+  const movable = useFlag('movable-panels');
+  if (adder && movable) return null;
   return (
     <>
       <div class="tp-add">
