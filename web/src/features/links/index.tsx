@@ -82,6 +82,7 @@ function LinkTypes() {
 
 registerPanel('project', {
   id: 'blocked-by',
+  icon: '⛓',
   title: 'Blocked by',
   description: 'Projects this one waits for. Shown only while it is blocked.',
   order: 5,
@@ -90,6 +91,7 @@ registerPanel('project', {
 });
 registerPanel('project', {
   id: 'links',
+  icon: '🔗',
   title: 'Linked items',
   description: 'Projects, cards and lists linked to this project.',
   order: 35,

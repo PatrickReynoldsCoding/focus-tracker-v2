@@ -214,7 +214,7 @@ registerPanel('today', {
   render: ({ today }) => <FocusCard data={today} />,
   compact: ({ today }) => <FocusCard data={today} compact />,
 });
-registerPanel('today', { id: 'todos', title: 'To do today', description: 'To-dos for today, with tick and add.', order: 20, count: ({ today }) => today.todos.filter((t: Todo) => !t.done).length, render: ({ today, setToday }) => <TodoPanel data={today} setData={setToday} /> });
+registerPanel('today', { id: 'todos', icon: '☐', title: 'To do today', description: 'To-dos for today, with tick and add.', order: 20, count: ({ today }) => today.todos.filter((t: Todo) => !t.done).length, render: ({ today, setToday }) => <TodoPanel data={today} setData={setToday} /> });
 registerPanel('today', {
   id: 'on-today',
   title: 'On Today',
@@ -236,6 +236,7 @@ registerPanel('today', {
 });
 registerPanel('today', {
   id: 'neglected',
+  icon: '⏳',
   title: 'Waiting for you',
   description: 'Active projects not touched for a while. Shown only when there are some.',
   order: 80,

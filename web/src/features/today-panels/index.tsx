@@ -23,4 +23,4 @@ registerPanel('list', { id: 'list-settings', order: 10, render: ({ list, setList
 
 registerPanel('project', { id: 'notes-today', title: 'Show notes on Today', attachTo: 'notes', order: 21, render: ({ project }) => <ProjectNotesToday projectId={project.id} /> });
 // Same id as the link chips in projects/ProjectPage.tsx: linked lists show in full instead.
-registerPanel('project', { id: 'lists', title: 'Linked lists', description: 'Lists linked to this project, in full.', order: 60, render: ({ project }) => <LinkedLists project={project} /> });
+registerPanel('project', { id: 'lists', icon: '≡', title: 'Linked lists', description: 'Lists linked to this project, in full.', order: 60, render: ({ project }) => <LinkedLists project={project} /> });

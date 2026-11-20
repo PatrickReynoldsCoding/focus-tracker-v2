@@ -79,6 +79,7 @@ registerRoute({ id: 'project', prefix: '/p', tab: 'projects', render: ({ params 
 registerPanel('project', { id: 'board', title: 'Board', description: 'The project’s cards in their columns.', alwaysShown: true, order: 10, wide: true, render: ({ project, setProject }) => <Board columns={project.columns} owner={{ project_id: project.id }} onColumns={(columns) => setProject((p) => ({ ...p, columns }))} /> });
 registerPanel('project', {
   id: 'notes',
+  icon: '✎',
   title: 'Notes',
   description: 'The project’s notes.',
   order: 20,
@@ -93,6 +94,7 @@ registerPanel('project', {
 // The 'resources' panel (order 40) is registered by features/resources.
 registerPanel('project', {
   id: 'sessions',
+  icon: '⏱',
   title: 'Sessions',
   description: 'Recent sessions on this project and where you stopped.',
   order: 50,
@@ -120,6 +122,7 @@ registerPanel('project', {
 });
 registerPanel('project', {
   id: 'lists',
+  icon: '≡',
   title: 'Lists',
   order: 60,
   render: ({ project }) =>

@@ -15,6 +15,7 @@ export const FLAG = 'today-panel';
 
 registerPanel('today', {
   id: 'today-list',
+  icon: '✓',
   title: 'Today',
   description: 'Everything for today in one list: habits, then to-dos and cards for today or left from earlier. Tick, add and open them.',
   order: 20,
