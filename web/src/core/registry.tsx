@@ -51,8 +51,10 @@ export interface PanelDef<P> {
   /** Replaces another feature's panel with the same id, whichever is registered first. */
   override?: boolean;
   render: Render<P>;
-  /** One line about what it shows, for "+ Add feature" and Today settings. */
+  /** One line about what it shows, for Add panel and Today settings. */
   description?: string;
+  /** A small icon (an emoji or symbol) for Add panel's list. */
+  icon?: string;
   /** Cannot be removed from its page (the focus card, a project's board). */
   alwaysShown?: boolean;
   /** Not part of the layout: always drawn above ('top') or below ('bottom') the panels that move,
@@ -313,6 +315,8 @@ export interface FileCreateDef {
   icon: ComponentChildren;
   order: number;
   dialog: ComponentType<{ folderId: string | null; onClose: () => void }>;
+  /** Make it at once from a name, without opening it (Add panel's file picker: “New note” there). */
+  make?: (name: string, folderId: string | null) => Promise<FileItem | undefined>;
 }
 /** A kind of file the Files tab shows (the server lists it, src/core/files.ts). Each feature
  *  registers its own: how it looks, opens, is renamed, deleted and made. Pickers (Add file) and
@@ -342,6 +346,9 @@ export interface FileTypeDef {
   rename?: (f: FileItem, name: string) => Promise<unknown>;
   remove?: (f: FileItem) => Promise<unknown>;
   create?: FileCreateDef[];
+  /** Its panel id on Today ('list-<id>'): the file can be a panel (Add panel's Add file). The
+   *  server's FileSource.today uses the same id. None: it cannot be a panel (a link). */
+  panel?: (f: FileItem) => string;
 }
 const fileTypes: (FileTypeDef & { id: string })[] = [];
 export const registerFileType = (t: FileTypeDef) => add(fileTypes, { ...t, id: t.type });
@@ -349,6 +356,44 @@ export const registerFileType = (t: FileTypeDef) => add(fileTypes, { ...t, id: t
 export function useFileTypes(): FileTypeDef[] {
   return visible(fileTypes, useFlags()).sort((a, b) => a.order - b.order);
 }
+
+// ---------- Add panel (the "+ Add panel" button) ----------
+
+/** Where Add panel puts things, worked out by the page's layout (a pill of Today, Today, project pages). */
+export interface PanelAdderTarget {
+  /** For people: 'the pill “Home”', 'Today', 'project pages'. */
+  where: string;
+  /** Panels registered for the page that are not shown there now. */
+  panels: PanelDef<any>[];
+  addPanel: (p: PanelDef<any>) => Promise<unknown>;
+  /** Files (Add file), or null when the page takes none. */
+  files: null | {
+    /** The file types that can be chosen. */
+    accepts: (t: FileTypeDef) => boolean;
+    /** Already there (shown ticked). `panel` is FileTypeDef.panel's id, when the type has one. */
+    has: (f: FileItem, panel: string | null) => boolean;
+    add: (f: FileItem, panel: string | null) => Promise<unknown>;
+    /** What choosing a file does, one short sentence. */
+    hint: string;
+  };
+}
+export interface PanelAdderProps extends PanelAdderTarget {
+  place: string;
+  onClose: () => void;
+}
+/** The sheet "+ Add panel" opens (features/add-panel). None registered (or its flag off): the layout's older "Add panels…" list. */
+export interface PanelAdderDef {
+  id: string;
+  order: number;
+  feature?: string;
+  component: ComponentType<PanelAdderProps>;
+}
+const adders: PanelAdderDef[] = [];
+export const registerPanelAdder = (a: PanelAdderDef) => add(adders, a);
+export function usePanelAdder(): PanelAdderDef | undefined {
+  return visible(adders, useFlags()).sort((a, b) => a.order - b.order)[0];
+}
+
 export function useRoutes(): RouteDef[] {
   return visible(routes, useFlags());
 }
