@@ -4,9 +4,9 @@
 // loaded only when a board opens; see ./Editor.tsx and ./host.ts.
 import type { VNode } from 'preact';
 import { useState } from 'preact/hooks';
-import { change, del, get, mode, optimistic, patch } from '../../core/api';
+import { change, del, get, mode, optimistic, patch, post } from '../../core/api';
 import { useFlag } from '../../core/features';
-import { registerFileType, registerPanel, registerPanelSource, registerRoute, registerTab, type Addable, type PanelDef, type TodayPanelProps } from '../../core/registry';
+import { registerFileType, registerPanel, registerPanelSource, registerRoute, registerTab, type Addable, type FileItem, type PanelDef, type TodayPanelProps } from '../../core/registry';
 import { useSignal } from '../../core/signal';
 import { FileGlyph, Loading, useData } from '../../core/ui';
 import { BoardGrid, NewBoardDialog, Preview } from './Boards';
@@ -209,7 +209,7 @@ function Settings() {
 
 registerTab({ id: 'whiteboards', path: '/whiteboards', label: 'Whiteboards', icon: '✐', order: 45, feature: FLAG, render: () => <WhiteboardsTab /> });
 registerRoute({ id: 'whiteboard', prefix: '/w', tab: 'whiteboards', feature: FLAG, render: ({ params }) => <BoardEditor key={params[0]} id={params[0]} /> });
-registerPanel('project', { id: 'whiteboards', title: 'Whiteboards', description: 'The project’s whiteboards.', order: 45, feature: FLAG, render: (p) => <ProjectBoards {...p} /> });
+registerPanel('project', { id: 'whiteboards', icon: '✐', title: 'Whiteboards', description: 'The project’s whiteboards.', order: 45, feature: FLAG, render: (p) => <ProjectBoards {...p} /> });
 registerPanelSource('today', { id: 'whiteboards', order: 65, feature: FLAG, Provide: TodayBoardsSource, resolve: resolveBoard, addable: addableBoards });
 registerPanel('projects', { id: 'whiteboards-link', order: 90, feature: FLAG, render: () => <ProjectsLink /> });
 registerPanel('settings', { id: 'whiteboards', order: 60, feature: FLAG, render: () => <Settings /> });
@@ -231,5 +231,12 @@ registerFileType({
   preview: (f) => (f.thumbnail ? <img src={`/api/whiteboards/${f.id}/thumbnail?mode=${encodeURIComponent(mode.value)}&v=${encodeURIComponent(f.updated_at)}`} alt="" loading="lazy" decoding="async" /> : null),
   rename: (f, name) => patch(`/whiteboards/${f.id}`, { name }),
   remove: (f) => del(`/whiteboards/${f.id}`),
-  create: [{ id: 'whiteboard', label: 'Whiteboard', icon: <FileGlyph tint="purple" size={20}>✐</FileGlyph>, order: 30, dialog: ({ folderId, onClose }) => <NewBoardDialog folderId={folderId} onClose={onClose} /> }],
+  create: [{ id: 'whiteboard', label: 'Whiteboard', icon: <FileGlyph tint="purple" size={20}>✐</FileGlyph>, order: 30, dialog: ({ folderId, onClose }) => <NewBoardDialog folderId={folderId} onClose={onClose} />, make: makeBoard }],
+  panel: (f) => `wb-${f.id}`,
 });
+
+/** A new, empty whiteboard in a folder, for Add panel's picker. */
+async function makeBoard(name: string, folderId: string | null): Promise<FileItem | undefined> {
+  const b = await change(() => post<Board & { folder_id: string | null; project_id: string | null; created: string; updated_at: string }>('/whiteboards', { name, folder_id: folderId }));
+  return b ? { type: 'whiteboard', id: b.id, name: b.name, folder_id: b.folder_id ?? null, project_id: b.project_id ?? null, created: b.created, updated_at: b.updated_at } : undefined;
+}
