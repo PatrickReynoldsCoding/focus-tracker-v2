@@ -1,5 +1,5 @@
 // Browser check for page layouts (V1-GAPS 39–41): the desktop grid, straight on the page (drag by
-// the title, resize from the corner, the ⋯ menu's Remove, Add panels and Reset; on Today in the All
+// the title, resize from the corner, the ⋯ menu's Remove, Add panel and Reset; on Today in the All
 // pill), Today's pills on a computer (each pill its own grid, Edit pill, New pill, Remove from a
 // pill) and on a phone (Today settings, swipes), arranging on a phone (a long press: move, height,
 // remove, add back; leaving it), and pop-out windows.
@@ -120,7 +120,7 @@ async function grid(theme) {
   await page.mouse.up();
   ok(!(await page.$('.lg-moving')) && Math.abs((await box(page, 'habits')).x - bigger.x) < 2, `${name}: a press inside a panel's content does not move it`);
 
-  // ⋯: Auto height, Remove, Add panels, Reset.
+  // ⋯: Auto height, Remove, Add panel, Reset.
   const menu = async (id) => {
     await page.hover(`.lg-item[data-panel="${id}"]`);
     await page.click(`.lg-item[data-panel="${id}"] .lg-more`);
@@ -140,21 +140,21 @@ async function grid(theme) {
   ok(saved.removed.includes(gone) && !(await page.$(`.lg-item[data-panel="${gone}"]`)), `${name}: ⋯ Remove takes ${gone} off the page and saves it`);
 
   await menu('habits');
-  await page.click('.files-menu button:has-text("Add panels")');
-  await page.waitForSelector('dialog[open] .lg-add');
-  await page.waitForSelector('dialog[open] .lg-add h3:has-text("Notes")');
+  await page.click('.files-menu button:has-text("Add panel…")');
+  await page.waitForSelector('dialog[open] .ap-list');
   await shot(page, `${name}-add-panels`);
-  await page.click(`dialog[open] li:has-text("${gone === 'plan-week' ? 'This week' : 'Waiting for you'}") button:has-text("Add")`);
-  await page.waitForTimeout(300);
+  await page.click(`dialog[open] .ap-row:has-text("${gone === 'plan-week' ? 'This week' : 'Waiting for you'}")`);
+  await page.waitForTimeout(600);
   saved = (await api.get('/layout/today')).grid;
-  ok(!saved.removed.includes(gone), `${name}: Add panels puts ${gone} back`);
-  // Add a note that was not on Today.
-  const recipes = page.locator('dialog[open] li:has-text("Recipes") button:has-text("Add")');
-  await recipes.click();
-  await page.keyboard.press('Escape');
-  await page.waitForTimeout(800);
+  ok(!saved.removed.includes(gone), `${name}: Add panel puts ${gone} back`);
+  // Add a note that was not on Today (Add panel → Add file; scripts/ui/add-panel.mjs checks the picker).
+  await page.click('.lg-add-panel button');
+  await page.click('dialog[open] .ap-file');
+  await page.fill('dialog[open] input[type=search]', 'Recipes');
+  await page.click('dialog[open] .ap-row:has-text("Recipes")');
+  await page.waitForTimeout(1200);
   const recipesId = `list-${lists.find((l) => l.name === 'Recipes').id}`;
-  ok(!!(await page.$(`.lg-item[data-panel="${recipesId}"]`)), `${name}: a note added from Add panels is a new panel`);
+  ok(!!(await page.$(`.lg-item[data-panel="${recipesId}"]`)), `${name}: a note added from Add file is a new panel`);
 
   await menu('habits');
   await page.click('.files-menu button:has-text("Reset this page")');
@@ -232,8 +232,9 @@ async function deskPills(theme) {
   await page.fill('dialog[open] .pl-editor input', 'Deep work');
   await page.click('dialog[open] .pl-icons button[aria-label="🧠"]');
   await page.click('dialog[open] .pl-add-group .chip:has-text("Habits")');
-  await page.waitForSelector('dialog[open] .pl-add-group .chip:has-text("Travel")');
-  await page.click('dialog[open] .pl-add-group .chip:has-text("Travel")');
+  await page.waitForSelector('dialog[open] .pl-add-group .chip:has-text("Ideas")');
+  ok(!(await page.$('dialog[open] .pl-add-group .chip:has-text("Travel")')), `${name}: notes not on Today are not listed one by one (Add panel → Add file adds them)`);
+  await page.click('dialog[open] .pl-add-group .chip:has-text("Ideas")');
   await shot(page, `${name}-new-pill`);
   await page.click('dialog[open] button:has-text("Add pill")');
   await page.waitForTimeout(800);
@@ -242,13 +243,13 @@ async function deskPills(theme) {
   ok(deep && deep.icon === '🧠' && deep.panels[0] === 'habits' && ['today', 'notes'].every((id) => saved.pills.some((p) => p.id === id)), `${name}: the new pill is saved with the usual ones (${saved.pills?.map((p) => p.name).join(', ')})`);
   ok((await selected(page)).includes('Deep work'), `${name}: and shown`);
   ids = await page.$$eval('.lg-item', (els) => els.map((e) => e.dataset.panel));
-  ok(ids.length === 2 && ids[0] === 'habits', `${name}: with its two panels, a note not on Today too (${ids.join(', ')})`);
+  ok(ids.length === 2 && ids[0] === 'habits', `${name}: with its two panels (${ids.join(', ')})`);
 
   // ✎ Edit pill: rename, and ▲ puts the note first.
   await page.click('.pl-bar button:has-text("Edit pill")');
   await page.waitForSelector('dialog[open] .pl-editor');
   await page.fill('dialog[open] .pl-editor input', 'Thinking');
-  await page.click('dialog[open] .pl-in li:has-text("Travel") button[aria-label^="Move Travel up"]');
+  await page.click('dialog[open] .pl-in li:has-text("Ideas") button[aria-label^="Move Ideas up"]');
   await page.click('dialog[open] button:has-text("Save")');
   await page.waitForTimeout(800);
   saved = await api.get('/layout/today');
@@ -356,9 +357,10 @@ async function pills(theme) {
   await page.fill('dialog[open] .pl-editor input', 'Evening');
   await page.click('dialog[open] .pl-icons button[aria-label="🌙"]');
   await page.click('dialog[open] .pl-add-group .chip:has-text("Habits")');
-  await page.waitForSelector('dialog[open] .pl-add-group .chip:has-text("Travel")');
-  await page.click('dialog[open] .pl-add-group .chip:has-text("Travel")');
-  await page.click('dialog[open] .pl-in li:has-text("Travel") button[aria-label^="Move Travel up"]');
+  await page.waitForSelector('dialog[open] .pl-add-group .chip:has-text("Ideas")');
+  ok(!(await page.$('dialog[open] .pl-add-group .chip:has-text("Travel")')), `${name}: notes not on Today are not listed one by one (Add panel → Add file adds them)`);
+  await page.click('dialog[open] .pl-add-group .chip:has-text("Ideas")');
+  await page.click('dialog[open] .pl-in li:has-text("Ideas") button[aria-label^="Move Ideas up"]');
   await shot(page, `${name}-editor`);
   await page.click('dialog[open] button:has-text("Add pill")');
   await page.waitForTimeout(500);
@@ -382,7 +384,7 @@ async function pills(theme) {
   await page.click('.pl-pill:has-text("Evening")');
   await page.waitForTimeout(800);
   const cards = await page.$$eval('#pl-panels .lg-row', (els) => els.map((e) => e.textContent.slice(0, 30)));
-  ok(cards.length === 2 && cards[0].includes('Travel'), `${name}: the pill shows its panels in order (${cards.join(' | ')})`);
+  ok(cards.length === 2 && cards[0].includes('Ideas'), `${name}: the pill shows its panels in order (${cards.join(' | ')})`);
   await shot(page, `${name}-evening`);
   // Delete it with Undo.
   await page.click('.pl-gear');
@@ -528,7 +530,7 @@ async function arrange(theme) {
   await page.waitForTimeout(300);
   ok(!(await page.$('.lg-arranging')), `${name}: a tap outside the panels leaves it`);
 
-  // In the All pill: Remove, then + Add panels in the bar brings it back; Done.
+  // In the All pill: Remove, then + Add panel in the bar brings it back; Done.
   await pill(page, 'All');
   await page.waitForSelector('#pl-panels .lg-row[data-panel="habits"]');
   const hb = await page.locator('#pl-panels .lg-row[data-panel="habits"] h2').first().boundingBox();
@@ -537,14 +539,16 @@ async function arrange(theme) {
   await page.waitForTimeout(500);
   ok((await api.get('/layout/today')).grid.removed.includes('habits') && !(await page.$('.lg-row[data-panel="habits"]')), `${name}: Remove takes Habits off Today`);
   ok(!!(await page.$('.lg-arranging')), `${name}: still arranging after Remove`);
-  await page.click('.lg-arr-bar button:has-text("Add panels")');
-  await page.waitForSelector('dialog[open] .lg-add');
-  await page.click('dialog[open] li:has-text("Habits") button:has-text("Add")');
-  await page.waitForTimeout(400);
+  await page.click('.lg-arr-bar button:has-text("Add panel")');
+  await page.waitForSelector('dialog[open] .ap-list');
   await page.goBack();
   await page.waitForTimeout(400);
-  ok(!(await page.$('dialog[open]')) && !!(await page.$('.lg-arranging')), `${name}: Back closes Add panels, still arranging`);
-  ok(!(await api.get('/layout/today')).grid.removed.includes('habits'), `${name}: Add panels brings Habits back`);
+  ok(!(await page.$('dialog[open]')) && !!(await page.$('.lg-arranging')), `${name}: Back closes Add panel, still arranging`);
+  await page.click('.lg-arr-bar button:has-text("Add panel")');
+  await page.click('dialog[open] .ap-row:has-text("Habits")');
+  await page.waitForTimeout(800);
+  ok(!(await page.$('dialog[open]')) && !!(await page.$('.lg-arranging')), `${name}: choosing a panel closes the sheet, still arranging`);
+  ok(!(await api.get('/layout/today')).grid.removed.includes('habits'), `${name}: Add panel brings Habits back`);
   await shot(page, `${name}-all`);
   await page.click('.lg-arr-done');
   await page.waitForTimeout(300);
