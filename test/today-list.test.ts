@@ -112,13 +112,13 @@ describe('GET /api/today/list', () => {
     expect(c.done).toBe(day);
     c = await call('POST', `/tasks/${card.id}/move`, { column_id: todo.id }, m);
     expect(c.done).toBeNull();
-    // A card with no day is left alone.
+    // A card with no day is done in Done too (D34), and giving it a day keeps it there, done.
     const plainCard = await call('POST', '/tasks', { title: 'No day', project_id: p.id }, m);
-    expect((await call('POST', `/tasks/${plainCard.id}/move`, { column_id: done.id }, m)).done).toBeNull();
-    // A card already in Done when it gets a day is not in the list.
-    await call('PATCH', `/tasks/${plainCard.id}`, { day }, m);
+    expect((await call('POST', `/tasks/${plainCard.id}/move`, { column_id: done.id }, m)).done).toBe(day);
+    c = await call('PATCH', `/tasks/${plainCard.id}`, { day, done: null }, m);
+    expect([c.column_id, c.done]).toEqual([done.id, day]);
     l = await call('GET', '/today/list', undefined, m);
-    expect(l.items.some((x: any) => x.id === plainCard.id)).toBe(false);
+    expect(l.items.find((x: any) => x.id === plainCard.id)?.state ?? 'done').toBe('done');
 
     const list = await call('POST', '/lists', { name: 'Errands', kind: 'list' }, m);
     const item = await call('POST', '/tasks', { title: 'Post office', list_id: list.id, day }, m);

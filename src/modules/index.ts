@@ -2,6 +2,7 @@
 import type { Module } from '../core/registry';
 import { addPanelModule } from './add-panel';
 import { basicsModule } from './basics';
+import { doneColumnModule } from './done-column';
 import { filesModule } from './files';
 import { habitsModule } from './habits';
 import { insightsModule } from './insights';
@@ -27,6 +28,7 @@ import { whiteboardsModule } from './whiteboards';
 
 export const MODULES: Module[] = [
   projectsModule,
+  doneColumnModule,
   basicsModule,
   resourcesModule,
   relationsModule,

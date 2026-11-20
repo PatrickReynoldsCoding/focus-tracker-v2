@@ -11,6 +11,7 @@ import m0012 from '../../migrations/0012_whiteboard_scenes.sql';
 import m0016 from '../../migrations/0016_drop_unused.sql';
 import m0017 from '../../migrations/0017_card_day.sql';
 import m0018 from '../../migrations/0018_files.sql';
+import m0019 from '../../migrations/0019_done_column.sql';
 
 /** Every migration, in order. A new file in migrations/ needs a line here (a test checks). */
 export const MIGRATIONS: [name: string, sql: string][] = [
@@ -23,6 +24,7 @@ export const MIGRATIONS: [name: string, sql: string][] = [
   ['0016_drop_unused.sql', m0016],
   ['0017_card_day.sql', m0017],
   ['0018_files.sql', m0018],
+  ['0019_done_column.sql', m0019],
 ];
 
 let done = false;

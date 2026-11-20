@@ -13,18 +13,21 @@ import type { Row } from '../core/entity';
 import { buildTodayList, type TodayCardIn, type TodayList, type TodayTodoIn } from '../core/today-list';
 import { checkHabit, habitProgress, skipHabit } from './habits';
 import { todosEntity, todosForDay } from './lists';
-import { doneColumn, firstColumn, tasksEntity } from './projects';
+import { DONE_FLAG, doneColumn, firstColumn, tasksEntity } from './projects';
 
 export const TODAY_LIST_FLAG = 'today-panel';
 
 /** Cards for today or earlier that are not done, and those ticked today, with where they live. */
 export async function cardsForDay(ctx: Ctx, day: string): Promise<TodayCardIn[]> {
+  // In the Done column (D34), or with the flag done-column off, in the last of two or more columns (D30).
+  const inDone = (await ctx.feature(DONE_FLAG))
+    ? '(t.project_id IS NOT NULL AND c.is_done = 1)'
+    : `(t.project_id IS NOT NULL
+           AND (SELECT COUNT(*) FROM columns x WHERE x.project_id = t.project_id) > 1
+           AND NOT EXISTS (SELECT 1 FROM columns x WHERE x.project_id = t.project_id AND (x.ord > c.ord OR (x.ord = c.ord AND x.created > c.created))))`;
   const rows = await ctx.db
     .prepare(
-      `SELECT t.id, t.title, t.day, t.done, t.project_id, t.list_id, COALESCE(p.name, l.name) AS owner,
-         (t.project_id IS NOT NULL
-           AND (SELECT COUNT(*) FROM columns x WHERE x.project_id = t.project_id) > 1
-           AND NOT EXISTS (SELECT 1 FROM columns x WHERE x.project_id = t.project_id AND (x.ord > c.ord OR (x.ord = c.ord AND x.created > c.created)))) AS in_last
+      `SELECT t.id, t.title, t.day, t.done, t.project_id, t.list_id, COALESCE(p.name, l.name) AS owner, ${inDone} AS in_last
        FROM tasks t JOIN columns c ON c.id = t.column_id
        LEFT JOIN projects p ON p.id = t.project_id LEFT JOIN lists l ON l.id = t.list_id
        WHERE t.mode = ? AND t.day IS NOT NULL AND t.day <= ? AND (t.done IS NULL OR t.done = ?)
@@ -62,8 +65,9 @@ export async function todayList(ctx: Ctx): Promise<TodayList> {
 }
 
 /**
- * Tick a card off (or back on). A project card whose board has two or more columns moves to the
- * last one (done) or, ticked back on, to the first; a plain list's item only records the day.
+ * Tick a card off (or back on). A project card moves to its board's Done column or, ticked back
+ * on, to the first column (D34; flag off: the last of two or more columns); a plain list's item
+ * only records the day.
  */
 export async function tickCard(ctx: Ctx, id: string, done: boolean) {
   const card = await get(ctx, tasksEntity, id);
@@ -134,7 +138,7 @@ export const todayListModule: Module = {
     {
       name: 'tick_today_item',
       description:
-        'Tick something in the Today list: a to-do or card done (done false = not done; a project card moves to its board’s last column, or back to the first), ' +
+        'Tick something in the Today list: a to-do or card done (done false = not done; a project card moves to its board’s Done column, or back to the first), ' +
         'a habit session (done false takes one off), or a habit put off for today (not_today true) or back on today’s list (not_today false). Returns the list.',
       feature: TODAY_LIST_FLAG,
       input: z.object({ kind: z.enum(KINDS), id: z.string(), done: z.boolean().optional(), not_today: z.boolean().optional() }),

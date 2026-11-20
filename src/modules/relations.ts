@@ -82,7 +82,7 @@ export interface Item {
 /**
  * Each linkable kind: a label and a query giving id, title, status, context, project_id,
  * list_id, sub and updated_at for every row of the mode (the first parameter).
- * A card is done when it sits in a column called "Done".
+ * A card is done when it sits in its board's Done column (D34; a plain list's item is always open).
  */
 export const LINKABLE: Record<string, { label: string; select: string }> = {
   projects: {
@@ -93,7 +93,7 @@ export const LINKABLE: Record<string, { label: string; select: string }> = {
   },
   tasks: {
     label: 'card',
-    select: `SELECT t.id, t.title, CASE WHEN lower(trim(col.name)) = 'done' THEN 'done' ELSE 'open' END AS status,
+    select: `SELECT t.id, t.title, CASE WHEN col.is_done = 1 THEN 'done' ELSE 'open' END AS status,
       COALESCE(p.name, l.name) AS context, t.project_id, t.list_id, NULL AS sub, t.updated_at
       FROM tasks t LEFT JOIN columns col ON col.id = t.column_id LEFT JOIN projects p ON p.id = t.project_id
       LEFT JOIN lists l ON l.id = t.list_id WHERE t.mode = ?`,

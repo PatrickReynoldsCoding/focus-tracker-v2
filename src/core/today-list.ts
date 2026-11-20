@@ -76,7 +76,7 @@ export interface TodayCardIn {
   list_id?: string | null;
   /** The project's or list's name. */
   from?: string | null;
-  /** A project card in its board's last column (done there, even if not ticked in the list). */
+  /** A project card in its board's Done column (done there, even if not ticked in the list; D34). */
   in_last?: boolean;
 }
 
