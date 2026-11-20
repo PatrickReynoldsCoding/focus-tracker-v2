@@ -54,3 +54,13 @@ Questions the owner could not be asked while an item was built. Each gives the d
 5. Today's picker leaves out links (they have no panel); a project's picker offers links too. Default: as described.
 6. Add file's lists are sorted by last changed (recent first), with a Recent section of six at the top level. Default: as described.
 7. The panel just added goes at the end of the pill or page and is scrolled into view. Default: at the end.
+
+## Columns are statuses, fixed Done (v0.23.0)
+
+1. Issue links (D16's open question): a card in its board's Done column counts as finished, whatever the column is called. Default: yes.
+2. The Done column can be renamed (it stays the Done status). Default: renamable; it cannot be moved or deleted.
+3. Hide done is remembered per project on the server, the same on every device. Default: shown (not hidden) for every project, old and new.
+4. A card is done whenever it is in Done, also without a day (D30 only counted cards with a day). Cards already in Done got a done day when the update ran (the day each was last changed). Default: as described.
+5. Unticking a card in the Today list, or Claude's `done: false`, moves it to the board's first column (not back to where it was before). Default: the first column, as in D30.
+6. Migration: the last column named done, complete(d) or finished became the Done column and moved to the end; Work boards with Waiting, In-review or Blocked after Done now show them before Done. Default: as described.
+7. Folded Done is a slim strip with ✓, the name and the count; tapping it opens Done again (and turns Hide done off). Default: as described.
