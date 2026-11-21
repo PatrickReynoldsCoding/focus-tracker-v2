@@ -11,15 +11,26 @@
 .tp-items li:last-child { border-bottom: 0; }
 .tp-add { display: flex; align-items: start; }
 
-.tp-quote { background: var(--surface); }
-.tp-quote.c-none { background: var(--surface); }
-.tp-quote-body { min-height: 5.5em; display: flex; flex-direction: column; gap: 8px; justify-content: center; }
-.tp-quote blockquote { margin: 0; font-size: 1.3rem; line-height: 1.35; font-weight: 600; overflow-wrap: anywhere; }
-.tp-quote blockquote::before { content: '“'; }
-.tp-quote blockquote::after { content: '”'; }
-.tp-quote-note { font-size: 0.92rem; color: var(--fg); opacity: 0.8; }
-.tp-quote-nav { display: flex; justify-content: space-between; }
-.tp-quote-nav button { font-size: 1.6rem; min-height: 44px; min-width: 44px; color: var(--fg); }
+/* One at a time: v1's quote card in the list's colour (the accent when it has none). */
+.tp-quote { --rot-c: var(--accent); border-color: color-mix(in srgb, var(--rot-c) 55%, var(--line));
+  background: radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--rot-c) 26%, var(--surface)) 0%, var(--surface) 70%); }
+.tp-quote .card-head h2 { color: color-mix(in srgb, var(--rot-c) 75%, var(--fg)); }
+.tp-quote .pos { font-family: ui-monospace, monospace; font-size: 12px; color: var(--muted); }
+.tp-quote-body { text-align: center; margin: 16px 6px 12px; min-height: 4em; display: flex; flex-direction: column; justify-content: center; gap: 10px; animation: tp-fade 0.35s ease; }
+@keyframes tp-fade { from { opacity: 0; } to { opacity: 1; } }
+.tp-quote blockquote { margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: clamp(20px, 2.2vw, 25px); line-height: 1.25; overflow-wrap: anywhere; font-weight: 400; }
+.tp-quote blockquote::before, .tp-quote blockquote::after { content: none; }
+.tp-quote blockquote .rq::before, .tp-quote blockquote .rq::after { color: var(--rot-c); font-size: 1.5em; line-height: 0; position: relative; top: 0.22em; }
+.tp-quote blockquote .rq::before { content: '\201C'; margin-right: 4px; }
+.tp-quote blockquote .rq::after { content: '\201D'; margin-left: 4px; }
+.tp-quote-note { font-size: 14.5px; line-height: 1.5; color: var(--muted); max-width: 52ch; margin: 0 auto; overflow-wrap: anywhere; }
+.tp-quote-nav { display: inline-flex; gap: 4px; }
+.tp-quote-nav button { border: 1px solid color-mix(in srgb, var(--rot-c) 55%, var(--line)); background: transparent; color: inherit; width: 30px; min-width: 30px; height: 30px; min-height: 30px; border-radius: 8px; font-size: 16px; }
+.list-title { background: none; border: 0; padding: 0; font: inherit; color: var(--fg); text-align: left; cursor: pointer; min-height: 0; }
+.list-title:hover { text-decoration: underline; text-underline-offset: 3px; }
+.seg-radio { display: flex; flex-direction: column; gap: 6px; }
+.seg-radio label { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+.seg-radio label.on { border-color: var(--accent); background: var(--accent-soft); }
 
 .tp-settings summary { cursor: pointer; font-weight: 600; min-height: 32px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .tp-settings[open] summary { margin-bottom: 10px; }

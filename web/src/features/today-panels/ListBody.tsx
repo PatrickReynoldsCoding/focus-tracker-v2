@@ -4,6 +4,7 @@
 import { change, del, newId, optimistic, post } from '../../core/api';
 import { AddInput, fmtDay, todayLocal } from '../../core/ui';
 import { useFlag } from '../../core/features';
+import { ListTitle } from './ListDialog';
 import { OneAtATime, type QuoteItem } from './OneAtATime';
 
 export type Card = { id: string; title: string; note: string | null };
@@ -111,17 +112,16 @@ function TodoItems({ l, setList }: { l: FullList; setList: SetList }) {
 /** A list as a panel: head with the name (a link to its page), then the items. */
 export function ListPanel({ l, setList, onRemove }: { l: FullList; setList: SetList; onRemove?: () => void }) {
   const oneFlag = useFlag('list-one-at-a-time');
-  const href = `#/n/${l.id}`;
   if (oneFlag && l.display === 'one') {
     const items: QuoteItem[] = l.kind === 'todo' ? todosOf(l).filter((t) => !t.done).map((t) => ({ id: t.id, title: t.title, note: t.note })) : cardsOf(l).map((c) => ({ id: c.id, title: c.title, note: c.note }));
-    return <OneAtATime name={l.name} color={l.color} seconds={l.seconds} items={items} href={href} onRemove={onRemove} />;
+    return <OneAtATime list={l} setList={setList} items={items} onRemove={onRemove} />;
   }
   const count = l.kind === 'todo' ? todosOf(l).filter((t) => !t.done).length : cardsOf(l).length;
   return (
     <section class="card tp-list" data-pat-top={l.color || undefined} style={l.color ? { borderTop: `4px solid var(--c-${l.color})` } : undefined}>
       <div class="card-head">
         <h2>
-          <a href={href}>{l.kind === 'todo' ? '☐ ' : '≡ '}{l.name}</a>
+          <ListTitle list={l} setList={setList as (fn: (l: any) => any) => void} prefix={l.kind === 'todo' ? '☐ ' : '≡ '} />
         </h2>
         <span class="row tight">
           <span class="muted">{count}</span>

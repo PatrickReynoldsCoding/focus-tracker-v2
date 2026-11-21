@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useEink } from '../../core/theme';
 import { Markdown } from '../../core/ui';
+import { ListTitle, type ListSettingsProps } from './ListDialog';
 
 export type QuoteItem = { id: string; title: string; note?: string | null };
 
@@ -28,7 +29,8 @@ export function deal(ids: string[], dealt: string[], current: string | undefined
   return [...kept.slice(0, at), ...ahead];
 }
 
-export function OneAtATime({ name, color, seconds, items, href, onRemove }: { name: string; color?: string | null; seconds: number; items: QuoteItem[]; href: string; onRemove?: () => void }) {
+export function OneAtATime({ list, setList, items, onRemove }: { list: ListSettingsProps; setList: (fn: (l: any) => any) => void; items: QuoteItem[]; onRemove?: () => void }) {
+  const { name, color, seconds } = list;
   const ids = items.map((i) => i.id).join(',');
   const dealt = useRef<string[]>([]);
   const [pos, setPos] = useState(0);
@@ -61,13 +63,13 @@ export function OneAtATime({ name, color, seconds, items, href, onRemove }: { na
   }, [seconds, tick, ids, eink]);
   const item = items.find((i) => i.id === order[at]);
   return (
-    <section class={`card tp-quote c-${color || 'none'}`}>
+    <section class="card tp-quote" style={{ '--rot-c': color ? `var(--c-${color})` : 'var(--accent)' }}>
       <div class="card-head">
         <h2>
-          <a href={href}>{name}</a>
+          <ListTitle list={list} setList={setList} prefix="✦ " quote />
         </h2>
         <span class="row tight">
-          <span class="muted small">{order.length ? `${at + 1} of ${order.length}` : ''}</span>
+          <span class="pos">{order.length ? `${at + 1} / ${order.length}` : ''}</span>
           {onRemove && (
             <button class="icon small" aria-label={`Remove ${name} from Today`} title="Remove from Today" onClick={onRemove}>
               ✕
@@ -76,8 +78,10 @@ export function OneAtATime({ name, color, seconds, items, href, onRemove }: { na
         </span>
       </div>
       {item ? (
-        <div class="tp-quote-body" aria-live="polite">
-          <blockquote>{item.title}</blockquote>
+        <div class="tp-quote-body" key={item.id} aria-live="polite">
+          <blockquote>
+            <span class="rq">{item.title}</span>
+          </blockquote>
           {item.note && <Markdown text={item.note} class="tp-quote-note" />}
         </div>
       ) : (
@@ -85,10 +89,10 @@ export function OneAtATime({ name, color, seconds, items, href, onRemove }: { na
       )}
       {order.length > 1 && (
         <div class="tp-quote-nav">
-          <button class="icon" aria-label="Previous" onClick={() => go(-1)}>
+          <button class="icon" aria-label="Previous item" onClick={() => go(-1)}>
             ‹
           </button>
-          <button class="icon" aria-label="Next" onClick={() => go(1)}>
+          <button class="icon" aria-label="Next item" onClick={() => go(1)}>
             ›
           </button>
         </div>
