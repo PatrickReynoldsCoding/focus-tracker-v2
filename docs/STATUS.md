@@ -22,6 +22,7 @@ Updated 2026-11-21. Phases from the spec (`SPEC.md` §7).
 | Owner's item, 21 Nov (2) | v0.32.0: project labels: a small coloured label with the project's name on files (Files, Add file), notes, lists and whiteboards on Today and on their pages, and Today's to-dos and cards; tap to open the project (D37). |
 | Owner's item, 21 Nov (3) | v0.32.1: project label layout: on a Files card it sits in the footer, not over the preview; a whiteboard's bar on a phone has two rows so its name has room. |
 | Owner's item, 21 Nov (4) | v0.33.0: Today pills on a computer are a flag (`desktop-pills`, off): a computer shows every panel in the All layout with no pill row; the phone keeps its pills (D38). |
+| Owner's item, 21 Nov (5) | v0.33.1: the small note keeps its line breaks and blank lines and scrolls in a box of its own instead of growing; Files card previews keep them too (D39). |
 | 9 Stretch | Parked: **export all data** button (wanted later), Work-mode PRs tab, fitness view. |
 
 ## Waiting for the owner

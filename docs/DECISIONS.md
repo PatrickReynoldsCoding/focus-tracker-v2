@@ -385,3 +385,13 @@ Code: `src/modules/layout.ts` (flag), `web/src/features/layout/pills.tsx` and `T
 - **Reachable**: the switch is in Settings → Features. Today settings on a computer with the flag off says there are no pills here, how to turn them on, and keeps the focus card size (the focus card stays above the panels). Pills can be edited on a phone, with the flag on, or by Claude.
 - **Claude**: `get_today_pills` and `set_today_pills` work as before (behind `today-pills`); their descriptions say a computer shows pills only while `desktop-pills` is on.
 
+## D39. The small note keeps its lines and scrolls (owner, 2026-11-21: "When notes are in collapsed view they lose new line formatting. We should add a scroll to this panel so the panel doesn't resize automatically.")
+
+Code: `web/src/core/blank-lines.ts` (the reader), `NoteSmall` in `web/src/features/today-panels/OnToday.tsx`, `today-panels.css`, `Markdown`'s `blankLines` prop in `core/ui.tsx`; test `test/blank-lines.test.ts`; browser check `scripts/ui/note-small.mjs`. No migration, no flag.
+
+- **Before**: the small note stripped the Markdown and ran every line together in one paragraph cut at 220 characters; a Files card did the same with " · " between lines.
+- **Now**: the small note shows the whole note formatted, with single newlines as line breaks and each extra blank line kept as an empty line, the same count the editor shows (v0.23.1). It sits in a text box that scrolls on its own (about 14 lines high, `overscroll-behavior: contain`, `touch-action: pan-y`), so the panel stays one size however long the note is.
+- **Height set by the owner**: the corner handle (or the phone's height handle) still sets the panel's height; the text box then fills what is left under the title and scrolls. ⋯ Auto height goes back to the 14-line box.
+- **Files cards and the Notes tab's cards**: the preview keeps the same line breaks and blank lines. It stays a clipped box with no scroll (a card is a link, and its preview is only the first 240 to 300 characters).
+- **Full note panel and the editor**: unchanged.
+
