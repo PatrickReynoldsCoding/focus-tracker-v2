@@ -156,19 +156,7 @@ function General() {
           Time zone
           <input defaultValue={data.global.timezone ?? 'Europe/London'} onBlur={(e) => set('timezone', (e.target as HTMLInputElement).value, true)} />
         </label>
-        <div class="row">
-          <label>
-            Pomodoro work (min)
-            <input type="number" min={5} defaultValue={data.mode['pomodoro.work'] ?? '25'} onBlur={(e) => set('pomodoro.work', (e.target as HTMLInputElement).value)} />
-          </label>
-          <label>
-            Break (min)
-            <input type="number" min={1} defaultValue={data.mode['pomodoro.break'] ?? '5'} onBlur={(e) => set('pomodoro.break', (e.target as HTMLInputElement).value)} />
-          </label>
-        </div>
-        <label class="inline">
-          <input type="checkbox" defaultChecked={data.mode['pomodoro.default'] !== 'off'} onChange={(e) => set('pomodoro.default', (e.target as HTMLInputElement).checked ? 'on' : 'off')} /> Pomodoro timer in sessions
-        </label>
+        {/* The Pomodoro's settings are in features/pomodoro (its own section). */}
         {/* The nudge's controls (hour, days untouched) moved to the Notifications section. */}
       </div>
     </section>

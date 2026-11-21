@@ -6,7 +6,7 @@
 import { useState } from 'preact/hooks';
 import { change, post } from '../../core/api';
 import { Dialog } from '../../core/ui';
-import { clock as clockSeconds, clockMinutes, keepGoing, nextPeriod, pause, resume, setPomodoro, start, useSession, type Defaults, type Live } from './session';
+import { clock as clockSeconds, clockMinutes, keepGoing, nextPeriod, pause, resume, start, useSession, type Defaults, type Live } from './session';
 import { setCornerHidden, useCornerHidden } from './CornerTimer';
 import { useFlag } from '../../core/features';
 import { useEink } from '../../core/theme';
@@ -65,9 +65,9 @@ function LengthPicker({ value, lengths, onChange }: { value: number | null; leng
 }
 
 export function StartControls({ defaults, extra }: { defaults: Defaults | undefined; extra?: preact.ComponentChildren }) {
-  const d = defaults ?? { pomodoro: true, work: 25, break: 5, planned_min: 25, lengths: [25, 50, 90] };
+  const d = defaults ?? { pomodoro: false, work: 25, break: 5, planned_min: 25, lengths: [25, 50, 90] };
   const [length, setLength] = useState<number | null>(d.planned_min);
-  const [pomodoro, setPomo] = useState(d.pomodoro);
+  const pomodoro = d.pomodoro; // the session has no pomodoro of its own any more (features/pomodoro)
   const [busy, setBusy] = useState(false);
   return (
     <div class="start-controls">
@@ -86,9 +86,6 @@ export function StartControls({ defaults, extra }: { defaults: Defaults | undefi
         <LengthPicker value={length} lengths={d.lengths} onChange={setLength} />
         {extra}
       </div>
-      <label class="inline small">
-        <input type="checkbox" checked={pomodoro} onChange={(e) => setPomo((e.target as HTMLInputElement).checked)} /> Pomodoro ({d.work} min work, {d.break} min break)
-      </label>
     </div>
   );
 }
@@ -180,9 +177,6 @@ export function SessionBox({ l, onFinish }: { l: Live; onFinish: () => void }) {
             {p.phase === 'work' ? 'Break now' : 'Work now'}
           </button>
         )}
-        <label class="inline small pomo-switch">
-          <input type="checkbox" checked={!!p} onChange={(e) => setPomodoro((e.target as HTMLInputElement).checked)} /> Pomodoro
-        </label>
         {cornerOn && hidden && (
           <button
             class="ghost small"

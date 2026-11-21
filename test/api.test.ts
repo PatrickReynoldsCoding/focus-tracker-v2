@@ -169,7 +169,7 @@ describe('today, sessions and status', () => {
     expect(t.show_session_controls).toBe(true);
     const s = await call('POST', '/session/start', {}, { mode: 'work' });
     expect(s.project_id).toBe(p.id);
-    expect(s.pomodoro.phase).toBe('work');
+    expect(s.pomodoro).toBeNull(); // the Pomodoro is its own timer now (test/pomodoro.test.ts)
     await call('POST', '/session/start', {}, { mode: 'work', expect: 400 });
     const status = await call('GET', '/status', undefined, { mode: 'work' });
     expect(status.session.project_name).toBe('Focus me');

@@ -5,7 +5,7 @@ Shows today's focus project and the session timer (with pomodoro) in the menu ba
 ## Set up
 
 1. Install [SwiftBar](https://github.com/swiftbar/SwiftBar) (`brew install swiftbar`) and choose a plugin folder.
-2. Copy `focus-tracker.1m.sh` into that folder and make it runnable: `chmod +x focus-tracker.1m.sh`. The `1m` in the name means it refreshes every minute.
+2. Copy `focus-tracker.5s.sh` into that folder and make it runnable: `chmod +x focus-tracker.5s.sh`. The `5s` in the name means it redraws every 5 seconds so the Pomodoro countdown can tick; it asks the server only every 30 seconds (and right after you click something). Delete an old `focus-tracker.1m.sh` if you have one.
 3. In Focus Tracker, open Settings → Devices and API tokens, add a token called "Mac menu bar" and copy it.
 4. Create `~/.config/focus-tracker/swiftbar.env`:
 
@@ -18,7 +18,7 @@ Shows today's focus project and the session timer (with pomodoro) in the menu ba
    Then `chmod 600 ~/.config/focus-tracker/swiftbar.env`.
 5. Optional: `brew install terminal-notifier` for notifications that open the tracker when clicked. Without it the plugin uses AppleScript notifications.
 
-For both modes at once, copy the plugin twice (for example `focus-work.1m.sh`) and point the copy at another file with `FT_CONFIG=~/.config/focus-tracker/swiftbar-work.env` set inside it, just below the first line.
+For both modes at once, copy the plugin twice (for example `focus-work.5s.sh`) and point the copy at another file with `FT_CONFIG=~/.config/focus-tracker/swiftbar-work.env` set inside it, just below the first line.
 
 ## How it works
 

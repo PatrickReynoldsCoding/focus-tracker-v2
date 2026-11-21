@@ -97,6 +97,7 @@ async function clearPomodoro(ctx: Ctx): Promise<void> {
  */
 async function pomodoroNotice(ctx: Ctx): Promise<void> {
   const { storedSession, sessionNotices, waitsForClick } = await import('./sessions');
+  const { pomodoroNotices } = await import('./pomodoro');
   const s = await storedSession(ctx);
   const waits = s ? await waitsForClick(ctx) : true;
   let notices = s ? sessionNotices(s, ctx.nowDate.getTime(), waits) : [];
@@ -105,6 +106,7 @@ async function pomodoroNotice(ctx: Ctx): Promise<void> {
     const p = await ctx.db.prepare('SELECT name FROM projects WHERE id = ? AND mode = ?').bind(s.project_id, ctx.mode).first<{ name: string }>();
     notices = sessionNotices(s, ctx.nowDate.getTime(), waits, p?.name);
   }
+  notices = [...notices, ...(await pomodoroNotices(ctx))];
   for (const n of notices) await insertOnce(ctx, n);
   const keys = notices.map((n) => n.dedupe_key);
   const keep = keys.length ? `AND dedupe_key NOT IN (${keys.map(() => '?').join(', ')})` : '';

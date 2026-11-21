@@ -13,6 +13,7 @@ import { habitProgress } from './habits';
 import { listsEntity, todosForDay } from './lists';
 import { pendingNotifications } from './notifications';
 import { projectsEntity } from './projects';
+import { currentPomodoro } from './pomodoro';
 import { currentSession } from './sessions';
 import { notBlockedSql } from './relations';
 import { buildTodayList } from '../core/today-list';
@@ -221,6 +222,7 @@ export async function today(ctx: Ctx) {
     rotation: rot.today,
     suggestions: focus ? [] : await suggestions(ctx, day, rot.today.category),
     session,
+    pomodoro: await currentPomodoro(ctx),
     todos,
     habits,
     lists,
@@ -258,6 +260,7 @@ export async function status(ctx: Ctx) {
       pomodoro: session.pomodoro,
       planned: session.planned,
     },
+    pomodoro: await currentPomodoro(ctx),
     todos_due: todos.filter((t) => !t.done).map((t) => ({ id: t.id, title: t.title, day: t.day })),
     habits_left: habits.filter((h) => h.left > 0).map((h) => ({ id: h.id, name: h.name, left: h.left, per: h.per })),
     // The Today list's open items (flag today-panel; null while it is off), for clients that show one list.

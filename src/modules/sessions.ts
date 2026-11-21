@@ -147,7 +147,8 @@ function checkMinutes(v: unknown, field: string): number | null {
 /** What a new session would use: for the start controls in clients. */
 export async function sessionDefaults(ctx: Ctx) {
   return {
-    pomodoro: (await ctx.setting('pomodoro.default')) !== 'off',
+    // The Pomodoro is its own timer now (pomodoro.ts). A session only has the old one if asked for it.
+    pomodoro: (await ctx.setting('pomodoro.default')) === 'on',
     work: Number((await ctx.setting('pomodoro.work')) ?? 25),
     break: Number((await ctx.setting('pomodoro.break')) ?? 5),
     planned_min: await lastLength(ctx),

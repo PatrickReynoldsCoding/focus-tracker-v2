@@ -8,6 +8,7 @@ import type { Module } from '../core/registry';
 import { update } from '../core/store';
 import { checkHabit } from './habits';
 import { dismiss, notificationsEntity } from './notifications';
+import { nextPomodoroPeriod, pausePomodoro, resumePomodoro, startPomodoro, stopPomodoro } from './pomodoro';
 import { extendSession, nextPeriod, pauseSession, resumeSession, startSession, stopSession } from './sessions';
 import { status } from './today';
 import { tickCard } from './today-list';
@@ -38,6 +39,16 @@ export async function swiftbarText(ctx: Ctx, origin: string): Promise<string> {
     else if (pl) bar = `◉ ${name} ${mmss(pl.seconds_left)}`;
     else bar = `◉ ${name} ${mmss(s.session.elapsed_seconds)}`;
   } else if (s.focus) bar = `◎ ${clean(s.focus.name, 22)}`;
+  const pomo = s.pomodoro;
+  // Setting 'swiftbar.show_pomodoro' (default on): the Pomodoro countdown in the menu bar itself.
+  if (pomo && (await ctx.setting('swiftbar.show_pomodoro')) !== 'off') {
+    const icon = pomo.phase === 'work' ? '🍅' : '☕';
+    // A running countdown is a marker the plugin turns into the time left on every redraw (it redraws every few seconds
+    // from the saved text, so the countdown ticks without calling the server each time).
+    const ends = Math.floor(Date.parse(pomo.phase_ends_at) / 1000);
+    const label = pomo.waiting ? (pomo.next_phase === 'work' ? 'back to work' : 'break time') : pomo.paused ? `⏸ ${mmss(pomo.seconds_left)}` : `@@P:${ends}@@`;
+    bar = `${icon} ${label} ${bar}`;
+  }
   const unseen = s.notifications.filter((n) => !n.seen_at);
   if (unseen.length) bar += ` •${unseen.length}`;
   lines.push(bar, '---');
@@ -53,6 +64,12 @@ export async function swiftbarText(ctx: Ctx, origin: string): Promise<string> {
     lines.push(`Stop session… | ${act('stop')}`);
   }
   else if (s.focus) lines.push(`Start session | ${act('start')}`);
+
+  if (pomo) {
+    if (pomo.waiting) lines.push(`${pomo.next_phase === 'work' ? 'Start work' : pomo.next_phase === 'long_break' ? 'Start long break' : 'Start break'} | ${act('pomodoro-next')}`);
+    else lines.push(`Skip to ${pomo.phase === 'work' ? 'break' : 'work'} | ${act('pomodoro-next')}`);
+    lines.push(pomo.paused ? `Resume pomodoro | ${act('pomodoro-resume')}` : `Pause pomodoro | ${act('pomodoro-pause')}`, `Stop pomodoro | ${act('pomodoro-stop')}`);
+  } else lines.push(`Start pomodoro | ${act('pomodoro-start')}`);
 
   if (s.today_list) {
     // The Today list (flag today-panel): habits, then to-dos and cards, as on Today.
@@ -97,6 +114,16 @@ export async function swiftbarAction(ctx: Ctx, form: Record<string, string>) {
       return resumeSession(ctx);
     case 'next':
       return nextPeriod(ctx);
+    case 'pomodoro-start':
+      return startPomodoro(ctx);
+    case 'pomodoro-next':
+      return nextPomodoroPeriod(ctx);
+    case 'pomodoro-pause':
+      return pausePomodoro(ctx);
+    case 'pomodoro-resume':
+      return resumePomodoro(ctx);
+    case 'pomodoro-stop':
+      return stopPomodoro(ctx);
     case 'extend':
       return extendSession(ctx, Number(id) || 10);
     case 'stop':

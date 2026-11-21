@@ -12,6 +12,7 @@ import { navigationModule } from './navigation';
 import { notesModule } from './notes';
 import { offlineModule } from './offline';
 import { planModule } from './plan';
+import { pomodoroModule } from './pomodoro';
 import { notificationsModule } from './notifications';
 import { notifyPrefsModule } from './notify-prefs';
 import { projectsModule } from './projects';
@@ -39,6 +40,7 @@ export const MODULES: Module[] = [
   planModule,
   todayModule,
   sessionsModule,
+  pomodoroModule,
   todayPanelsModule,
   todayListModule,
   notificationsModule,

@@ -1,0 +1,23 @@
+/* The Pomodoro: floating timer, Today panel. */
+.pomo-float {
+  position: fixed;
+  right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  background: var(--surface);
+  color: var(--fg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+.pomo-float.waiting { border-color: var(--warm); }
+.pomo-float .pomo-time { font-weight: 600; font-variant-numeric: tabular-nums; }
+.pomo-float .pomo-controls { gap: 4px; flex-wrap: wrap; }
+.pomo-big { font-size: 2.2rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+@media (max-width: 700px) {
+  .pomo-float { bottom: calc(72px + env(safe-area-inset-bottom)); }
+}

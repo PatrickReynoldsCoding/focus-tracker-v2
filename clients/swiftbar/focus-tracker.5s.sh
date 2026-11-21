@@ -36,30 +36,47 @@ ask() {
   osascript -e 'on run argv' -e 'text returned of (display dialog (item 1 of argv) default answer (item 2 of argv) with title "Focus Tracker")' -e 'end run' "$1" "$2" 2>/dev/null
 }
 
+CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/focus-tracker-swiftbar.${FT_MODE:-personal}.txt"
+mkdir -p "$(dirname "$CACHE")"
+
 case "$1" in
   stop)
     where=$(ask "Where did you stop?" "") || exit 0
     action stop "" --data-urlencode "where_stopped=$where"
     exit 0 ;;
-  start|tick|habit|dismiss|pause|resume|next|extend)
+  start|tick|card|habit|dismiss|pause|resume|next|extend|pomodoro-start|pomodoro-next|pomodoro-pause|pomodoro-resume|pomodoro-stop)
     action "$1" "$2"
+    rm -f "$CACHE"
     exit 0 ;;
 esac
 
-if ! out=$(api "$FT_URL/api/swiftbar"); then
-  echo "◎ ⚠"
-  echo "---"
-  echo "Cannot reach Focus Tracker | color=red"
-  echo "Refresh | refresh=true"
-  exit 0
+# The plugin runs every 5 seconds so a Pomodoro countdown can tick, but it only asks the server every 30 seconds
+# (and right after an action); in between it redraws the saved text.
+if [ -f "$CACHE" ] && [ $(( $(date +%s) - $(stat -f %m "$CACHE") )) -lt 30 ]; then
+  out=$(cat "$CACHE")
+else
+  if ! out=$(api "$FT_URL/api/swiftbar"); then
+    echo "◎ ⚠"
+    echo "---"
+    echo "Cannot reach Focus Tracker | color=red"
+    echo "Refresh | refresh=true"
+    exit 0
+  fi
+  # New notifications: show them once, then tell the server they were seen.
+  while IFS=$'\t' read -r tag id title body; do
+    [ "$tag" = "#notify" ] || continue
+    notify "$title" "$body"
+    action seen "$id" &
+  done <<< "$out"
+  wait
+  printf '%s\n' "$out" | grep -v "^#notify" > "$CACHE"
+  out=$(cat "$CACHE")
 fi
 
-# New notifications: show them once, then tell the server they were seen.
-while IFS=$'\t' read -r tag id title body; do
-  [ "$tag" = "#notify" ] || continue
-  notify "$title" "$body"
-  action seen "$id" &
-done <<< "$out"
-wait
-
-grep -v "^#notify" <<< "$out" | sed "s|__SELF__|\"$0\"|g"
+# @@P:<epoch>@@ is the end of the running Pomodoro period: show the time left.
+if [[ "$out" =~ @@P:([0-9]+)@@ ]]; then
+  left=$(( BASH_REMATCH[1] - $(date +%s) ))
+  [ "$left" -lt 0 ] && left=0
+  out=${out//"${BASH_REMATCH[0]}"/$(printf '%d:%02d' $((left / 60)) $((left % 60)))}
+fi
+sed "s|__SELF__|\"$0\"|g" <<< "$out"
