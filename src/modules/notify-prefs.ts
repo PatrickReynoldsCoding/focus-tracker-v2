@@ -1,8 +1,8 @@
 // Notification settings: a master switch, one switch per kind, quiet hours and which
 // clients show notifications. The server applies them (notifications.ts), so every
-// client obeys without changes. Stored as one JSON setting `notify`, global (the same
-// in every mode: it is about the owner's devices and sleep, not a project area).
-// The daily nudge's hour and "untouched for N days" stay per-mode settings (nudge.hour, nudge.days).
+// client obeys without changes. Stored per profile (mode) as one JSON setting `notify`, with
+// the daily nudge's hour and "untouched for N days" (nudge.hour, nudge.days). It was one setting
+// for every profile until v0.30.0 (D17); D35 made it per profile, as the owner asked.
 
 import { z } from 'zod';
 import type { Ctx } from '../core/ctx';
@@ -68,7 +68,7 @@ const PatchSchema = z.object({
 export type NotifyPatch = z.infer<typeof PatchSchema>;
 
 export async function getPrefs(ctx: Ctx): Promise<NotifyPrefs> {
-  const raw = await ctx.jsonSetting<Partial<NotifyPrefs>>('notify', {}, '');
+  const raw = await ctx.jsonSetting<Partial<NotifyPrefs>>('notify', {});
   const p: NotifyPrefs = {
     ...DEFAULT_PREFS,
     ...raw,
@@ -129,13 +129,13 @@ export async function describePrefs(ctx: Ctx) {
 
 export async function updatePrefs(ctx: Ctx, input: unknown) {
   const patch = PatchSchema.parse(input);
-  const cur = await ctx.jsonSetting<Partial<NotifyPrefs>>('notify', {}, '');
+  const cur = await ctx.jsonSetting<Partial<NotifyPrefs>>('notify', {});
   const next: Partial<NotifyPrefs> = { ...cur };
   for (const k of ['enabled', 'reminders', 'habits', 'nudge', 'session'] as const) if (patch[k] !== undefined) next[k] = patch[k];
   if (patch.quiet) next.quiet = { ...DEFAULT_PREFS.quiet, ...(cur.quiet ?? {}), ...patch.quiet } as NotifyPrefs['quiet'];
   if (patch.clients) next.clients = { ...DEFAULT_PREFS.clients, ...(cur.clients ?? {}), ...patch.clients } as NotifyPrefs['clients'];
   if (next.quiet && next.quiet.enabled && next.quiet.from === next.quiet.to) throw bad('Quiet hours need different start and end times');
-  await ctx.setSetting('notify', JSON.stringify(next), '');
+  await ctx.setSetting('notify', JSON.stringify(next));
   if (patch.nudge !== undefined) await ctx.setSetting('nudge.enabled', null); // the switch above replaces the older setting
   if (patch.nudge_hour !== undefined) await ctx.setSetting('nudge.hour', String(patch.nudge_hour));
   if (patch.nudge_days !== undefined) await ctx.setSetting('nudge.days', String(patch.nudge_days));
@@ -153,7 +153,7 @@ export const notifyPrefsModule: Module = {
     {
       name: 'get_notification_settings',
       description:
-        'The owner’s notification settings: master switch, switches for reminders, habit prompts, the daily nudge and session/pomodoro alerts, quiet hours (in their time zone), which clients show notifications (android, swiftbar, web), and the nudge hour and days (per mode).',
+        'The owner’s notification settings: master switch, switches for reminders, habit prompts, the daily nudge and session/pomodoro alerts, quiet hours (in their time zone), which clients show notifications (android, swiftbar, web), and the nudge hour and days. All of it belongs to the profile (mode) asked about.',
       readOnly: true,
       input: z.object({}),
       run: (ctx) => describePrefs(ctx),
@@ -161,7 +161,7 @@ export const notifyPrefsModule: Module = {
     {
       name: 'set_notification_settings',
       description:
-        'Change notification settings; send only what changes. enabled = master switch; reminders, habits, nudge, session = per kind; quiet = { enabled, from: "22:00", to: "07:00" } (may cross midnight; notifications wait until it ends); clients = { android, swiftbar, web } booleans; nudge_hour (0-23) and nudge_days apply to the current mode. Everything but nudge_hour/nudge_days is the same in every mode.',
+        'Change notification settings; send only what changes. enabled = master switch; reminders, habits, nudge, session = per kind; quiet = { enabled, from: "22:00", to: "07:00" } (may cross midnight; notifications wait until it ends); clients = { android, swiftbar, web } booleans; nudge_hour (0-23) and nudge_days. Changes only the profile (mode) given, or the default one.',
       input: PatchSchema,
       run: (ctx, a) => updatePrefs(ctx, a),
     },

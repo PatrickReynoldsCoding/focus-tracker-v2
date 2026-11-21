@@ -38,7 +38,7 @@ export interface StoredSession {
 export const LENGTHS = [25, 50, 90];
 const MAX_MIN = 600;
 const KEY = 'session.current';
-/** The planned length used last: global (not per mode), like v1. 'none' = no limit. */
+/** The planned length used last, per profile (D35; it was global like v1 until v0.30.0). 'none' = no limit. */
 const LENGTH_KEY = 'session.length';
 
 export const workedSeconds = (s: StoredSession, now: number) => {
@@ -132,7 +132,7 @@ export async function currentSession(ctx: Ctx) {
 
 /** The planned length used last, in minutes (null = no limit). 25 before anything was chosen. */
 export async function lastLength(ctx: Ctx): Promise<number | null> {
-  const v = await ctx.setting(LENGTH_KEY, '');
+  const v = await ctx.setting(LENGTH_KEY);
   if (v === 'none') return null;
   const n = Number(v);
   return v && Number.isInteger(n) && n >= 1 && n <= MAX_MIN ? n : 25;
@@ -169,7 +169,7 @@ export async function startSession(
   let planned: number | null;
   if (input.planned_min !== undefined) {
     planned = checkMinutes(input.planned_min, 'planned_min');
-    await ctx.setSetting(LENGTH_KEY, planned === null ? 'none' : String(planned), '');
+    await ctx.setSetting(LENGTH_KEY, planned === null ? 'none' : String(planned));
   } else planned = d.planned_min;
   const usePomodoro = input.pomodoro ?? d.pomodoro;
   const s: StoredSession = {

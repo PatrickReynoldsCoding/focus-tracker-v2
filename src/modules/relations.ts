@@ -46,7 +46,7 @@ export const LINK_TYPES: LinkType[] = [
 const TYPES_SETTING = 'links.types';
 
 async function customTypes(ctx: Ctx): Promise<LinkType[]> {
-  const raw = await ctx.jsonSetting<{ id: string; outward: string; inward: string }[]>(TYPES_SETTING, [], '');
+  const raw = await ctx.jsonSetting<{ id: string; outward: string; inward: string }[]>(TYPES_SETTING, []);
   return Array.isArray(raw) ? raw.map((t) => ({ id: t.id, outward: t.outward, inward: t.inward, custom: true })) : [];
 }
 
@@ -411,16 +411,16 @@ async function addType(ctx: Ctx, input: { outward?: string; inward?: string }) {
   let id = slug;
   for (let n = 2; types.some((t) => t.id === id); n++) id = `${slug}-${n}`;
   const custom = (await customTypes(ctx)).map(({ custom: _c, ...t }) => t);
-  await ctx.setSetting(TYPES_SETTING, JSON.stringify([...custom, { id, outward, inward }]), '');
+  await ctx.setSetting(TYPES_SETTING, JSON.stringify([...custom, { id, outward, inward }]));
   return linkTypes(ctx);
 }
 
 async function deleteType(ctx: Ctx, id: string) {
   const custom = await customTypes(ctx);
   if (!custom.some((t) => t.id === id)) throw bad(LINK_TYPES.some((t) => t.id === id) ? 'Built-in link types cannot be removed' : `No link type ${id}`);
-  const used = await ctx.db.prepare('SELECT COUNT(*) AS n FROM links WHERE type = ?').bind(id).first<{ n: number }>();
+  const used = await ctx.db.prepare('SELECT COUNT(*) AS n FROM links WHERE mode = ? AND type = ?').bind(ctx.mode, id).first<{ n: number }>();
   if (used?.n) throw bad(`${used.n} link${used.n === 1 ? ' uses' : 's use'} this type. Remove ${used.n === 1 ? 'it' : 'them'} first.`);
-  await ctx.setSetting(TYPES_SETTING, JSON.stringify(custom.filter((t) => t.id !== id).map(({ custom: _c, ...t }) => t)), '');
+  await ctx.setSetting(TYPES_SETTING, JSON.stringify(custom.filter((t) => t.id !== id).map(({ custom: _c, ...t }) => t)));
   return linkTypes(ctx);
 }
 

@@ -4,7 +4,7 @@
 import { env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 import { statements } from '../src/core/migrate';
-import { call, tool, toolError } from './helpers';
+import { call, tool, toolError, flagEverywhere } from './helpers';
 import migration from '../migrations/0019_done_column.sql';
 
 let n = 0;
@@ -13,7 +13,7 @@ async function fresh() {
   return { mode: m.id as string };
 }
 const names = (cols: any[]) => cols.map((c) => c.name);
-const flag = (on: boolean) => call('PUT', '/features/done-column', { enabled: on });
+const flag = (on: boolean) => flagEverywhere('done-column', on);
 
 describe('the Done column', () => {
   it('gives a new project To do, Doing and a fixed Done, and keeps Done last', async () => {

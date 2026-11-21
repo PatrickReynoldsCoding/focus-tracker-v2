@@ -13,6 +13,7 @@ import m0017 from '../../migrations/0017_card_day.sql';
 import m0018 from '../../migrations/0018_files.sql';
 import m0019 from '../../migrations/0019_done_column.sql';
 import m0020 from '../../migrations/0020_habit_project.sql';
+import m0021 from '../../migrations/0021_profile_settings.sql';
 
 /** Every migration, in order. A new file in migrations/ needs a line here (a test checks). */
 export const MIGRATIONS: [name: string, sql: string][] = [
@@ -27,6 +28,7 @@ export const MIGRATIONS: [name: string, sql: string][] = [
   ['0018_files.sql', m0018],
   ['0019_done_column.sql', m0019],
   ['0020_habit_project.sql', m0020],
+  ['0021_profile_settings.sql', m0021],
 ];
 
 let done = false;

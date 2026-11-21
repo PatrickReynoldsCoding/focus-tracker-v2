@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { call, mcp, tool, toolError } from './helpers';
+import { call, mcp, tool, toolError, flagEverywhere } from './helpers';
 
 // Each test works in its own mode, so Today's suggestions and undo see only its rows.
 let n = 0;
@@ -138,7 +138,7 @@ describe('issue links', () => {
 
     // with the feature off, links have no effect and their routes are gone
     await req('POST', `/todos/${todo.id}/tick`, { done: false });
-    await req('PUT', '/features/issue-links', { enabled: false });
+    await flagEverywhere('issue-links', false);
     try {
       expect((await req('GET', '/today')).suggestions.map((p: any) => p.name)).toContain('Blocked');
       expect((await req('GET', `/projects/${b.id}/full`)).links).toEqual([]);
@@ -146,7 +146,7 @@ describe('issue links', () => {
       const { tools } = await mcp<any>('tools/list');
       expect(tools.map((t: any) => t.name)).not.toContain('link_items');
     } finally {
-      await req('PUT', '/features/issue-links', { enabled: true });
+      await flagEverywhere('issue-links', true);
     }
   });
 
@@ -167,7 +167,7 @@ describe('issue links', () => {
   it('lets the owner add and remove custom link types behind a flag', async () => {
     const { req } = await freshMode();
     await req('POST', '/links/types', { outward: 'funds', inward: 'is funded by' }, 404);
-    await req('PUT', '/features/custom-link-types', { enabled: true });
+    await flagEverywhere('custom-link-types', true);
     try {
       const types = await req('POST', '/links/types', { outward: 'Funds', inward: 'is funded by' });
       expect(types.at(-1)).toMatchObject({ id: 'funds', outward: 'funds', inward: 'is funded by', custom: true });
@@ -182,7 +182,7 @@ describe('issue links', () => {
       expect((await req('DELETE', '/links/types/funds')).some((t: any) => t.id === 'funds')).toBe(false);
       await req('DELETE', '/links/types/blocks', undefined, 400);
     } finally {
-      await req('PUT', '/features/custom-link-types', { enabled: false });
+      await flagEverywhere('custom-link-types', false);
     }
   });
 });

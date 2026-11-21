@@ -4,7 +4,7 @@
 import { SELF } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 import { buildTodayList, habitItem } from '../src/core/today-list';
-import { BASE, apiToken, call, mcp, tool } from './helpers';
+import { BASE, apiToken, call, mcp, tool, flagEverywhere } from './helpers';
 
 let n = 0;
 /** A fresh mode, so each test starts empty. */
@@ -13,7 +13,7 @@ async function fresh() {
   return { mode: m.id as string };
 }
 const addDays = (day: string, k: number) => new Date(Date.parse(`${day}T12:00:00Z`) + k * 864e5).toISOString().slice(0, 10);
-const flag = (on: boolean) => call('PUT', '/features/today-panel', { enabled: on });
+const flag = (on: boolean) => flagEverywhere('today-panel', on);
 
 describe('the builder (src/core/today-list.ts)', () => {
   const h = { id: 'h', name: 'Run', per: 'week', target: 3, done_today: 0, done_this_period: 1, skipped_today: false };

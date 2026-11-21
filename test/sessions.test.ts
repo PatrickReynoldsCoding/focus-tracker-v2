@@ -3,7 +3,7 @@
 import { env } from 'cloudflare:test';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { pomodoroView, sessionNotices, workedSeconds, type StoredSession } from '../src/modules/sessions';
-import { call, tool } from './helpers';
+import { call, tool, flagEverywhere } from './helpers';
 
 const M = { mode: 'work' };
 const MIN = 60_000;
@@ -22,7 +22,7 @@ async function pass(ms: number) {
   await write({ ...s, started: back(s.started), paused_at: s.paused_at ? back(s.paused_at) : s.paused_at });
 }
 async function setFlag(id: string, on: boolean) {
-  await call('PUT', `/features/${id}`, { enabled: on });
+  await flagEverywhere(id, on);
 }
 
 async function startOn(name: string, body: Record<string, unknown> = {}) {

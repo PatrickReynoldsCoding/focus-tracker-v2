@@ -5,14 +5,14 @@ import { z } from 'zod';
 import { errorResponse, resolveMode } from '../api';
 import { Ctx, type Env } from '../core/ctx';
 import { ApiError } from '../core/errors';
-import { featureStates } from '../core/features';
+import { FEATURES_KEY, isOn, statesFrom } from '../core/features';
 import { allTools, type Tool } from '../core/registry';
 
 const SUPPORTED = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 const LATEST = SUPPORTED[0];
 
 const INSTRUCTIONS = `Focus Tracker is the owner's personal tracker: projects with Kanban boards, notes (Markdown), lists, to-dos, habits, a daily focus project and work sessions.
-- Data is split into modes (usually "personal" and "work"). Every tool takes an optional "mode"; without it the default mode is used.
+- Data is split into profiles (called modes in the tools), such as "personal" and "work"; list_profiles gives them all. Every tool takes an optional "mode" (a profile's id); without it the default profile is used. Each profile has its own settings and feature switches, so a tool can be off in one profile and on in another.
 - Start with get_today for the day, list_projects / get_project for projects, search to find anything.
 - Never choose today's focus project unless the owner asks: each day starts empty until they choose.
 - Never store sensitive material (bank or card details, passwords, ID numbers, health records) in resources or notes.
@@ -21,12 +21,24 @@ const INSTRUCTIONS = `Focus Tracker is the owner's personal tracker: projects wi
 
 type Rpc = { jsonrpc: '2.0'; id?: string | number | null; method: string; params?: Record<string, unknown> };
 
-const modeArg = z.string().optional().describe('Mode such as "personal" or "work". Default: the default mode.');
+const modeArg = z.string().optional().describe('Profile id such as "personal" or "work" (list_profiles). Default: the default profile.');
 
+/** Tools whose feature is on in at least one profile: tools/list names no profile, and a call may name any (D35). */
 async function enabledTools(env: Env): Promise<Tool[]> {
-  const ctx = new Ctx(env, await resolveMode(env, undefined));
-  const states = await featureStates(ctx);
-  return (allTools() as Tool[]).filter((t) => !t.feature || states[t.feature]);
+  const rows = (
+    await env.DB.prepare('SELECT m.id, s.value FROM modes m LEFT JOIN settings s ON s.mode = m.id AND s.key = ?').bind(FEATURES_KEY).all<{ id: string; value: string | null }>()
+  ).results;
+  const on = new Set<string>();
+  for (const r of rows) {
+    let chosen: Record<string, boolean> = {};
+    try {
+      chosen = r.value ? JSON.parse(r.value) : {};
+    } catch {
+      /* a broken value: the defaults */
+    }
+    for (const [id, v] of Object.entries(statesFrom(chosen))) if (v) on.add(id);
+  }
+  return (allTools() as Tool[]).filter((t) => !t.feature || on.has(t.feature));
 }
 
 async function toolList(env: Env) {
@@ -49,6 +61,9 @@ async function callTool(env: Env, name: string, args: Record<string, unknown>) {
     const { mode, ...rest } = args ?? {};
     const parsed = tool.input.parse(rest);
     const ctx = new Ctx(env, await resolveMode(env, typeof mode === 'string' ? mode : undefined));
+    // The switches of the profile the call is for decide.
+    if (tool.feature && !(await isOn(ctx, tool.feature)))
+      throw new ApiError(404, `${name} is turned off in the profile "${ctx.mode}" (its feature ${tool.feature} is off there: Settings → Features)`, 'feature_off');
     ctx.label = `Claude: ${name}`;
     const result = await tool.run(ctx, parsed);
     await ctx.flushUndo();

@@ -13,7 +13,7 @@ import { habitWeek } from '../src/modules/insights';
 import { planSession, scheduleTodo, setLead, weekPlan } from '../src/modules/plan';
 import { rotation } from '../src/modules/today';
 import { parseLevel } from '../src/core/habit-levels';
-import { call, mcp, tool, toolError } from './helpers';
+import { call, mcp, tool, toolError, flagEverywhere } from './helpers';
 
 register(MODULES);
 
@@ -295,13 +295,13 @@ describe('REST, Claude tools and the flag', () => {
   });
 
   it('hides the tools and routes while plan-week is off', async () => {
-    await call('PUT', '/features/plan-week', { enabled: false });
+    await flagEverywhere('plan-week', false);
     try {
       const names = (await mcp<any>('tools/list')).tools.map((t: any) => t.name);
       for (const n of ['get_week_plan', 'plan_habit_session', 'unplan_habit_session', 'schedule_todo', 'set_day_lead']) expect(names).not.toContain(n);
       await call('GET', '/plan', undefined, { expect: 404 });
     } finally {
-      await call('PUT', '/features/plan-week', { enabled: true });
+      await flagEverywhere('plan-week', true);
     }
     const names = (await mcp<any>('tools/list')).tools.map((t: any) => t.name);
     expect(names).toContain('get_week_plan');

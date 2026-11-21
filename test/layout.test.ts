@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { call, tool, toolError } from './helpers';
+import { call, tool, toolError, flagEverywhere } from './helpers';
 
 let n = 0;
 /** A fresh mode, so each test starts with no saved layout and an empty undo history. */
@@ -63,13 +63,13 @@ describe('desktop layout', () => {
 
   it('is refused while the flag is off', async () => {
     const m = await freshMode();
-    await call('PUT', '/features/movable-panels', { enabled: false });
+    await flagEverywhere('movable-panels', false);
     try {
       await call('PUT', '/layout/today/grid', { items: {} }, { ...m, expect: 404 });
       // Reading still works (the page draws in the usual order).
       await call('GET', '/layout/today', undefined, m);
     } finally {
-      await call('PUT', '/features/movable-panels', { enabled: true });
+      await flagEverywhere('movable-panels', true);
     }
   });
 });
@@ -183,11 +183,11 @@ describe('a pill’s own grid', () => {
   it('is refused while the pills or the grid are off', async () => {
     const m = await freshMode();
     for (const f of ['today-pills', 'movable-panels']) {
-      await call('PUT', `/features/${f}`, { enabled: false });
+      await flagEverywhere(f, false);
       try {
         await call('PUT', '/layout/today/grids/today', { items: {} }, { ...m, expect: 404 });
       } finally {
-        await call('PUT', `/features/${f}`, { enabled: true });
+        await flagEverywhere(f, true);
       }
     }
   });

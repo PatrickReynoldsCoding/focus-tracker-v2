@@ -2,7 +2,7 @@ import { env, SELF } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 import { statements } from '../src/core/migrate';
 import { MAX_SCENE_BYTES } from '../src/modules/whiteboards';
-import { apiToken, BASE, call, mcp, tool, toolError } from './helpers';
+import { apiToken, BASE, call, mcp, tool, toolError, flagEverywhere } from './helpers';
 import migration from '../migrations/0012_whiteboard_scenes.sql';
 
 const THUMB = 'data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA';
@@ -24,7 +24,7 @@ function scene(extra: Record<string, unknown> = {}) {
   };
 }
 
-const flag = (on: boolean) => call('PUT', '/features/whiteboards', { enabled: on });
+const flag = (on: boolean) => flagEverywhere('whiteboards', on);
 
 describe('whiteboards', () => {
   it('lists boards without their drawings and serves the drawing on its own', async () => {

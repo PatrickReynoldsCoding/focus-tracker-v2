@@ -11,6 +11,7 @@ import { pruneUndo } from './core/store';
 import { mcpFetch } from './mcp/server';
 import { MODULES } from './modules';
 import { dailyNudge, generate } from './modules/notifications';
+import { purgeExpired } from './modules/profiles';
 
 register(MODULES);
 const app = buildApp();
@@ -70,6 +71,9 @@ export default {
       await generate(ctx);
       await dailyNudge(ctx);
     }
-    if (new Date().getUTCMinutes() < 5) await pruneUndo(env.DB);
+    if (new Date().getUTCMinutes() < 5) {
+      await pruneUndo(env.DB);
+      await purgeExpired(env.DB);
+    }
   },
 } satisfies ExportedHandler<Env>;

@@ -12,6 +12,7 @@ import { navigationModule } from './navigation';
 import { notesModule } from './notes';
 import { offlineModule } from './offline';
 import { planModule } from './plan';
+import { profilesModule } from './profiles';
 import { pomodoroModule } from './pomodoro';
 import { notificationsModule } from './notifications';
 import { notifyPrefsModule } from './notify-prefs';
@@ -31,6 +32,7 @@ export const MODULES: Module[] = [
   projectsModule,
   doneColumnModule,
   basicsModule,
+  profilesModule,
   resourcesModule,
   relationsModule,
   listsModule,

@@ -52,3 +52,9 @@ export async function toolError(name: string, args: Record<string, unknown> = {}
   if (!r.isError) throw new Error(`${name} should have failed`);
   return r.content[0].text;
 }
+
+/** Turn a feature flag on or off in every profile (flags are per profile, D35). */
+export async function flagEverywhere(id: string, enabled: boolean): Promise<void> {
+  const modes = await call<{ id: string }[]>('GET', '/modes');
+  for (const m of modes) await call('PUT', `/features/${id}`, { enabled }, { mode: m.id });
+}

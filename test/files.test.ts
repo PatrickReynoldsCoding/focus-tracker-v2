@@ -2,7 +2,7 @@ import { env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 import { statements } from '../src/core/migrate';
 import migration from '../migrations/0018_files.sql';
-import { apiToken, BASE, call, mcp, tool, toolError } from './helpers';
+import { apiToken, BASE, call, mcp, tool, toolError, flagEverywhere } from './helpers';
 
 const THUMB = 'data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA';
 
@@ -245,7 +245,7 @@ describe('files and folders', () => {
     const p = await call('POST', '/projects', { name: 'Tooling' }, { mode: m });
     expect(await toolError('delete_folder', { id: (await tool('list_files', { project_id: p.id, mode: m })).folder.id, mode: m })).toMatch(/folder of a project/);
 
-    await call('PUT', '/features/files-tab', { enabled: false });
+    await flagEverywhere('files-tab', false);
     try {
       const { tools } = await mcp<any>('tools/list');
       expect(tools.some((t: any) => t.name === 'list_files')).toBe(false);
@@ -253,7 +253,7 @@ describe('files and folders', () => {
       // Folders keep working underneath, so data stays in step.
       expect((await call('POST', '/lists', { name: 'Still filed', kind: 'note', project_id: p.id }, { mode: m })).folder_id).toBeTruthy();
     } finally {
-      await call('PUT', '/features/files-tab', { enabled: true });
+      await flagEverywhere('files-tab', true);
     }
   });
 });

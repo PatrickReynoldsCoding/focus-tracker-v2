@@ -4,7 +4,7 @@ import { env } from 'cloudflare:test';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Ctx } from '../src/core/ctx';
 import { habitWeek, habitsHistory, logLines, projectsInsight, weekStarts, weekSummary } from '../src/modules/insights';
-import { call, mcp, tool } from './helpers';
+import { call, mcp, tool, flagEverywhere } from './helpers';
 
 const T = '2026-11-18T00:00:00.000Z';
 let n = 0;
@@ -237,13 +237,13 @@ describe('REST, the Claude tool and the flag', () => {
     expect((await tool('insights', { view: 'projects', weeks: 12 })).weeks).toBe(12);
     expect((await tool('insights')).weeks).toHaveLength(2);
     expect((await tool('insights', { view: 'habits' })).weeks).toHaveLength(8);
-    await call('PUT', '/features/insights', { enabled: false });
+    await flagEverywhere('insights', false);
     try {
       await call('GET', '/insights/week', undefined, { expect: 404 });
       const tools = await mcp<any>('tools/list');
       expect(tools.tools.some((t: any) => t.name === 'insights')).toBe(false);
     } finally {
-      await call('PUT', '/features/insights', { enabled: true });
+      await flagEverywhere('insights', true);
     }
   });
 });

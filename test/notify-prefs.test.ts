@@ -35,8 +35,8 @@ describe('notification settings', () => {
     expect(t.quiet).toEqual({ enabled: true, from: '22:00', to: '06:30' });
     // The nudge controls are the old settings, so the rest of the app keeps reading them.
     expect((await call('GET', '/settings', undefined, m)).mode['nudge.days']).toBe('7');
-    // Notification switches are the same in every mode.
-    expect((await call('GET', '/notification-settings', undefined, { mode: 'personal' })).reminders).toBe(false);
+    // Each profile has its own notification settings (D35).
+    expect((await call('GET', '/notification-settings', undefined, { mode: 'personal' })).reminders).toBe(true);
   });
 
   it('the master switch hides every kind from status, pending and the menu bar', async () => {

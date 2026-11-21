@@ -7,6 +7,7 @@ import { newId, randomToken, sha256Hex } from '../core/ids';
 import { allEntities, entity, type Module } from '../core/registry';
 import { create, get, list, move, redoLast, remove, undoLast, update } from '../core/store';
 import { allFeatures, featureStates, setFeature } from '../core/features';
+import { PER_PROFILE_SETTINGS } from './profiles';
 
 /** Settings a client may not write directly (they have their own calls). */
 const PROTECTED = /^(session\.current|focus\.)/;
@@ -31,6 +32,11 @@ export async function putSetting(ctx: Ctx, key: string, value: string | null, gl
       throw bad(`Unknown time zone ${value}`);
     }
   }
+  if (key === 'default_mode') {
+    if (!global) throw bad('default_mode is a global setting');
+    if (!value || !(await ctx.db.prepare('SELECT 1 FROM modes WHERE id = ?').bind(value).first())) throw bad(`No profile "${value}"`);
+  }
+  if (global && (PER_PROFILE_SETTINGS as readonly string[]).includes(key)) throw bad(`${key} belongs to each profile: send it without global`);
   await ctx.setSetting(key, value, global ? '' : ctx.mode);
   return { key, value, global };
 }

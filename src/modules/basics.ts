@@ -1,6 +1,7 @@
 // Small modules: modes, categories, backlog, criteria. (Links: relations.ts, stickies: stickies.ts.)
 
 import { z } from 'zod';
+import type { Ctx } from '../core/ctx';
 import type { Entity } from '../core/entity';
 import { bad } from '../core/errors';
 import { allEntities, type Module } from '../core/registry';
@@ -13,39 +14,58 @@ function checkColour(v: unknown) {
   if (typeof v === 'string' && v !== '' && !/^#[0-9a-fA-F]{6}$/.test(v)) throw bad('color must look like #3366cc');
 }
 
+/** Two profiles with the same name would be easy to mix up (and deleting one asks for its name). */
+async function checkUniqueLabel(ctx: Ctx, label: unknown, except: string | null) {
+  if (typeof label !== 'string') return;
+  const clash = await ctx.db.prepare('SELECT id FROM modes WHERE lower(trim(label)) = lower(trim(?)) AND id != ?').bind(label, except ?? '').first();
+  if (clash) throw bad(`There is already a profile called ${label.trim()}`);
+}
+
+/** An id not used by a profile, nor by a deleted one that can still be restored. */
+async function freeModeId(ctx: Ctx, wanted: string): Promise<string> {
+  for (let n = 1; ; n++) {
+    const id = n === 1 ? wanted : `${wanted.slice(0, 37)}-${n}`;
+    const used = await ctx.db.prepare('SELECT 1 FROM modes WHERE id = ?1 UNION SELECT 1 FROM deleted_modes WHERE id = ?1').bind(id).first();
+    if (!used) return id;
+  }
+}
+
 export const modesEntity: Entity = {
   name: 'modes',
   table: 'modes',
   singular: 'mode',
-  desc: 'Separate areas of life with their own data, such as Personal and Work.',
+  desc: 'Profiles (the app’s name for modes): separate areas of life with their own data and settings, such as Personal and Work.',
   modeScoped: false,
   orderGroup: [],
   fields: {
     label: { type: 'text', required: true },
-    color: { type: 'text', desc: 'Accent colour as #rrggbb, used by the web app while this mode is open' },
+    color: { type: 'text', desc: 'Colour theme as #rrggbb, used by the web app while this profile is open' },
   },
-  beforeUpdate(_ctx, _before, patch) {
+  async beforeUpdate(ctx, before, patch) {
     checkColour(patch.color);
+    await checkUniqueLabel(ctx, patch.label, String(before.id));
   },
   async onDelete(ctx, row) {
-    // A mode can only go when it holds no data (and never the last one).
+    // The plain delete only takes an empty profile (and never the last one); Manage profiles
+    // deletes one with everything in it (profiles.ts).
     const modes = await ctx.db.prepare('SELECT COUNT(*) AS n FROM modes').first<{ n: number }>();
-    if ((modes?.n ?? 0) <= 1) throw bad('The last mode cannot be deleted');
+    if ((modes?.n ?? 0) <= 1) throw bad('The last profile cannot be deleted');
     const used: string[] = [];
     for (const e of allEntities()) {
       if (!e.modeScoped) continue;
       const r = await ctx.db.prepare(`SELECT COUNT(*) AS n FROM ${e.table} WHERE mode = ?`).bind(row.id).first<{ n: number }>();
       if (r?.n) used.push(`${r.n} ${r.n === 1 ? e.singular : e.name}`);
     }
-    if (used.length) throw bad(`The mode "${row.label}" still has data (${used.join(', ')}). Delete that first.`);
-    if ((await ctx.setting('default_mode', '')) === row.id) throw bad('This is the default mode; make another mode the default first');
+    if (used.length) throw bad(`The profile "${row.label}" still has data (${used.join(', ')}). Delete that first, or delete the profile with everything in it (Manage profiles).`);
+    if ((await ctx.setting('default_mode', '')) === row.id) throw bad('This is the default profile; make another profile the default first');
   },
-  beforeCreate(_ctx, row) {
+  async beforeCreate(ctx, row) {
     checkColour(row.color);
-    // A mode's id is chosen from its label, so it reads well in URLs: "side-projects".
+    await checkUniqueLabel(ctx, row.label, null);
+    // A profile's id is chosen from its label, so it reads well in URLs: "side-projects".
     if (typeof row.label === 'string' && row.id && /^[a-z0-9]{10}$/.test(String(row.id))) {
       const slug = row.label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-      if (slug.length >= 2) row.id = slug.length < 6 ? `${slug}-mode` : slug.slice(0, 40);
+      if (slug.length >= 2) row.id = await freeModeId(ctx, slug.length < 6 ? `${slug}-mode` : slug.slice(0, 40));
     }
   },
 };

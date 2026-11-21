@@ -13,7 +13,7 @@ import { create, get, list, move, remove, update } from './core/store';
 export async function resolveMode(env: Env, requested: string | null | undefined): Promise<string> {
   const mode = requested || (await env.DB.prepare("SELECT value FROM settings WHERE mode = '' AND key = 'default_mode'").first<{ value: string }>())?.value || 'personal';
   const ok = await env.DB.prepare('SELECT 1 FROM modes WHERE id = ?').bind(mode).first();
-  if (!ok) throw bad(`No mode "${mode}"`);
+  if (!ok) throw new ApiError(400, `No profile "${mode}" (it may have been deleted)`, 'unknown_mode');
   return mode;
 }
 
