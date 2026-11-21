@@ -12,6 +12,7 @@ export type Habit = {
   step_up_every: string | null;
   prompts: string | null;
   category_id: string | null;
+  project_id: string | null;
   description: string | null;
   status: string;
   started: string | null;
@@ -30,6 +31,7 @@ export type Progress = {
   id: string;
   day: string;
   name: string;
+  project_id?: string | null;
   per: string | null;
   target: number | null;
   done_today: number;

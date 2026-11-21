@@ -24,6 +24,8 @@ const PACES = [1, 2, 3, 4];
  */
 export function NewHabitDialog({ habit, onClose }: { habit?: Habit | null; onClose: () => void }) {
   const { data: cats } = useData<Category[]>('/categories');
+  const { data: projects } = useData<{ id: string; name: string; status: string }[]>('/projects');
+  const [project, setProject] = useState(habit?.project_id ?? '');
   const [step, setStep] = useState(1);
   const [name, setName] = useState(habit?.name ?? '');
   const [why, setWhy] = useState(habit?.intention ?? habit?.description ?? '');
@@ -49,6 +51,7 @@ export function NewHabitDialog({ habit, onClose }: { habit?: Habit | null; onClo
       name: name.trim(),
       intention: why.trim() || null,
       category_id: category || null,
+      project_id: project || null,
       sessions: startLevel.sessions,
       per,
       size: formatSize(startLevel.size, startLevel.unit) || null,
@@ -92,6 +95,20 @@ export function NewHabitDialog({ habit, onClose }: { habit?: Habit | null; onClo
                   {c.label}
                 </option>
               ))}
+            </select>
+          </label>
+          <label>
+            Project (optional)
+            <select value={project} onChange={(e) => setProject((e.target as HTMLSelectElement).value)}>
+              <option value="">None</option>
+              {(projects ?? [])
+                .filter((p) => p.status === 'active')
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
             </select>
           </label>
           <div class="row">

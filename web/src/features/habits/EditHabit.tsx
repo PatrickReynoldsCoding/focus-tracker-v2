@@ -17,6 +17,7 @@ export function EditHabitDialog({
   onMove: { up?: () => void; down?: () => void };
 }) {
   const { data: cats } = useData<Category[]>('/categories');
+  const { data: projects } = useData<{ id: string; name: string; status: string }[]>('/projects');
   const [h, setH] = useState<Habit>(habit);
   const set = (k: keyof Habit, v: unknown) => setH({ ...h, [k]: v === '' ? null : v });
   const text = (k: keyof Habit) => (e: Event) => set(k, (e.target as HTMLInputElement).value);
@@ -42,6 +43,7 @@ export function EditHabitDialog({
                 name: fields.name,
                 intention: fields.intention,
                 category_id: fields.category_id,
+                project_id: fields.project_id ?? null,
                 sessions: fields.sessions,
                 per: fields.per,
                 size: fields.size,
@@ -72,6 +74,21 @@ export function EditHabitDialog({
               </option>
             ))}
           </select>
+        </label>
+        <label>
+          Project
+          <select value={h.project_id ?? ''} onChange={(e) => set('project_id', (e.target as HTMLSelectElement).value || null)}>
+            <option value="">None</option>
+            {(projects ?? [])
+              .filter((p) => p.status === 'active' || p.id === h.project_id)
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+          </select>
+          <span class="muted small">The habit also shows on that project’s page.</span>
         </label>
         <div class="row">
           <label>

@@ -31,3 +31,4 @@ import './today-list';
 import './files';
 import './add-panel';
 import './pomodoro';
+import './habits/ProjectHabits';
