@@ -85,7 +85,13 @@ export interface PanelDef<P> {
   /** More things to do with the panel, for its ⋯ menu on a computer (added by a layout step: the
    *  pop-out windows add “Pop out”). */
   menu?: (props: P) => PanelAction[];
+  /** For a Settings section: whom its settings apply to, shown as a tag on the section.
+   *  'profile' = the profile that is open (kept on the server per profile), 'all' = every profile
+   *  (the time zone, devices, Claude), 'device' = this device only (kept in the browser). */
+  scope?: SettingsScope;
 }
+
+export type SettingsScope = 'profile' | 'all' | 'device';
 
 /** One line of a panel's ⋯ menu. */
 export interface PanelAction {
