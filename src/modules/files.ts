@@ -166,6 +166,7 @@ export async function listFiles(ctx: Ctx, o: ListFilesOptions = {}) {
     ctx.db.prepare('SELECT id, name, status FROM projects WHERE mode = ?').bind(ctx.mode).all<{ id: string; name: string; status: string }>(),
   ]);
   const statusOf = new Map(projects.results.map((p) => [p.id, p.status]));
+  const nameOf = new Map(projects.results.map((p) => [p.id, p.name]));
   const folderOfProject = new Map<string, string>();
   for (const f of all.values()) if (f.project_id) folderOfProject.set(f.project_id, f.id);
 
@@ -187,13 +188,13 @@ export async function listFiles(ctx: Ctx, o: ListFilesOptions = {}) {
   const like = q ? likeOf(q) : null;
   const found = (await Promise.all(sources.map((s) => s.list(ctx, like)))).flat();
   const here = current ? all.get(current)! : null;
-  const files: (FileItem & { location?: string | null })[] = [];
+  const files: (FileItem & { location?: string | null; project_name: string | null })[] = [];
   for (const f of found) {
     const folder = f.folder_id ?? (f.project_id ? (folderOfProject.get(f.project_id) ?? null) : null);
     if (!inScope(folder)) continue;
     // A project's empty notes show only in the project's own folder.
     if (f.quiet && (deep || !here || here.project_id !== f.project_id)) continue;
-    files.push({ ...f, folder_id: folder });
+    files.push({ ...f, folder_id: folder, project_name: f.project_id ? (nameOf.get(f.project_id) ?? null) : null });
   }
 
   const pathOf = (id: string | null): FolderRow[] => {
@@ -436,7 +437,7 @@ export const filesModule: Module = {
     {
       name: 'list_files',
       description:
-        'List the Files tab: folders and files (notes, to-do lists, lists, whiteboards, links, project notes) in a folder (folder_id; none = top level) or a project’s folder (project_id). With query or type it searches that folder and everything inside it (names, note text, link addresses).',
+        'List the Files tab: folders and files (notes, to-do lists, lists, whiteboards, links, project notes; each with project_id and project_name when it belongs to a project) in a folder (folder_id; none = top level) or a project’s folder (project_id). With query or type it searches that folder and everything inside it (names, note text, link addresses).',
       readOnly: true,
       feature: FLAG,
       input: z.object({

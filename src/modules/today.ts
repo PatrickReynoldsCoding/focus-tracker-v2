@@ -17,7 +17,7 @@ import { currentPomodoro } from './pomodoro';
 import { currentSession } from './sessions';
 import { notBlockedSql } from './relations';
 import { buildTodayList } from '../core/today-list';
-import { cardsForDay, notTodayKeys, TODAY_LIST_FLAG, todoListNames, withListNames } from './today-list';
+import { cardsForDay, notTodayKeys, TODAY_LIST_FLAG, todoListNames, todoListProjects, withListNames } from './today-list';
 
 export const logEntity: Entity = {
   name: 'log',
@@ -202,7 +202,7 @@ export async function logSession(ctx: Ctx, input: { project_id?: string; date?: 
 export async function today(ctx: Ctx) {
   const day = await ctx.today();
   const withList = await ctx.feature(TODAY_LIST_FLAG);
-  const [focus, rot, session, todos, habits, lists, nudge, cards, todoLists] = await Promise.all([
+  const [focus, rot, session, todos, habits, lists, nudge, cards, todoLists, todoListProject] = await Promise.all([
     focusOf(ctx, day),
     rotation(ctx, day),
     currentSession(ctx),
@@ -212,6 +212,7 @@ export async function today(ctx: Ctx) {
     neglected(ctx, day),
     withList ? cardsForDay(ctx, day) : [],
     withList ? todoListNames(ctx) : {},
+    withList ? todoListProjects(ctx) : {},
   ]);
   return {
     mode: ctx.mode,
@@ -230,6 +231,8 @@ export async function today(ctx: Ctx) {
     // The Today list (flag today-panel) also needs the cards for today and, with several to-do lists, their names.
     cards,
     todo_lists: todoLists,
+    // A to-do list's project (list id → project id), so a to-do from a project's list says which.
+    todo_list_projects: todoListProject,
   };
 }
 

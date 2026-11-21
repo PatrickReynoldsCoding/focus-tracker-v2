@@ -44,6 +44,15 @@ export async function todoListNames(ctx: Ctx): Promise<Record<string, string>> {
   return Object.fromEntries(r.results.slice(1).map((l) => [l.id, l.name]));
 }
 
+/** Each to-do list that belongs to a project: list id → project id (the Today list's project labels). */
+export async function todoListProjects(ctx: Ctx): Promise<Record<string, string>> {
+  const r = await ctx.db
+    .prepare("SELECT id, project_id FROM lists WHERE mode = ? AND kind = 'todo' AND project_id IS NOT NULL")
+    .bind(ctx.mode)
+    .all<{ id: string; project_id: string }>();
+  return Object.fromEntries(r.results.map((l) => [l.id, l.project_id]));
+}
+
 /** To-do rows as the builder reads them, with their list's name when there are several lists. */
 export function withListNames(todos: Row[], names: Record<string, string>): TodayTodoIn[] {
   return todos.map((t) => ({

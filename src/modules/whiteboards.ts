@@ -180,7 +180,7 @@ export const whiteboardsModule: Module = {
       const board = await get(ctx, whiteboardsEntity, c.req.param('id'));
       const text = await sceneOf(ctx, board.id);
       // The drawing goes out as stored, without parsing it here (it can be large; 10 ms CPU per request).
-      const body = `{"id":${JSON.stringify(board.id)},"name":${JSON.stringify(board.name)},"updated_at":${JSON.stringify(board.updated_at)},"scene":${text ?? 'null'}}`;
+      const body = `{"id":${JSON.stringify(board.id)},"name":${JSON.stringify(board.name)},"project_id":${JSON.stringify(board.project_id ?? null)},"updated_at":${JSON.stringify(board.updated_at)},"scene":${text ?? 'null'}}`;
       return new Response(body, { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
     });
     api.put('/whiteboards/:id/scene', async (c) => {
