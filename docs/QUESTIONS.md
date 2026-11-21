@@ -81,3 +81,10 @@ Questions the owner could not be asked while an item was built. Each gives the d
 
 1. The old Notes tab (Files off) lost its Project notes tickbox and the project-note cards with it, so nothing is stuck on. Default: gone; project notes are on Files and project pages.
 2. The "Today" tag on old Notes tab cards and "· on Today" under a whiteboard stay (they inform, they do not switch). Default: kept.
+
+## Project labels (v0.32.0)
+
+1. A label's colour comes from the project's id (one of seven tints), not from its category's colour, because category colours are free hex values and labels must follow the theme tokens. Default: from the id.
+2. In Add file the label is not a link (the whole row is the Add button; leaving the sheet by accident would be annoying). Default: not a link there; a link everywhere else.
+3. No labels inside the project's own folder or on its own page, and none on a project's notes (their name is the project's). Default: left out.
+4. Today's "Done" rows of the Today list have no label (they are folded away). Default: none.
