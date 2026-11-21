@@ -23,7 +23,10 @@ class TodayWidget : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
         val pending = goAsync()
         thread {
-            try { refresh(context) } finally { pending.finish() }
+            try {
+                drawSaved(context) // something on screen at once, even when the server is slow
+                refresh(context)
+            } finally { pending.finish() }
         }
     }
 
@@ -36,7 +39,7 @@ class TodayWidget : AppWidgetProvider() {
         val pending = goAsync()
         thread {
             try {
-                val api = Api(Prefs(context))
+                val api = Api(Prefs(context), fast = true)
                 when (action) {
                     "todo" -> api.post("/api/todos/$id/tick", JSONObject().put("done", true))
                     "habit" -> api.post("/api/habits/$id/check", JSONObject().put("add", 1))
@@ -70,18 +73,35 @@ class TodayWidget : AppWidgetProvider() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
 
-        /** Fetch the status and redraw every Today widget. Blocking: call off the main thread. */
+        /** Fetch the status and redraw every Today widget. Blocking: call off the main thread. When the server
+         *  does not answer in time, the last saved status is drawn with a note, so the widget never just times out. */
         fun refresh(context: Context) {
-            val manager = AppWidgetManager.getInstance(context)
-            val ids = manager.getAppWidgetIds(ComponentName(context, TodayWidget::class.java))
             val prefs = Prefs(context)
-            val status = if (prefs.ready) runCatching { Api(prefs).status() } else Result.failure(IllegalStateException("Open the app to connect"))
-            status.getOrNull()?.let { runCatching { AlarmScheduler.schedule(context, it) } } // also when no widget is placed
-            if (ids.isEmpty()) return
-            for (id in ids) manager.updateAppWidget(id, views(context, id, status))
+            val fresh = if (prefs.ready) runCatching { Api(prefs, fast = true).status() } else Result.failure(IllegalStateException("Open the app to connect"))
+            fresh.getOrNull()?.let { runCatching { AlarmScheduler.schedule(context, it) } } // also when no widget is placed
+            val saved = if (fresh.isFailure) savedStatus(prefs) else null
+            draw(context, saved?.let { Result.success(it) } ?: fresh, if (saved != null) "Offline · saved ${savedTime(prefs)}" else null)
         }
 
-        private fun views(context: Context, widgetId: Int, result: Result<Status>): RemoteViews {
+        /** Redraw from the saved status, without the network. */
+        private fun drawSaved(context: Context) {
+            val prefs = Prefs(context)
+            savedStatus(prefs)?.let { draw(context, Result.success(it), "Updating…") }
+        }
+
+        private fun savedStatus(prefs: Prefs): Status? =
+            prefs.cachedStatus.takeIf { it.isNotEmpty() }?.let { text -> runCatching { Status.parse(JSONObject(text)) }.getOrNull() }
+
+        private fun savedTime(prefs: Prefs): String =
+            java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(prefs.cachedAt))
+
+        private fun draw(context: Context, status: Result<Status>, note: String?) {
+            val manager = AppWidgetManager.getInstance(context)
+            val ids = manager.getAppWidgetIds(ComponentName(context, TodayWidget::class.java))
+            for (id in ids) manager.updateAppWidget(id, views(context, id, status, note))
+        }
+
+        private fun views(context: Context, widgetId: Int, result: Result<Status>, note: String?): RemoteViews {
             val v = RemoteViews(context.packageName, R.layout.widget_today)
             v.setOnClickPendingIntent(R.id.add, PendingIntent.getActivity(
                 context, 3, Intent(context, QuickAddActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
@@ -100,7 +120,8 @@ class TodayWidget : AppWidgetProvider() {
             }
             v.setTextViewText(R.id.focus, s.focusName ?: "No focus yet")
             v.setOnClickPendingIntent(R.id.header, openApp(context, if (s.focusId != null) "/p/${s.focusId}" else "/today", 1))
-            v.setViewVisibility(R.id.next, View.GONE)
+            v.setTextViewText(R.id.next, note ?: "")
+            v.setViewVisibility(R.id.next, if (note != null) View.VISIBLE else View.GONE)
             val session = s.session
             if (session != null) {
                 v.setViewVisibility(R.id.session_row, View.VISIBLE)

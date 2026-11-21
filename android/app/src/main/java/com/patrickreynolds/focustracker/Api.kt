@@ -18,22 +18,39 @@ class Prefs(context: Context) {
         get() = p.getString("mode", "personal") ?: "personal"
         set(v) = p.edit().putString("mode", v).apply()
     val ready get() = url.isNotEmpty() && token.isNotEmpty()
+
+    /** The last status the server sent and when, so a widget can draw something while the server is slow or out of reach. */
+    var cachedStatus: String
+        get() = p.getString("status", "") ?: ""
+        set(v) = p.edit().putString("status", v).apply()
+    var cachedAt: Long
+        get() = p.getLong("status_at", 0L)
+        set(v) = p.edit().putLong("status_at", v).apply()
 }
 
 class ApiException(val status: Int, message: String) : Exception(message)
 
-/** Blocking HTTP calls: run them off the main thread. */
-class Api(private val prefs: Prefs) {
+/**
+ * Blocking HTTP calls: run them off the main thread. A widget's broadcast may run for about 10 seconds, so
+ * `fast` gives up after 4 + 6 seconds and the widget shows the saved status instead of timing out.
+ */
+class Api(private val prefs: Prefs, private val fast: Boolean = false) {
     fun get(path: String): String = call("GET", path, null)
     fun post(path: String, body: JSONObject = JSONObject()): String = call("POST", path, body.toString())
 
-    fun status(): Status = Status.parse(JSONObject(get("/api/status?client=android")))
+    fun status(): Status {
+        val text = get("/api/status?client=android")
+        val status = Status.parse(JSONObject(text))
+        prefs.cachedStatus = text
+        prefs.cachedAt = System.currentTimeMillis()
+        return status
+    }
 
     private fun call(method: String, path: String, body: String?): String {
         val c = URL(prefs.url + path).openConnection() as HttpURLConnection
         c.requestMethod = method
-        c.connectTimeout = 10_000
-        c.readTimeout = 15_000
+        c.connectTimeout = if (fast) 4_000 else 10_000
+        c.readTimeout = if (fast) 6_000 else 15_000
         c.setRequestProperty("Authorization", "Bearer ${prefs.token}")
         c.setRequestProperty("X-Mode", prefs.mode)
         if (body != null) {
