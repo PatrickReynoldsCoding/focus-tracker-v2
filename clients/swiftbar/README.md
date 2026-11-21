@@ -12,13 +12,13 @@ Shows today's focus project and the session timer (with pomodoro) in the menu ba
    ```sh
    FT_URL=https://your-tracker.example.workers.dev
    FT_TOKEN=ft_...
-   FT_MODE=personal   # or work
+   FT_MODE=personal   # optional: a profile's id (Settings → Profiles) to pin it
    ```
 
    Then `chmod 600 ~/.config/focus-tracker/swiftbar.env`.
 5. Optional: `brew install terminal-notifier` for notifications that open the tracker when clicked. Without it the plugin uses AppleScript notifications.
 
-The menu bar follows the profile you have open in the web app (switching profile there changes it within 30 seconds). To pin one profile instead, set `FT_MODE=<profile id>` in the env file.
+The menu bar follows the profile you have open in the web app (switching profile there changes it within 30 seconds; Manage profiles can turn that off and keep a chosen default). To pin one profile instead, set `FT_MODE=<profile id>` in the env file.
 
 For both modes at once, copy the plugin twice (for example `focus-work.5s.sh`) and point the copy at another file with `FT_CONFIG=~/.config/focus-tracker/swiftbar-work.env` set inside it, just below the first line.
 

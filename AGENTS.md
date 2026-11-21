@@ -17,10 +17,11 @@ Modular first: a feature lives in its own files on the server and in the browser
 - `src/core/`: the small shared core.
   - `entity.ts`: how a table is described (fields, types, refs, ordering, hooks).
   - `store.ts`: generic create / get / list / update / remove / move for any entity, recording every change for undo; cascades deletes along `ref` fields marked `cascade`, clears the others.
-  - `features.ts`: **feature flags**. A module lists the flags it reads in `Module.features` (`{ id, label, description, default, experimental? }`); the owner switches them in Settings → Features (one setting for the deployment). Server code asks `await ctx.feature('id')`; a route that belongs to a flag calls `requireFeature(ctx, 'id')`; a Claude tool sets `feature: 'id'` and is hidden while it is off.
+  - `features.ts`: **feature flags**. A module lists the flags it reads in `Module.features` (`{ id, label, description, default, experimental? }`); the owner switches them in Settings → Features, **per profile** (D35: a request's flags are those of its mode; Claude's tool list shows a tool while it is on in any profile). Server code asks `await ctx.feature('id')`; a route that belongs to a flag calls `requireFeature(ctx, 'id')`; a Claude tool sets `feature: 'id'` and is hidden while it is off.
   - `ctx.ts`, `auth.ts`, `migrate.ts`, `registry.ts`, `ids.ts`, `errors.ts`.
 - `src/modules/<feature>.ts`: one feature each. A module declares `entities` (tables), `routes` (REST routes under `/api`), `tools` (Claude tools, zod input) and `features` (flags). List it in `src/modules/index.ts` A module may also list `files` (rows the Files tab shows: `src/core/files.ts`, a `FileSource` with type, group, entity and `list(ctx, like)`, and optionally `today` (panel id prefix and how to put a file on Today or off it), which Add panel and Claude's `add_panel` use) and cross-cutting hooks `beforeWrite` / `afterWrite` (run for every row of every kind written through the store, in the same undo step; the files module keeps `folder_id` and `project_id` in step with them) and `beforeDelete`.
 - Project boards: columns are statuses; `src/modules/done-column.ts` (flag `done-column`) keeps each project's fixed Done column (`columns.is_done`) last and undeletable and keeps a card's `done` in step with being in it, for every way a card changes (D34). Code that needs "the column that means done" calls `doneColumn()` in `projects.ts`.
+- Profiles are modes (`src/modules/profiles.ts`, D35): a new per-profile setting needs nothing (settings rows are per mode); a setting for every profile uses mode `''`; a new table with a `mode` column is picked up by deleting and purging a profile (a test checks).
 - `migrations/`: D1 schema. A new migration also needs a line in `MIGRATIONS` in `src/core/migrate.ts` (a test checks). Never edit a migration that has shipped; add a new one.
 
 **Browser** (`web/src/`)
@@ -32,7 +33,7 @@ Modular first: a feature lives in its own files on the server and in the browser
   - `registerPanel('project', …)` gets `{ project, setProject }` (GET /api/projects/:id/full),
   - `registerPanel('projects', …)` is a section of the Projects tab (under the table), gets `{ category }` (the tab's category filter),
   - `registerPanel('card', …)` is a section of the card dialog, gets `{ card, columns, save, update, close }`,
-  - `registerPanel('settings', …)` is a section of Settings,
+  - `registerPanel('settings', …)` is a section of Settings; give it `scope: 'profile' | 'all' | 'device'` (whom its settings are for, shown as a tag; D35 lists which setting is which),
   - `registerPanel('habits', …)` is a section at the top of the Habits tab (no props),
   - `registerOverlay` draws something over every page once signed in (gets `{ route }`), such as the session's corner timer.
   - `registerHeaderItem` puts something at the left edge of the header (gets `{ route }`), such as the Back button.

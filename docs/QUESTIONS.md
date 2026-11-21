@@ -64,3 +64,15 @@ Questions the owner could not be asked while an item was built. Each gives the d
 5. Unticking a card in the Today list, or Claude's `done: false`, moves it to the board's first column (not back to where it was before). Default: the first column, as in D30.
 6. Migration: the last column named done, complete(d) or finished became the Done column and moved to the end; Work boards with Waiting, In-review or Blocked after Done now show them before Done. Default: as described.
 7. Folded Done is a slim strip with ✓, the name and the count; tapping it opens Done again (and turns Hide done off). Default: as described.
+
+## Profiles (v0.30.0)
+
+1. Notification settings are now per profile (D17 had them global): quiet hours and "which devices show notifications" must be set in each profile. Default: per profile, as asked; every profile started with the old values.
+2. The last session length is per profile (v1 had one for everything). Default: per profile, as asked.
+3. Copy settings copies Today's pills and layouts but leaves out the notes, lists and whiteboards placed in them, and does not copy the usual weekly rotation (it names the other profile's categories). Default: as described.
+4. New profile starts with "Default settings" chosen; "Copy settings from" offers the open profile first. Default: default settings.
+5. A deleted profile can be restored for 7 days, then it is purged; Delete now purges at once. Default: 7 days.
+6. Opening a profile in the app still makes it the default (menu bar, widgets, Claude follow it, as in v0.25.0). Manage profiles can turn that off so Make default sticks. Default: on.
+7. Claude's tool list shows a tool while its feature is on in any profile; calling it in a profile where it is off fails with a message. Default: as described (the connector cannot know the profile before a call).
+8. Profile names must be different (ignoring case), because deleting asks for the name. Default: unique.
+9. The profile dropdown stays the plain dropdown of v0.25.0 (no colour dots in it; browsers cannot show them in a dropdown). Default: plain dropdown, with ＋ New profile… and ⚙ Manage profiles… at the end.
