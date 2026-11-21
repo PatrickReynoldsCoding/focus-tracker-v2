@@ -57,11 +57,27 @@ export function withListNames(todos: Row[], names: Record<string, string>): Toda
   }));
 }
 
+const NOT_TODAY_KEY = 'nottoday';
+
+/** To-dos and cards the owner put off for today ("Not today"): one setting per mode that starts again each day, so they come back tomorrow. */
+export async function notTodayKeys(ctx: Ctx, day: string): Promise<string[]> {
+  const s = await ctx.jsonSetting<{ day: string; keys: string[] } | null>(NOT_TODAY_KEY, null);
+  return s?.day === day ? s.keys : [];
+}
+
+/** Put a to-do or card off for today (or back on today's list). Habits have their own skip (habits.ts skipHabit). */
+export async function setNotToday(ctx: Ctx, kind: 'todo' | 'card', id: string, on: boolean) {
+  const day = await ctx.today();
+  const key = `${kind}:${id}`;
+  const rest = (await notTodayKeys(ctx, day)).filter((k) => k !== key);
+  await ctx.setSetting(NOT_TODAY_KEY, JSON.stringify({ day, keys: on ? [...rest, key] : rest }));
+}
+
 /** Everything for today, in one list (GET /api/today/list, Claude's get_today_list, the menu bar). */
 export async function todayList(ctx: Ctx): Promise<TodayList> {
   const day = await ctx.today();
-  const [habits, todos, cards, names] = await Promise.all([habitProgress(ctx, day), todosForDay(ctx, day), cardsForDay(ctx, day), todoListNames(ctx)]);
-  return buildTodayList(day, { habits, todos: withListNames(todos, names), cards });
+  const [habits, todos, cards, names, hide] = await Promise.all([habitProgress(ctx, day), todosForDay(ctx, day), cardsForDay(ctx, day), todoListNames(ctx), notTodayKeys(ctx, day)]);
+  return buildTodayList(day, { habits, todos: withListNames(todos, names), cards, hide });
 }
 
 /**
@@ -91,7 +107,7 @@ async function tickItem(ctx: Ctx, a: { kind: (typeof KINDS)[number]; id: string;
     if (a.not_today !== undefined) await skipHabit(ctx, a.id, a.not_today);
     else await checkHabit(ctx, a.id, undefined, done ? 1 : -1);
   } else if (a.not_today !== undefined) {
-    throw bad('not_today is for habits only');
+    await setNotToday(ctx, a.kind, a.id, a.not_today);
   } else if (a.kind === 'todo') {
     await update(ctx, todosEntity, a.id, { done: done ? await ctx.today() : null });
   } else {

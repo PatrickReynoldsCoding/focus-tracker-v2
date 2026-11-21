@@ -6,12 +6,12 @@ import type { Ctx } from '../core/ctx';
 import { bad } from '../core/errors';
 import type { Module } from '../core/registry';
 import { update } from '../core/store';
-import { checkHabit } from './habits';
+import { checkHabit, skipHabit } from './habits';
 import { dismiss, notificationsEntity } from './notifications';
 import { nextPomodoroPeriod, pausePomodoro, resumePomodoro, startPomodoro, stopPomodoro } from './pomodoro';
 import { extendSession, nextPeriod, pauseSession, resumeSession, startSession, stopSession } from './sessions';
 import { status } from './today';
-import { tickCard } from './today-list';
+import { setNotToday, tickCard } from './today-list';
 
 /** SwiftBar treats "|" as the start of parameters; keep text safe and short. */
 const clean = (s: unknown, max = 60) => {
@@ -51,6 +51,9 @@ export async function swiftbarText(ctx: Ctx, origin: string): Promise<string> {
   }
   const unseen = s.notifications.filter((n) => !n.seen_at);
   if (unseen.length) bar += ` •${unseen.length}`;
+  // A red number for what is left to do today, as a badge: SwiftBar draws the SF Symbol "<n>.circle.fill" (0 to 50) in red.
+  const left = s.today_list ? s.today_list.left : s.todos_due.length + s.habits_left.length;
+  if (left > 0) bar += ` | sfimage=${Math.min(left, 50)}.circle.fill sfcolor=red`;
   lines.push(bar, '---');
 
   if (s.focus) {
@@ -81,6 +84,9 @@ export async function swiftbarText(ctx: Ctx, origin: string): Promise<string> {
         const action = x.kind === 'habit' ? act('habit', x.id) : act(x.kind === 'card' ? 'card' : 'tick', x.id);
         lines.push(`${x.kind === 'habit' ? '○' : '☐'} ${clean(x.title)}${extra} | ${action}`);
       }
+      // "Not today": take an item off today's list (it comes back tomorrow).
+      lines.push('Not today… | ');
+      for (const x of open.slice(0, 20)) lines.push(`--${clean(x.title)} | ${act('nottoday', `${x.kind}:${x.id}`)}`);
     } else if (s.today_list.done) lines.push('---', `Today: all done (${s.today_list.done})`);
   } else if (s.todos_due.length) {
     lines.push('---', `To do today (${s.todos_due.length})`);
@@ -96,7 +102,7 @@ export async function swiftbarText(ctx: Ctx, origin: string): Promise<string> {
       lines.push(`${clean(n.title)}${n.body ? `: ${clean(n.body, 50)}` : ''} | ${act('dismiss', n.id)}`);
     }
   }
-  lines.push('---', `Open Focus Tracker | href=${origin}/#/today`, `Mode: ${ctx.mode}`, 'Refresh | refresh=true');
+  lines.push('---', `Open Focus Tracker | href=${origin}/#/today`, `Profile: ${ctx.mode}`, 'Refresh | refresh=true');
   // Lines the plugin turns into macOS notifications (and then marks seen). SwiftBar never shows them:
   // the plugin removes every line starting with "#notify" before printing.
   for (const n of unseen) lines.push(`#notify\t${n.id}\t${clean(n.title, 80)}\t${clean(n.body ?? '', 200)}`);
@@ -134,6 +140,12 @@ export async function swiftbarAction(ctx: Ctx, form: Record<string, string>) {
     }
     case 'card':
       return tickCard(ctx, id, true);
+    case 'nottoday': {
+      const [kind, itemId] = [id.slice(0, id.indexOf(':')), id.slice(id.indexOf(':') + 1)];
+      if (kind === 'habit') return skipHabit(ctx, itemId, true);
+      if (kind === 'todo' || kind === 'card') return setNotToday(ctx, kind, itemId, true);
+      throw bad(`Cannot put ${kind} off for today`);
+    }
     case 'habit':
       return checkHabit(ctx, id);
     case 'dismiss':

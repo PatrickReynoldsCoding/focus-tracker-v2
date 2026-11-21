@@ -74,8 +74,8 @@ function Modes() {
   if (!data) return <Loading />;
   return (
     <section class="card">
-      <h2>Modes</h2>
-      <p class="muted small">Separate areas of life, each with its own projects, notes and habits. The colour tints the app while that mode is open.</p>
+      <h2>Profiles</h2>
+      <p class="muted small">Separate areas of life, each with its own projects, notes, habits and settings. The colour theme tints the app while that profile is open. Switch from the dropdown at the top; add one there with “New profile…”.</p>
       <ul class="plain">
         {data.map((m) => (
           <li key={m.id} class="mode-row">
@@ -103,7 +103,7 @@ function Modes() {
           </li>
         ))}
       </ul>
-      <AddInput placeholder="Add a mode, such as Side projects" onAdd={(label) => change(() => post('/modes', { label }))} />
+      <AddInput placeholder="Add a profile, such as Side projects" onAdd={(label) => change(() => post('/modes', { label }))} />
     </section>
   );
 }

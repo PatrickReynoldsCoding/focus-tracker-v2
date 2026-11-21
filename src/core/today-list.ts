@@ -96,7 +96,9 @@ export function habitItem(h: TodayHabitIn): TodayItem | null {
   return { ...base, state: 'open', progress, can_skip: true };
 }
 
-export function buildTodayList(day: string, input: { habits?: TodayHabitIn[]; todos?: TodayTodoIn[]; cards?: TodayCardIn[] }): TodayList {
+/** `hide`: keys ("todo:<id>", "card:<id>") the owner put off for today ("Not today"): they show as skipped, not open. */
+export function buildTodayList(day: string, input: { habits?: TodayHabitIn[]; todos?: TodayTodoIn[]; cards?: TodayCardIn[]; hide?: string[] }): TodayList {
+  const hide = new Set(input.hide ?? []);
   const habits = (input.habits ?? []).map(habitItem).filter((x): x is TodayItem => !!x);
   const things: (TodayItem & { at: number })[] = [];
   (input.todos ?? []).forEach((t, i) => {
@@ -107,7 +109,7 @@ export function buildTodayList(day: string, input: { habits?: TodayHabitIn[]; to
       kind: 'todo',
       id: t.id,
       title: t.title,
-      state: t.done ? 'done' : 'open',
+      state: t.done ? 'done' : hide.has(`todo:${t.id}`) ? 'skipped' : 'open',
       day: t.day,
       late: t.day && t.day < day ? t.day : null,
       from: t.list_name ?? null,
@@ -118,7 +120,7 @@ export function buildTodayList(day: string, input: { habits?: TodayHabitIn[]; to
   });
   (input.cards ?? []).forEach((c, i) => {
     if (!c.day || c.day > day) return;
-    const state: TodayState | null = c.done === day ? 'done' : !c.done && !c.in_last ? 'open' : null;
+    const state: TodayState | null = c.done === day ? 'done' : !c.done && !c.in_last ? (hide.has(`card:${c.id}`) ? 'skipped' : 'open') : null;
     if (!state) return;
     things.push({
       key: `card:${c.id}`,

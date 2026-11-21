@@ -52,7 +52,7 @@ class Api(private val prefs: Prefs, private val fast: Boolean = false) {
         c.connectTimeout = if (fast) 4_000 else 10_000
         c.readTimeout = if (fast) 6_000 else 15_000
         c.setRequestProperty("Authorization", "Bearer ${prefs.token}")
-        c.setRequestProperty("X-Mode", prefs.mode)
+        // No X-Mode: the widgets follow the profile that is open in the web app (the server remembers it).
         if (body != null) {
             c.doOutput = true
             c.setRequestProperty("Content-Type", "application/json")

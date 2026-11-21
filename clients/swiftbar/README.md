@@ -18,6 +18,8 @@ Shows today's focus project and the session timer (with pomodoro) in the menu ba
    Then `chmod 600 ~/.config/focus-tracker/swiftbar.env`.
 5. Optional: `brew install terminal-notifier` for notifications that open the tracker when clicked. Without it the plugin uses AppleScript notifications.
 
+The menu bar follows the profile you have open in the web app (switching profile there changes it within 30 seconds). To pin one profile instead, set `FT_MODE=<profile id>` in the env file.
+
 For both modes at once, copy the plugin twice (for example `focus-work.5s.sh`) and point the copy at another file with `FT_CONFIG=~/.config/focus-tracker/swiftbar-work.env` set inside it, just below the first line.
 
 ## How it works

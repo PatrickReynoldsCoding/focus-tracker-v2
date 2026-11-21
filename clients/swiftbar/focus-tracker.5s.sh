@@ -8,7 +8,7 @@
 # Setup: see clients/swiftbar/README.md. Needs ~/.config/focus-tracker/swiftbar.env with
 #   FT_URL=https://your-tracker.workers.dev
 #   FT_TOKEN=ft_...           (Settings → Devices and API tokens)
-#   FT_MODE=personal          (optional)
+#   FT_MODE=personal          (optional: leave it out and the menu bar follows the profile open in the web app)
 
 CONFIG="${FT_CONFIG:-$HOME/.config/focus-tracker/swiftbar.env}"
 # shellcheck disable=SC1090
@@ -20,7 +20,8 @@ if [ -z "$FT_URL" ] || [ -z "$FT_TOKEN" ]; then
   exit 0
 fi
 
-api() { curl -fsS --max-time 10 -H "Authorization: Bearer $FT_TOKEN" -H "X-Mode: ${FT_MODE:-personal}" "$@"; }
+# No FT_MODE: follow the profile that is open in the web app (the server remembers it). FT_MODE pins one profile.
+api() { curl -fsS --max-time 10 -H "Authorization: Bearer $FT_TOKEN" ${FT_MODE:+-H "X-Mode: $FT_MODE"} "$@"; }
 action() { api -X POST "$FT_URL/api/swiftbar/action" --data-urlencode "action=$1" --data-urlencode "id=$2" "${@:3}" >/dev/null; }
 
 notify() {
@@ -36,7 +37,7 @@ ask() {
   osascript -e 'on run argv' -e 'text returned of (display dialog (item 1 of argv) default answer (item 2 of argv) with title "Focus Tracker")' -e 'end run' "$1" "$2" 2>/dev/null
 }
 
-CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/focus-tracker-swiftbar.${FT_MODE:-personal}.txt"
+CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/focus-tracker-swiftbar.${FT_MODE:-active}.txt"
 mkdir -p "$(dirname "$CACHE")"
 
 case "$1" in
@@ -44,7 +45,7 @@ case "$1" in
     where=$(ask "Where did you stop?" "") || exit 0
     action stop "" --data-urlencode "where_stopped=$where"
     exit 0 ;;
-  start|tick|card|habit|dismiss|pause|resume|next|extend|pomodoro-start|pomodoro-next|pomodoro-pause|pomodoro-resume|pomodoro-stop)
+  start|tick|card|nottoday|habit|dismiss|pause|resume|next|extend|pomodoro-start|pomodoro-next|pomodoro-pause|pomodoro-resume|pomodoro-stop)
     action "$1" "$2"
     rm -f "$CACHE"
     exit 0 ;;

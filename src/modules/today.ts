@@ -17,7 +17,7 @@ import { currentPomodoro } from './pomodoro';
 import { currentSession } from './sessions';
 import { notBlockedSql } from './relations';
 import { buildTodayList } from '../core/today-list';
-import { cardsForDay, TODAY_LIST_FLAG, todoListNames, withListNames } from './today-list';
+import { cardsForDay, notTodayKeys, TODAY_LIST_FLAG, todoListNames, withListNames } from './today-list';
 
 export const logEntity: Entity = {
   name: 'log',
@@ -244,7 +244,7 @@ export async function status(ctx: Ctx) {
     pendingNotifications(ctx),
     ctx.feature(TODAY_LIST_FLAG).then(async (on) => (on ? { cards: await cardsForDay(ctx, day), names: await todoListNames(ctx) } : null)),
   ]);
-  const list = extra && buildTodayList(day, { habits, todos: withListNames(todos, extra.names), cards: extra.cards });
+  const list = extra && buildTodayList(day, { habits, todos: withListNames(todos, extra.names), cards: extra.cards, hide: await notTodayKeys(ctx, day) });
   return {
     mode: ctx.mode,
     day,

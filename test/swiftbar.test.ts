@@ -28,7 +28,7 @@ describe('SwiftBar menu bar', () => {
     await call('POST', '/reminders', { text: 'Call Bob', due: '2001-01-01T09:00:00Z' }, m);
     let out = await text();
     const lines = out.split('\n');
-    expect(lines[0]).toMatch(/^◎ Menu\s+bar project •1$/); // "|" is removed: it would break SwiftBar
+    expect(lines[0]).toMatch(/^◎ Menu\s+bar project •1( \| sfimage=\d+\.circle\.fill sfcolor=red)?$/); // "|" in the name is removed: it would break SwiftBar (the badge's own " | " is on purpose)
     expect(out).toContain(`☐ Pay rent (late) | bash=__SELF__ param1=tick param2=${todo.id}`); // the Today list (flag today-panel)
     expect(out).toContain(`param1=habit param2=${h.id}`);
     expect(out).toContain('Start session | bash=__SELF__ param1=start');
