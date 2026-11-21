@@ -1,5 +1,6 @@
-// Feature flags in the browser: loaded once from GET /api/features, changed in Settings → Features.
-import { api } from './api';
+// Feature flags in the browser: loaded from GET /api/features, changed in Settings → Features.
+// Each profile has its own flags (D35), so they load again when the profile changes.
+import { api, mode, signedIn } from './api';
 import { signal, useSignal } from './signal';
 
 export interface FeatureInfo {
@@ -18,9 +19,11 @@ function apply(list: FeatureInfo[]) {
   flags.value = Object.fromEntries(list.map((f) => [f.id, f.enabled]));
 }
 
-export async function loadFeatures(): Promise<void> {
+/** Load the flags of the open profile, or of another one about to be opened (so the screens of
+ *  the new profile never draw with the old profile's flags). */
+export async function loadFeatures(forMode?: string): Promise<void> {
   try {
-    apply(await api<FeatureInfo[]>('GET', '/features'));
+    apply(await api<FeatureInfo[]>('GET', '/features', undefined, { mode: forMode }));
   } catch {
     /* signed out or offline: everything flagged stays hidden */
   }
@@ -29,6 +32,10 @@ export async function loadFeatures(): Promise<void> {
 export async function setFeature(id: string, enabled: boolean): Promise<void> {
   apply(await api<FeatureInfo[]>('PUT', `/features/${id}`, { enabled }));
 }
+
+mode.subscribe(() => {
+  if (signedIn.value) void loadFeatures();
+});
 
 export const useFlags = () => useSignal(flags);
 export const useFlag = (id: string) => !!useSignal(flags)[id];

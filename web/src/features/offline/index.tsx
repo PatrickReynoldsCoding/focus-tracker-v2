@@ -106,4 +106,4 @@ function OfflineSettings() {
   );
 }
 
-registerPanel('settings', { id: 'offline', order: 45, feature: 'offline', render: () => <OfflineSettings /> });
+registerPanel('settings', { id: 'offline', order: 45, scope: 'device', feature: 'offline', render: () => <OfflineSettings /> });

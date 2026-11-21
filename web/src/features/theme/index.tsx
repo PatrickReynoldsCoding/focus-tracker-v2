@@ -32,4 +32,4 @@ function Appearance() {
   );
 }
 
-registerPanel('settings', { id: 'appearance', order: 12, render: () => <Appearance /> });
+registerPanel('settings', { id: 'appearance', order: 12, scope: 'device', render: () => <Appearance /> });

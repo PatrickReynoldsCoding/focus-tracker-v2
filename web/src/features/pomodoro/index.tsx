@@ -14,4 +14,4 @@ registerPanel('today', {
   render: () => <PomodoroPanel />,
   compact: () => <PomodoroCompact />,
 });
-registerPanel('settings', { id: 'pomodoro', order: 16, render: () => <PomodoroSettings /> });
+registerPanel('settings', { id: 'pomodoro', order: 16, scope: 'profile', render: () => <PomodoroSettings /> });

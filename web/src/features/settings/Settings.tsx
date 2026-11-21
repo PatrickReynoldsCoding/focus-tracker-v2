@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { change, del, logout, mode, patch, post, put, say } from '../../core/api';
 import { featureList, setFeature } from '../../core/features';
-import { Panels, registerPanel, registerTab } from '../../core/registry';
+import { profileOf, profiles } from '../../core/profiles';
+import { Panels, registerPanel, registerTab, type SettingsScope } from '../../core/registry';
 import { useSignal } from '../../core/signal';
 import { AddInput, ColorPicker, InlineEdit, Loading, useData } from '../../core/ui';
 
@@ -153,7 +154,7 @@ function General() {
       <h2>General</h2>
       <div class="stack">
         <label>
-          Time zone
+          Time zone (every profile)
           <input defaultValue={data.global.timezone ?? 'Europe/London'} onBlur={(e) => set('timezone', (e.target as HTMLInputElement).value, true)} />
         </label>
         {/* The Pomodoro's settings are in features/pomodoro (its own section). */}
@@ -168,7 +169,7 @@ function Features() {
   return (
     <section class="card">
       <h2>Features</h2>
-      <p class="muted small">Turn parts of the tracker on or off. Applies to every device and to Claude.</p>
+      <p class="muted small">Turn parts of the tracker on or off in this profile, on every device and for Claude. Each profile has its own switches.</p>
       {list.length ? (
         <ul class="plain">
           {list.map((f) => (
@@ -217,8 +218,24 @@ function useSections(root: { current: HTMLElement | null }): SectionLink[] {
   return sections;
 }
 
+const SCOPES: Record<SettingsScope, { text: string; hint: (profile: string) => string }> = {
+  profile: { text: 'This profile', hint: (p) => `Kept for ${p} only: each profile has its own` },
+  all: { text: 'Every profile', hint: () => 'The same in every profile' },
+  device: { text: 'This device', hint: () => 'Kept in this browser or app only' },
+};
+
+/** Whom a section applies to, as a tag in its corner (PanelDef.scope). */
+function ScopeTag({ scope, profile }: { scope: SettingsScope; profile: string }) {
+  return (
+    <span class={`scope-tag scope-${scope}`} title={SCOPES[scope].hint(profile)}>
+      {SCOPES[scope].text}
+    </span>
+  );
+}
+
 export function Settings() {
   const m = useSignal(mode);
+  const name = profileOf(useSignal(profiles), m)?.label ?? m;
   const body = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState('');
   const sections = useSections(body);
@@ -237,9 +254,12 @@ export function Settings() {
   const shown = (id: string) => !hiddenIds.includes(id);
   return (
     <div class="stack">
-      <div class="page-head row">
-        <h1>Settings</h1>
-        <span class="tag">{m}</span>
+      <div class="page-head">
+        <div class="row">
+          <h1>Settings</h1>
+          <span class="tag">{name}</span>
+        </div>
+        <p class="muted small">Each section says whom it is for: this profile ({name}; other profiles have their own), every profile, or this device only.</p>
       </div>
       <div class="settings-layout">
         <nav class="settings-nav" aria-label="Settings sections">
@@ -260,7 +280,8 @@ export function Settings() {
             place="settings"
             props={{}}
             wrap={(p, node) => (
-              <div class="settings-section" id={`set-${p.id}`} data-panel={p.id} key={p.id}>
+              <div class="settings-section" id={`set-${p.id}`} data-panel={p.id} data-scope={p.scope} key={p.id}>
+                {p.scope && <ScopeTag scope={p.scope} profile={name} />}
                 {node}
               </div>
             )}
@@ -277,9 +298,9 @@ export function Settings() {
 }
 
 registerTab({ id: 'settings', path: '/settings', label: 'Settings', icon: '⚙', order: 90, phone: true, render: () => <Settings /> });
-registerPanel('settings', { id: 'general', order: 10, render: () => <General /> });
-registerPanel('settings', { id: 'rotation', order: 20, render: () => <Rotation /> });
-registerPanel('settings', { id: 'categories', order: 30, render: () => <Categories /> });
-registerPanel('settings', { id: 'features', order: 40, render: () => <Features /> });
-registerPanel('settings', { id: 'tokens', order: 50, render: () => <Tokens /> });
-registerPanel('settings', { id: 'connections', order: 60, render: () => <Connections /> });
+registerPanel('settings', { id: 'general', order: 10, scope: 'all', render: () => <General /> });
+registerPanel('settings', { id: 'rotation', order: 20, scope: 'profile', render: () => <Rotation /> });
+registerPanel('settings', { id: 'categories', order: 30, scope: 'profile', render: () => <Categories /> });
+registerPanel('settings', { id: 'features', order: 40, scope: 'profile', render: () => <Features /> });
+registerPanel('settings', { id: 'tokens', order: 50, scope: 'all', render: () => <Tokens /> });
+registerPanel('settings', { id: 'connections', order: 60, scope: 'all', render: () => <Connections /> });

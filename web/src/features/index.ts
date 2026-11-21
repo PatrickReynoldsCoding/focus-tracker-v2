@@ -13,7 +13,7 @@ import './notes/files';
 import './log/Log';
 import './settings/Settings';
 import './today-panels/index';
-import './modes/Modes';
+import './profiles';
 import './criteria/Criteria';
 import './links';
 import './notifications-settings';

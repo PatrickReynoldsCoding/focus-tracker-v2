@@ -43,7 +43,7 @@ html[data-theme='eink'] code { border: 1px solid #000; background: #fff; }
 html[data-theme='eink'] .md pre, html[data-theme='eink'] .ed .ed-doc pre { border: 2px solid #000; background: #fff; }
 
 /* ---------- 2 px black borders ---------- */
-html[data-theme='eink'] :is(button, input:not([type='checkbox'], [type='radio'], [type='range']), select, textarea, .card, .kcard, .note-card, .column, .chip, .tag, .table, dialog.sheet, .more-sheet, .sticky-menu, .corner-timer, .callout, .notice, .tp-banner, .ins-tile, .ins-table-wrap, .seg, .aa-update, fieldset.group, ul.link-results, .link-picked, .token, .toast, .theme-option, .ed.is-editing, .ed-pop, .ed-raw, .ed-theirs, .ed-conflict, .mode-colour, .wb-open, .sticky) { border-width: var(--bw); border-color: #000; }
+html[data-theme='eink'] :is(button, input:not([type='checkbox'], [type='radio'], [type='range']), select, textarea, .card, .kcard, .note-card, .column, .chip, .tag, .table, dialog.sheet, .more-sheet, .sticky-menu, .corner-timer, .callout, .notice, .tp-banner, .ins-tile, .ins-table-wrap, .seg, .aa-update, fieldset.group, ul.link-results, .link-picked, .token, .toast, .theme-option, .ed.is-editing, .ed-pop, .ed-raw, .ed-theirs, .ed-conflict, .wb-open, .sticky) { border-width: var(--bw); border-color: #000; }
 html[data-theme='eink'] :is(button, input, select, textarea, .card, .kcard, .note-card, .column, .tag, .callout, .notice, .tp-banner, .ins-tile, .theme-option) { background-color: #fff; color: #000; }
 html[data-theme='eink'] :is(.card, .note-card, .kcard, .column, dialog.sheet, .ins-tile) { border-style: solid; }
 html[data-theme='eink'] dialog.sheet { border-width: 3px; }
@@ -81,8 +81,8 @@ html[data-theme='eink'] .ed-item:hover:not(:disabled), html[data-theme='eink'] .
 html[data-theme='eink'] .ed-tick { font-weight: 800; }
 
 /* ---------- 44 px tap targets ---------- */
-html[data-theme='eink'] :is(button, input:not([type='checkbox'], [type='radio'], [type='range'], [type='color']), select, .chip, .mode-switch button, .subtabs button, .seg button, .link-btn, .link-open, button.small, button.link, .ed-tb, .ed-item, .res-row button.small, .day-pick, .strip-day, .tabs a, .tabs .more-tab, .side a, .more-sheet a, .sticky-btn, .wb-bar button) { min-height: 44px; }
-html[data-theme='eink'] :is(button.icon, button.icon.small, .dot-minus, .dot-add, .mode-switch button, .ed-tb, .sticky-btn, .wb-back, .tp-quote-nav button) { min-width: 44px; }
+html[data-theme='eink'] :is(button, input:not([type='checkbox'], [type='radio'], [type='range'], [type='color']), select, .chip, .subtabs button, .seg button, .link-btn, .link-open, button.small, button.link, .ed-tb, .ed-item, .res-row button.small, .day-pick, .strip-day, .tabs a, .tabs .more-tab, .side a, .more-sheet a, .sticky-btn, .wb-bar button) { min-height: 44px; }
+html[data-theme='eink'] :is(button.icon, button.icon.small, .dot-minus, .dot-add, .ed-tb, .sticky-btn, .wb-back, .tp-quote-nav button) { min-width: 44px; }
 html[data-theme='eink'] :is(.swatch, .sticky-dot) { width: 44px; height: 44px; min-height: 44px; }
 html[data-theme='eink'] .swatches { gap: 8px; }
 html[data-theme='eink'] .sticky-swatches { grid-template-columns: repeat(4, 1fr); }
@@ -96,9 +96,8 @@ html[data-theme='eink'] .sticky-strip { min-height: 44px; }
 html[data-theme='eink'] .sticky-resize { width: 44px; height: 44px; }
 
 /* ---------- selected = thick border + tick ---------- */
-html[data-theme='eink'] :is(.chip.on, .mode-switch button.on, .subtabs button.on, .seg button.on, .ed-tb[aria-pressed='true'], .ed-tb[aria-expanded='true']) { background: #fff; color: #000; border: 4px solid #000; font-weight: 700; }
-html[data-theme='eink'] :is(.chip.on, .mode-switch button.on, .subtabs button.on, .seg button.on)::before { content: '✓ '; font-weight: 800; white-space: pre; }
-html[data-theme='eink'] .mode-switch { background: #fff; border: 2px solid #000; }
+html[data-theme='eink'] :is(.chip.on, .subtabs button.on, .seg button.on, .ed-tb[aria-pressed='true'], .ed-tb[aria-expanded='true']) { background: #fff; color: #000; border: 4px solid #000; font-weight: 700; }
+html[data-theme='eink'] :is(.chip.on, .subtabs button.on, .seg button.on)::before { content: '✓ '; font-weight: 800; white-space: pre; }
 html[data-theme='eink'] .subtabs { background: #fff; border: 2px solid #000; }
 html[data-theme='eink'] .seg button + button { border-left: 2px solid #000; }
 html[data-theme='eink'] .tabs a.on, html[data-theme='eink'] .tabs .more-tab.on { box-shadow: none; border-top: 6px solid #000; margin-top: -3px; color: #000; font-weight: 800; }
@@ -229,3 +228,4 @@ html[data-theme='eink'] :is(.theme-swatch.sw-light, .theme-swatch.sw-dark, .them
 html[data-theme='eink'] .theme-swatch.sw-light { background: #fff; }
 html[data-theme='eink'] .theme-swatch.sw-dark { background: #000; color: #fff; }
 html[data-theme='eink'] .theme-swatch.sw-system { background: linear-gradient(105deg, #fff 50%, #000 50%); color: #888; }
+html[data-theme='eink'] .side-toggle { min-width: 44px; }

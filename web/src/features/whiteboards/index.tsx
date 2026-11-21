@@ -212,7 +212,7 @@ registerRoute({ id: 'whiteboard', prefix: '/w', tab: 'whiteboards', feature: FLA
 registerPanel('project', { id: 'whiteboards', icon: '✐', title: 'Whiteboards', description: 'The project’s whiteboards.', order: 45, feature: FLAG, render: (p) => <ProjectBoards {...p} /> });
 registerPanelSource('today', { id: 'whiteboards', order: 65, feature: FLAG, Provide: TodayBoardsSource, resolve: resolveBoard, addable: addableBoards });
 registerPanel('projects', { id: 'whiteboards-link', order: 90, feature: FLAG, render: () => <ProjectsLink /> });
-registerPanel('settings', { id: 'whiteboards', order: 60, feature: FLAG, render: () => <Settings /> });
+registerPanel('settings', { id: 'whiteboards', order: 60, scope: 'device', feature: FLAG, render: () => <Settings /> });
 
 // Whiteboards as files on the Files tab: the preview image, opened full screen.
 registerFileType({

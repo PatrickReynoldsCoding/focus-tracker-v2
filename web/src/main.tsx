@@ -1,10 +1,10 @@
 import { render } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
-import { change, checkSignedIn, get, localStorageSet, login, mode, post, put, redo, saving, signedIn, toast, undo, version } from './core/api';
+import { checkSignedIn, localStorageSet, login, redo, saving, signedIn, toast, undo } from './core/api';
 import { loadFeatures } from './core/features';
 import { HeaderItems, Overlays, routeTab, tabBadges, useRoutes, useTabs } from './core/registry';
 import { useSignal } from './core/signal';
-import { Dialog, go, route } from './core/ui';
+import { go, route } from './core/ui';
 import './features';
 import './styles.css';
 
@@ -18,87 +18,6 @@ function useCurrent() {
 
 function Page() {
   return useCurrent().render();
-}
-
-const NEW_PROFILE = '__new__';
-/** Pages that belong to one profile's data: switching profile leaves them for Today (the other profile has no such page). */
-const PROFILE_PAGE = /^\/(p|list|whiteboard|note)\//;
-
-/** Flip to a profile at once. The server remembers it, so the Mac menu bar and the Android widgets follow. */
-function switchProfile(id: string) {
-  mode.value = id;
-  localStorageSet('ft.mode', id);
-  if (PROFILE_PAGE.test(route.value)) go('/today');
-  void put('/settings/default_mode', { value: id, global: true }).catch(() => {});
-}
-
-function ModeSwitch() {
-  const m = useSignal(mode);
-  const v = useSignal(version);
-  const [modes, setModes] = useState<{ id: string; label: string }[]>([]);
-  const [adding, setAdding] = useState(false);
-  useEffect(() => {
-    get('/modes').then(setModes).catch(() => {});
-  }, [v]);
-  return (
-    <>
-      <select
-        class="profile-switch"
-        aria-label="Profile"
-        value={m}
-        onChange={(e) => {
-          const id = (e.target as HTMLSelectElement).value;
-          if (id === NEW_PROFILE) {
-            (e.target as HTMLSelectElement).value = m;
-            setAdding(true);
-          } else switchProfile(id);
-        }}
-      >
-        {modes.length === 0 && <option value={m}>{m}</option>}
-        {modes.map((x) => (
-          <option key={x.id} value={x.id}>
-            {x.label}
-          </option>
-        ))}
-        <option value={NEW_PROFILE}>＋ New profile…</option>
-      </select>
-      {adding && <NewProfile onClose={() => setAdding(false)} onCreated={(id) => (setAdding(false), switchProfile(id))} />}
-    </>
-  );
-}
-
-/** Make a profile: a name and its own colour theme (the colour tints the app while it is open). */
-function NewProfile({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string) => void }) {
-  const [label, setLabel] = useState('');
-  const [color, setColor] = useState('#2f5d50');
-  const [busy, setBusy] = useState(false);
-  return (
-    <Dialog title="New profile" onClose={onClose}>
-      <form
-        class="stack"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          setBusy(true);
-          const made = await change(() => post<{ id: string }>('/modes', { label: label.trim(), color }), 'Profile made');
-          setBusy(false);
-          if (made) onCreated(made.id);
-        }}
-      >
-        <label>
-          Name
-          <input value={label} placeholder="Side projects" onInput={(e) => setLabel((e.target as HTMLInputElement).value)} autoFocus />
-        </label>
-        <label>
-          Colour theme
-          <input type="color" value={color} onInput={(e) => setColor((e.target as HTMLInputElement).value)} />
-        </label>
-        <p class="muted small">A profile has its own projects, notes, habits and settings. Its colour tints the app while it is open.</p>
-        <button class="primary" disabled={busy || label.trim().length < 2}>
-          Make profile
-        </button>
-      </form>
-    </Dialog>
-  );
 }
 
 function SavingDot() {
@@ -279,7 +198,6 @@ function App() {
             {sideHidden ? '☰' : '⇤'}
           </button>
           <HeaderItems route={current} />
-          <ModeSwitch />
           <SavingDot />
           <button class="ghost undo" aria-label="Undo" onClick={undo} title="Undo (Ctrl+Z)">
             ↶<span class="lbl"> Undo</span>

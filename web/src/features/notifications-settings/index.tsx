@@ -51,7 +51,7 @@ function Notifications() {
         <input type="checkbox" checked={data.enabled} onChange={(e) => save({ enabled: (e.target as HTMLInputElement).checked }, (p) => ({ ...p, enabled: (e.target as HTMLInputElement).checked }))} />
         <span>
           <strong>Notifications {data.enabled ? 'on' : 'off'}</strong>
-          <span class="muted small ns-hint">{data.enabled ? 'Turn this off to stop all of them, on every device.' : 'Nothing is shown on any device until you turn this on.'}</span>
+          <span class="muted small ns-hint">{data.enabled ? 'Turn this off to stop all of this profile’s notifications, on every device.' : 'Nothing is shown on any device until you turn this on.'}</span>
         </span>
       </label>
 
@@ -98,7 +98,6 @@ function Notifications() {
               />
             </label>
           </div>
-          <p class="muted small">These two are kept for the current mode, because the nudge looks at that mode’s projects.</p>
         </fieldset>
 
         <fieldset disabled={off}>
@@ -136,11 +135,11 @@ function Notifications() {
               {label}
             </label>
           ))}
-          <p class="muted small">These switches are the same in every mode.</p>
+          <p class="muted small">For this profile’s notifications. A device shows the profile it follows (the default profile, unless it names one).</p>
         </fieldset>
       </div>
     </section>
   );
 }
 
-registerPanel('settings', { id: 'notifications', order: 15, render: () => <Notifications /> });
+registerPanel('settings', { id: 'notifications', order: 15, scope: 'profile', render: () => <Notifications /> });

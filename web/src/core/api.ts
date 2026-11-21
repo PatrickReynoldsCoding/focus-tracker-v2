@@ -49,6 +49,30 @@ export class HttpError extends Error {
   }
 }
 
+/** The profile this device had open was deleted (on another device): open the default one. */
+let leaving = false;
+async function leaveMissingProfile(): Promise<void> {
+  if (leaving) return;
+  leaving = true;
+  try {
+    // No X-Mode: the server answers for the default profile.
+    const res = await fetch('/api/profiles', { headers: { 'X-FT-Client': 'web' }, credentials: 'same-origin' });
+    const data = res.ok ? ((await res.json()) as { default: string; profiles: { id: string; label: string }[] }) : null;
+    if (data && !data.profiles.some((p) => p.id === mode.value)) {
+      const next = data.profiles.find((p) => p.id === data.default) ?? data.profiles[0];
+      if (next) {
+        mode.value = next.id;
+        localStorageSet('ft.mode', next.id);
+        say(`That profile is gone. Now in ${next.label}.`);
+      }
+    }
+  } catch {
+    /* offline: try again on the next answer */
+  } finally {
+    leaving = false;
+  }
+}
+
 /** One request to the API, as it is: throws only on a network error. */
 function send(method: string, path: string, body: unknown, m: string, keepalive = false): Promise<Response> {
   const headers: Record<string, string> = { 'X-FT-Client': 'web', 'X-Mode': m };
@@ -68,14 +92,16 @@ async function answer<T>(res: Response): Promise<T> {
   } catch {
     if (res.ok) throw new HttpError(res.status, 'The server sent something unexpected');
   }
-  if (!res.ok) throw new HttpError(res.status, data?.error ?? `Request failed (${res.status})`, data);
+  if (!res.ok) {
+    if (data?.code === 'unknown_mode') void leaveMissingProfile();
+    throw new HttpError(res.status, data?.error ?? `Request failed (${res.status})`, data);
+  }
   offline.learn(data);
   return data as T;
 }
 
 /** A GET: from the server, kept as a saved copy; the saved copy when offline or while changes wait to be sent. */
-async function read<T>(path: string): Promise<T> {
-  const m = mode.value;
+async function read<T>(path: string, m: string = mode.value): Promise<T> {
   const off = offline.enabled();
   if (off && (offline.waiting() > 0 || offline.browserOffline())) {
     // Waiting changes are in the saved copy (the screens keep it up to date), not yet on the server.
@@ -125,8 +151,8 @@ async function write<T>(method: string, path: string, body: unknown, keepalive: 
   return answer<T>(res);
 }
 
-export async function api<T = any>(method: string, path: string, body?: unknown, opts: { keepalive?: boolean } = {}): Promise<T> {
-  return method === 'GET' ? read<T>(path) : write<T>(method, path, body, !!opts.keepalive);
+export async function api<T = any>(method: string, path: string, body?: unknown, opts: { keepalive?: boolean; mode?: string } = {}): Promise<T> {
+  return method === 'GET' ? read<T>(path, opts.mode) : write<T>(method, path, body, !!opts.keepalive);
 }
 
 export const get = <T = any>(p: string) => api<T>('GET', p);

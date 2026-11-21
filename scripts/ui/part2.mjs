@@ -105,10 +105,10 @@ for (const [tname, t] of themes) {
     const { page } = await open(browser, { width: 390, height: 844 }, errors, { name: 'accent-' + th, init: `try{localStorage.setItem('ft.theme','${th}')}catch(e){}` });
     page.on('response', (r) => r.status() === 404 && console.log('404', r.url()));
     // During the session started above the app opens on the project's page (Settings → When the app opens);
-    // switch modes from Settings, so the Personal project is not asked for in Work (a 404).
+    // switch profiles from Settings, so the Personal project is not asked for in Work (a 404).
     await page.goto(`${B}/#/settings`);
     await page.waitForTimeout(300);
-    await page.click('.mode-switch button >> text=Work');
+    await page.selectOption('.profile-switch', { label: 'Work' });
     await page.waitForTimeout(800);
     const acc = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim());
     console.log('work accent in', th, acc);

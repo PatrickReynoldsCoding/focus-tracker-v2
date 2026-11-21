@@ -97,6 +97,7 @@ function AndroidApp({ b }: { b: Bridge }) {
 registerPanel('settings', {
   id: 'android-app',
   order: 55,
+  scope: 'device',
   render: () => {
     const b = bridge();
     return b ? <AndroidApp b={b} /> : null;
