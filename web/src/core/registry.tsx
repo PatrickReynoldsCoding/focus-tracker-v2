@@ -379,6 +379,31 @@ export function useFileTypes(): FileTypeDef[] {
   return visible(fileTypes, useFlags()).sort((a, b) => a.order - b.order);
 }
 
+// ---------- project labels ----------
+
+/** Where a project label is drawn. `link`: tapping it opens the project (off inside a button,
+ *  such as a row of the Add file picker). */
+export interface ProjectLabelProps {
+  projectId: string | null | undefined;
+  link?: boolean;
+  class?: string;
+}
+/** The small label with a project's name on files, panels and Today's to-dos (features/project-labels). */
+export interface ProjectLabelDef {
+  id: string;
+  order: number;
+  feature?: string;
+  component: ComponentType<ProjectLabelProps>;
+}
+const projectLabels: ProjectLabelDef[] = [];
+export const registerProjectLabel = (d: ProjectLabelDef) => add(projectLabels, d);
+/** The project's label, where a feature registered one and its flag is on; nothing for no project. */
+export function ProjectLabel(props: ProjectLabelProps) {
+  const def = visible(projectLabels, useFlags()).sort((a, b) => a.order - b.order)[0];
+  if (!def || !props.projectId) return null;
+  return <def.component {...props} />;
+}
+
 // ---------- Add panel (the "+ Add panel" button) ----------
 
 /** Where Add panel puts things, worked out by the page's layout (a pill of Today, Today, project pages). */
