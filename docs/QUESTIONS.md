@@ -76,3 +76,8 @@ Questions the owner could not be asked while an item was built. Each gives the d
 7. Claude's tool list shows a tool while its feature is on in any profile; calling it in a profile where it is off fails with a message. Default: as described (the connector cannot know the profile before a call).
 8. Profile names must be different (ignoring case), because deleting asks for the name. Default: unique.
 9. The profile dropdown stays the plain dropdown of v0.25.0 (no colour dots in it; browsers cannot show them in a dropdown). Default: plain dropdown, with ＋ New profile… and ⚙ Manage profiles… at the end.
+
+## No "show on Today" switches (v0.31.0)
+
+1. The old Notes tab (Files off) lost its Project notes tickbox and the project-note cards with it, so nothing is stuck on. Default: gone; project notes are on Files and project pages.
+2. The "Today" tag on old Notes tab cards and "· on Today" under a whiteboard stay (they inform, they do not switch). Default: kept.
