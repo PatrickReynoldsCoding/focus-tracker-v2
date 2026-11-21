@@ -89,7 +89,7 @@ function PhoneTabs({ tabs, tabId, current, badges }: { tabs: ReturnType<typeof u
   const inMore = rest.some((t) => t.id === tabId);
   const moreBadge = rest.reduce((n, t) => n + (badges[t.id] ?? 0), 0);
   const link = (t: (typeof tabs)[number], onClick?: () => void) => (
-    <a key={t.id} href={`#${t.href?.(current) ?? t.path}`} class={tabId === t.id ? 'on' : ''} aria-current={tabId === t.id ? 'page' : undefined} onClick={onClick}>
+    <a key={t.id} href={`#${t.href?.(current) ?? t.path}`} title={t.label} class={tabId === t.id ? 'on' : ''} aria-current={tabId === t.id ? 'page' : undefined} onClick={onClick}>
       <span class="ico" aria-hidden="true">
         {t.icon}
         {badges[t.id] > 0 && <span class="badge" aria-label={`${badges[t.id]} waiting`}>{badges[t.id]}</span>}
@@ -170,33 +170,37 @@ function App() {
   return (
     <div class={`shell ${wide ? 'wide' : ''}${sideHidden ? ' no-side' : ''}`}>
       <nav class="side" aria-label="Main">
-        <div class="brand">Focus</div>
+        <div class="brand">
+          <span class="brand-name">Focus</span>
+          <button class="ghost side-collapse" aria-label={sideHidden ? 'Expand the sidebar' : 'Collapse the sidebar'} aria-pressed={sideHidden} title={sideHidden ? 'Expand the sidebar' : 'Collapse the sidebar'} onClick={toggleSide}>
+            {sideHidden ? '»' : '«'}
+          </button>
+        </div>
         {tabs.map((t) => (
           <a key={t.id} href={`#${t.href?.(current) ?? t.path}`} class={tabId === t.id ? 'on' : ''} aria-current={tabId === t.id ? 'page' : undefined}>
             <span class="ico" aria-hidden="true">
               {t.icon}
             </span>
-            {t.label}
+            <span class="side-label">{t.label}</span>
             {badges[t.id] > 0 && <span class="badge" aria-label={`${badges[t.id]} waiting`}>{badges[t.id]}</span>}
           </a>
         ))}
         <div class="side-foot">
           <button
-            class="ghost"
+            class="ghost side-width"
+            aria-label={wide ? 'Narrow the page' : 'Full width'}
+            title={wide ? 'Narrow the page' : 'Full width'}
             onClick={() => {
               setWide(!wide);
               localStorageSet('ft.wide', wide ? '0' : '1');
             }}
           >
-            {wide ? '⇤ Narrow' : '⇔ Full width'}
+            {wide ? '⇥⇤' : '⇔'}
           </button>
         </div>
       </nav>
       <div class="main">
         <header class="top">
-          <button class="ghost side-toggle" aria-label={sideHidden ? 'Show the sidebar' : 'Hide the sidebar'} aria-pressed={!sideHidden} title={sideHidden ? 'Show the sidebar' : 'Hide the sidebar'} onClick={toggleSide}>
-            {sideHidden ? '☰' : '⇤'}
-          </button>
           <HeaderItems route={current} />
           <SavingDot />
           <button class="ghost undo" aria-label="Undo" onClick={undo} title="Undo (Ctrl+Z)">

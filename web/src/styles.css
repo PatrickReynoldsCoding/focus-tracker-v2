@@ -278,12 +278,17 @@ html[data-theme='eink'] .files-menu { border-width: 2px; border-color: #000; }
 /* Profile switcher: a dropdown (Personal, Work, …, New profile). */
 .profile-switch { width: auto; flex: 0 0 auto; max-width: 11rem; min-height: 32px; padding: 4px 28px 4px 12px; border-radius: 999px; background-color: var(--surface-2); color: var(--fg); border: 0; font-size: 0.9rem; font-weight: 600; }
 
-/* The sidebar's hide/show button (wide screens only: a phone has the bottom bar). */
-.side-toggle { display: none; }
+/* The sidebar collapses to icons (wide screens only: a phone has the bottom bar). */
 @media (min-width: 900px) {
-  .side-toggle { display: inline-flex; min-height: 32px; padding: 4px 10px; }
-  .shell.no-side { grid-template-columns: 1fr; }
-  .shell.no-side .side { display: none; }
+  .shell.no-side { grid-template-columns: 64px 1fr; }
+  .shell.no-side .side { padding: 16px 6px; }
+  .shell.no-side .side-label, .shell.no-side .brand-name, .shell.no-side .side a .badge { display: none; }
+  .shell.no-side .side a { justify-content: center; padding: 9px 0; position: relative; }
+  .shell.no-side .side a.on { background: var(--accent-soft); }
+  .shell.no-side .brand { justify-content: center; padding: 4px 0 12px; }
+  .side .brand { display: flex; align-items: center; justify-content: space-between; }
+  .side-collapse, .side-width { min-height: 32px; padding: 4px 10px; }
+  .side-width { width: 100%; }
 }
 
 /* Settings: a sidebar of sections with search. */

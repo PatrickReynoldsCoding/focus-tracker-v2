@@ -228,4 +228,4 @@ html[data-theme='eink'] :is(.theme-swatch.sw-light, .theme-swatch.sw-dark, .them
 html[data-theme='eink'] .theme-swatch.sw-light { background: #fff; }
 html[data-theme='eink'] .theme-swatch.sw-dark { background: #000; color: #fff; }
 html[data-theme='eink'] .theme-swatch.sw-system { background: linear-gradient(105deg, #fff 50%, #000 50%); color: #888; }
-html[data-theme='eink'] .side-toggle { min-width: 44px; }
+html[data-theme='eink'] .side-collapse, html[data-theme='eink'] .side-width { min-width: 44px; }
