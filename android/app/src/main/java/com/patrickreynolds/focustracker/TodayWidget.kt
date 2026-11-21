@@ -30,6 +30,12 @@ class TodayWidget : AppWidgetProvider() {
         }
     }
 
+    /** Resized: redraw so the compact layout switches on or off. */
+    override fun onAppWidgetOptionsChanged(context: Context, manager: AppWidgetManager, id: Int, newOptions: android.os.Bundle) {
+        val pending = goAsync()
+        thread { try { drawSaved(context) } finally { pending.finish() } }
+    }
+
     override fun onEnabled(context: Context) = RefreshWorker.schedule(context)
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -103,6 +109,15 @@ class TodayWidget : AppWidgetProvider() {
 
         private fun views(context: Context, widgetId: Int, result: Result<Status>, note: String?): RemoteViews {
             val v = RemoteViews(context.packageName, R.layout.widget_today)
+            val width = AppWidgetManager.getInstance(context).getAppWidgetOptions(widgetId).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 250)
+            val compact = width < 230 // about 3 cells wide
+            if (compact) {
+                val pad = (10 * context.resources.displayMetrics.density).toInt()
+                v.setViewPadding(android.R.id.background, pad, pad, pad, pad)
+                v.setTextViewTextSize(R.id.focus, android.util.TypedValue.COMPLEX_UNIT_SP, 16f)
+                v.setTextViewTextSize(R.id.next, android.util.TypedValue.COMPLEX_UNIT_SP, 12f)
+                v.setTextViewTextSize(R.id.timer, android.util.TypedValue.COMPLEX_UNIT_SP, 20f)
+            }
             v.setOnClickPendingIntent(R.id.add, PendingIntent.getActivity(
                 context, 3, Intent(context, QuickAddActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
@@ -133,8 +148,8 @@ class TodayWidget : AppWidgetProvider() {
                     R.id.pomodoro,
                     when {
                         session.paused -> "Paused"
-                        session.waitingFor == "break" -> "Time for a break · open to start it"
-                        session.waitingFor != null -> "Break over · open to start work"
+                        session.waitingFor == "break" -> if (compact) "Break time · open" else "Time for a break · open to start it"
+                        session.waitingFor != null -> if (compact) "Break over · open" else "Break over · open to start work"
                         p != null && left != null -> "${if (p == "break") "Break" else "Work"} · ${left / 60} min left"
                         else -> ""
                     },

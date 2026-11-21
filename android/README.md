@@ -3,7 +3,7 @@
 A small native app (Kotlin, no Compose) with:
 
 - **The tracker itself**: the web app in a full-screen WebView, signed in, with links to other sites opening in the browser.
-- **Today widget** (4 × 3, resizable): today's focus project and next action, a running session's timer and pomodoro phase, then the to-dos due today and the habits left. Tap a to-do to tick it, a habit to count a session, Start to start a session on the focus project. Stop… and the project name open the app. **+** adds a to-do for today.
+- **Today widget** (3 × 3 or larger, resizable down to 3 wide, compact layout below ~230 dp): today's focus project and next action, a running session's timer and pomodoro phase, then the to-dos due today and the habits left. Tap a to-do to tick it, a habit to count a session, Start to start a session on the focus project. Stop… and the project name open the app. **+** adds a to-do for today.
 - **Notifications** for reminders, habit prompts and pomodoro breaks (checked every 15 minutes with WorkManager; each shown once across all devices). Pomodoro and "Time is up" alerts are on time: the app sets an exact alarm for the next one whenever it reads the status (Android 11: always allowed; 12: falls back to an alarm-clock alarm, which shows a clock icon, if exact alarms are switched off; 13+: allowed at install).
 
 The app's screens are the web app on purpose: one UI to keep up, and the native part is only what Android needs native code for (widgets, notifications).
