@@ -88,3 +88,9 @@ Questions the owner could not be asked while an item was built. Each gives the d
 2. In Add file the label is not a link (the whole row is the Add button; leaving the sheet by accident would be annoying). Default: not a link there; a link everywhere else.
 3. No labels inside the project's own folder or on its own page, and none on a project's notes (their name is the project's). Default: left out.
 4. Today's "Done" rows of the Today list have no label (they are folded away). Default: none.
+
+## 0.33.0 (Today pills on a computer)
+
+1. "Computer" means any width above a phone (760 px and up), where the pills showed before; a tablet between 760 and 899 px gets the same stacked page as before, now without the row. Default: 760 px.
+2. With the flag off, Today settings on a computer hides the pill editor and says where the pills are; the focus card size stays. Pills can still be edited on a phone or by Claude. Default: hidden.
+3. The "Show the All pill" switch is ignored while the computer has no pills (All is the whole page). Default: ignored.

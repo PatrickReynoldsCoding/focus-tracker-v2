@@ -374,3 +374,14 @@ Code: `web/src/features/project-labels/` (the label and the shared names list), 
 - **Claude**: `list_files` (and `GET /api/files`) give each file `project_name` beside `project_id`. `get_today` has `todo_list_projects`.
 
 - **0.32.1 (layout only)**: on a phone (600 px or less) a whiteboard's bar has two rows: back, name and Save and close, then the project label and Close without saving, so the name has the room; on a Files card the label moved from the preview's corner to the footer under the name. No new flag, no migration.
+
+## D38. Today pills on a computer are a flag, off (owner, 2026-11-21: "pills on desktop should be a feature flagged option turn off by default and just show all")
+
+Code: `src/modules/layout.ts` (flag), `web/src/features/layout/pills.tsx` and `TodaySettings.tsx`; test `test/layout.test.ts`; browser check `scripts/ui/layout.mjs desk-plain`. No migration. Flag **`desktop-pills`** ("Today pills on a computer", off, per profile).
+
+- **Off (usual)**: on a computer (760 px and wider) Today shows the focus card, then every panel as the All pill did, in the grid you arranged (the page's own layout), with + Add panel and the ⚙. No row of pills, no ✎ Edit pill, no + New pill. Nothing saved changes: pills and each pill's grid stay saved for the phone and for turning the flag on.
+- **On**: as before D38 (row, each pill's own grid, Edit pill, + New pill, All).
+- **Phone**: unchanged; it follows `today-pills`. With `today-pills` off Today is one page everywhere.
+- **Reachable**: the switch is in Settings → Features. Today settings on a computer with the flag off says there are no pills here, how to turn them on, and keeps the focus card size (the focus card stays above the panels). Pills can be edited on a phone, with the flag on, or by Claude.
+- **Claude**: `get_today_pills` and `set_today_pills` work as before (behind `today-pills`); their descriptions say a computer shows pills only while `desktop-pills` is on.
+
