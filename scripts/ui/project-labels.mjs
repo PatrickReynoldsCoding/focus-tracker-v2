@@ -57,6 +57,9 @@ async function run(name, viewport, opts = {}) {
   const lb = await card1.locator('.project-label').boundingBox();
   const cb = await card1.boundingBox();
   ok(lb.x >= cb.x && lb.x + lb.width <= cb.x + cb.width + 1, `${name}: the label sits inside the card`);
+  const tb = await card1.locator('.file-thumb').boundingBox();
+  const nb = await card1.locator('.files-name').boundingBox();
+  ok(lb.y >= tb.y + tb.height - 1 && lb.y >= nb.y + nb.height - 1, `${name}: the label is in the card's footer, under the name, not over the preview`);
   ok(await noHScroll(page), `${name}: no sideways scroll on Files`);
   await shot(page, `${name}-files-grid`);
   // The list view too, with the long name cut short.
@@ -129,6 +132,13 @@ async function run(name, viewport, opts = {}) {
   await page.waitForSelector('.page-head h1');
   await settle(page);
   ok((await labelIn(page, '.page-head').textContent()) === 'Focus Tracker v2', `${name}: the note's page has the label`);
+  await shot(page, `${name}-note`);
+  await page.goto(`${B}/#/n/${todoList.id}`);
+  await page.waitForSelector('.page-head h1');
+  await settle(page);
+  await shot(page, `${name}-list`);
+  await page.goto(`${B}/#/n/${note.id}`);
+  await page.waitForSelector('.page-head h1');
   await page.goto(`${B}/#/n/${loose.id}`);
   await page.waitForSelector('.page-head h1');
   await settle(page);
@@ -137,6 +147,12 @@ async function run(name, viewport, opts = {}) {
   await page.waitForSelector('.wb-bar');
   await settle(page);
   ok((await labelIn(page, '.wb-bar').count()) === 1, `${name}: the whiteboard's bar has the label`);
+  const tb2 = await page.locator('.wb-bar .wb-title').boundingBox();
+  const lb2 = await page.locator('.wb-bar .project-label').boundingBox();
+  const tw = await page.locator('.wb-bar .wb-title').evaluate((e) => e.scrollWidth <= e.clientWidth + 1);
+  ok(tb2.width >= (viewport.width < 600 ? 150 : 100) || tw, `${name}: the whiteboard's name has room (${Math.round(tb2.width)} px)`);
+  ok(viewport.width >= 600 ? lb2.x >= 0 : lb2.y >= tb2.y + tb2.height - 1, `${name}: the whiteboard's label is not squeezing the name`);
+  ok(await noHScroll(page), `${name}: no sideways scroll in the whiteboard bar`);
   await shot(page, `${name}-whiteboard`);
   await page.click('.wb-discard').catch(() => {});
 

@@ -34,9 +34,19 @@ html.wb-open, html.wb-open body { overflow: hidden; overscroll-behavior: none; }
 .wb-msg button { pointer-events: auto; }
 @media (max-width: 600px) {
   .wb-bar { gap: 4px; }
-  /* The project label goes under the name, so both fit. */
   .wb-name-line { flex-direction: column; align-items: flex-start; gap: 1px; }
   .wb-name-line > * { max-width: 100%; }
+  /* The bar has two rows on a phone: back, name and Save and close; then the project label and
+     Close without saving. The name gets the whole middle of the first row. */
+  .wb-bar { flex-wrap: wrap; row-gap: 2px; }
+  .wb-bar .wb-name-line { display: contents; }
+  .wb-bar .wb-back { order: 1; }
+  .wb-bar .wb-title { order: 2; flex: 1 1 0; }
+  .wb-bar .wb-done { order: 3; }
+  .wb-bar::after { content: ''; order: 4; flex: 0 0 100%; height: 0; }
+  .wb-bar .project-label { order: 5; flex: 0 1 auto; margin-left: 38px; }
+  .wb-bar .wb-status { order: 6; }
+  .wb-bar .wb-discard { order: 7; margin-left: auto; }
   .wb-bar .wb-discard { padding-inline: 8px; font-size: 0.8rem; }
   .wb-bar .wb-done { padding-inline: 10px; }
   .wb-status.saving, .wb-status.saved { display: none; }

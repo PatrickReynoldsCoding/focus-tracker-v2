@@ -17,7 +17,9 @@ html[data-theme='eink'] .project-label { background: var(--surface); border: 2px
 
 /* Where it sits. */
 .file-card { position: relative; }
-.file-card > .project-label { position: absolute; top: 6px; left: 6px; max-width: calc(100% - 44px); z-index: 1; box-shadow: var(--shadow); }
+/* On a card the label sits in the footer, under the name, never over the preview. */
+.file-card > .project-label { position: absolute; bottom: 8px; left: 10px; max-width: calc(100% - 54px); z-index: 1; }
+.file-card:has(> .project-label) .file-meta { padding-bottom: 34px; }
 .file-row > .project-label { max-width: 38%; flex-shrink: 1; }
 .ap-row .project-label { max-width: 40%; flex-shrink: 1; }
 /* A panel's title with a label: the label follows the name and goes under it when there is no room. */
