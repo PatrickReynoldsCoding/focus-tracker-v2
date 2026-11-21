@@ -16,15 +16,8 @@ const fail = (m) => { errors.push('ASSERT: ' + m); console.log('FAIL', m); };
   await page.waitForSelector('.note-card');
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${OUT}/p1-desk-notes.png`, fullPage: true });
-  // project notes switch
-  await page.check('.project-switch input');
-  await page.waitForSelector('.project-note');
-  await page.waitForTimeout(300);
-  await page.screenshot({ path: `${OUT}/p1-desk-notes-projects.png`, fullPage: true });
-  const pcount = await page.locator('.project-note').count();
-  if (pcount !== 2) fail('project note cards ' + pcount);
-  await page.reload(); await page.waitForSelector('.note-card');
-  if (!(await page.locator('.project-switch input').isChecked())) fail('switch not remembered after reload');
+  // The Project notes tickbox is gone (v0.31.0): project notes live in their project's folder on Files.
+  if (await page.locator('.project-switch, .project-note').count()) fail('Project notes tickbox or cards still on the Notes tab');
   // tick a to-do on the card
   const card = page.locator('.note-card.kind-todo');
   const before = await card.locator('li').count();
@@ -62,11 +55,8 @@ const fail = (m) => { errors.push('ASSERT: ' + m); console.log('FAIL', m); };
   await page.locator('.note-card.kind-note').first().click({ position: { x: 20, y: 60 } });
   await page.waitForSelector('.page-head h1');
   if (!page.url().includes('#/n/')) fail('click did not open note');
-  // switch off again
-  await page.goto(`${B}/#/notes`); await page.waitForSelector('.note-card');
-  await page.uncheck('.project-switch input');
-  await page.waitForTimeout(300);
-  if (await page.locator('.project-note').count()) fail('project notes still shown');
+  // A list's page has no On Today tickbox (+ Add panel → Add file puts it on Today).
+  if (await page.locator('.page-head .meta input[type=checkbox]').count()) fail('list page still has an On Today tickbox');
 }
 
 // ---- phone 390 with touch
@@ -76,10 +66,6 @@ const fail = (m) => { errors.push('ASSERT: ' + m); console.log('FAIL', m); };
   await page.waitForSelector('.note-card');
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${OUT}/p1-phone-notes.png`, fullPage: true });
-  await page.check('.project-switch input');
-  await page.waitForSelector('.project-note');
-  await page.waitForTimeout(300);
-  await page.screenshot({ path: `${OUT}/p1-phone-notes-projects.png`, fullPage: true });
   if ((await page.evaluate(() => document.documentElement.scrollWidth)) > 391) fail('phone horizontal scroll');
   // tap tick
   const card = page.locator('.note-card.kind-todo');
