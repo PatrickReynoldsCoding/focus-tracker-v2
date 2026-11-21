@@ -145,7 +145,7 @@ export function Notes() {
                   {l.name}
                 </a>
               </h3>
-              {l.kind === 'note' && l.preview && <Markdown text={l.preview} class="preview" />}
+              {l.kind === 'note' && l.preview && <Markdown text={l.preview} blankLines class="preview" />}
               {l.kind === 'todo' && l.items && (
                 <ul class="card-todos">
                   {l.items.map((i) => (

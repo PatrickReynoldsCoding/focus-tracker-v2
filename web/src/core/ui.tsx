@@ -4,6 +4,7 @@ import { marked } from 'marked';
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { get, HttpError, mode, version } from './api';
+import { noteHtml } from './blank-lines';
 import * as offline from './offline';
 import { useMarkdownEditor, type MarkdownEditorProps } from './registry';
 import { signal, useSignal } from './signal';
@@ -153,8 +154,8 @@ export function Dialog({ title, onClose, children, wide }: { title: ComponentChi
 
 marked.setOptions({ gfm: true, breaks: true });
 
-export function Markdown({ text, class: cls }: { text: string; class?: string }) {
-  const html = DOMPurify.sanitize(marked.parse(text || '', { async: false }) as string);
+export function Markdown({ text, class: cls, blankLines }: { text: string; class?: string; blankLines?: boolean }) {
+  const html = blankLines ? noteHtml(text) : DOMPurify.sanitize(marked.parse(text || '', { async: false }) as string);
   return <div class={`md ${cls ?? ''}`} dangerouslySetInnerHTML={{ __html: html }} />;
 }
 

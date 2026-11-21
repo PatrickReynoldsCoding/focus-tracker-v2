@@ -58,7 +58,10 @@
 .file-card .files-open { flex-direction: column; align-items: stretch; gap: 0; }
 .file-thumb { height: 116px; background: var(--surface-2); display: grid; place-items: center; overflow: hidden; border-bottom: 1px solid var(--line); }
 .file-thumb > img { width: 100%; height: 100%; object-fit: cover; background: #fff; }
-.file-text-preview { align-self: stretch; justify-self: stretch; margin: 0; padding: 10px 12px; font-size: 0.78rem; line-height: 1.4; color: var(--muted); white-space: pre-line; overflow: hidden; background: var(--surface); }
+.file-text-preview { align-self: stretch; justify-self: stretch; margin: 0; padding: 10px 12px; font-size: 0.78rem; line-height: 1.4; color: var(--muted); overflow: hidden; text-align: left; background: var(--surface); }
+.file-text-preview.md :is(h1, h2, h3, h4, h5, h6, p, ul, ol, blockquote, pre) { font-size: inherit; font-weight: inherit; line-height: inherit; margin: 0 0 0.35em; padding-top: 0; }
+.file-text-preview ul, .file-text-preview ol { padding-left: 1.2em; }
+.file-text-preview .md-blank { min-height: 1.4em; }
 .file-meta { display: flex; align-items: center; gap: 8px; padding: 8px 40px 10px 10px; min-width: 0; }
 .file-card > .files-more { position: absolute; right: 4px; bottom: 8px; }
 

@@ -7,7 +7,7 @@ import { change, get, optimistic, put } from '../../core/api';
 import { Adaptive } from '../../core/adaptive';
 import { useFlag } from '../../core/features';
 import { ProjectLabel, type Addable, type PanelDef, type TodayPanelProps } from '../../core/registry';
-import { Dialog, Loading, MarkdownEditor, useData } from '../../core/ui';
+import { Dialog, Loading, Markdown, MarkdownEditor, useData } from '../../core/ui';
 import { cardsOf, ListPanel, todosOf, type FullList, type SetList } from './ListBody';
 
 export type NoteItem = { type: 'note'; key: string; name: string; kind: 'note' | 'project'; id?: string; project_id?: string; color: string | null; body: string };
@@ -19,18 +19,15 @@ type Option = { key: string; list_id: string | null; project_id: string | null; 
 const target = (i: { key: string }) => (i.key.startsWith('project:') ? { project_id: i.key.slice(8) } : { list_id: i.key.slice(5) });
 const ICON: Record<string, string> = { note: '✎', project: '✎', todo: '☐', list: '≡' };
 
-const SMALL_NOTE_CHARS = 220;
-
-/** The small note: its title and the start of its text, to read. Open it for the editor. */
+/** The small note: its title and all of its text, with its line breaks and blank lines, in a box that scrolls. Open it for the editor. */
 function NoteSmall({ n, href }: { n: NoteItem; href: string }) {
-  const text = n.body.replace(/[#*_`>\[\]]/g, '').trim();
   return (
     <section class="card tp-note panel-small" data-pat-top={n.color || undefined} style={n.color ? { borderTop: `4px solid var(--c-${n.color})` } : undefined}>
       <h2>
         <a href={href}>✎ {n.name}</a>
         {n.kind === 'note' && <ProjectLabel projectId={n.project_id} />}
       </h2>
-      <p class="muted">{text ? (text.length > SMALL_NOTE_CHARS ? `${text.slice(0, SMALL_NOTE_CHARS)}…` : text) : 'Empty. Open it to write.'}</p>
+      {n.body.trim() ? <Markdown text={n.body} blankLines class="tp-note-scroll" /> : <p class="muted">Empty. Open it to write.</p>}
     </section>
   );
 }

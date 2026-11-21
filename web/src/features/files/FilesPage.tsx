@@ -6,7 +6,7 @@ import type { VNode } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { del, get, newId, optimistic, patch, post, say } from '../../core/api';
 import { ProjectLabel, useFileTypes, type FileItem, type FileTypeDef } from '../../core/registry';
-import { go, Loading, plainPreview, useData } from '../../core/ui';
+import { go, Loading, Markdown, useData } from '../../core/ui';
 import { DeleteFolderDialog, MoveDialog, NameDialog, type Count } from './dialogs';
 import { FolderIcon } from './icons';
 import { Menu, MenuItem } from '../../core/menu';
@@ -260,7 +260,7 @@ export function FilesPage({ route, params }: { route: string; params: string[] }
   const fileCard = (f: FileItem) => {
     const t = typeOf(f)!;
     const e: Entry = { kind: 'file', file: f };
-    const preview = t.preview?.(f) ?? (f.preview ? <p class="file-text-preview">{plainPreview(f.preview, 6, 220)}</p> : null);
+    const preview = t.preview?.(f) ?? (f.preview ? <Markdown text={f.preview} blankLines class="file-text-preview" /> : null);
     return (
       <li key={entryKey(e)} class="file-card" {...dragProps(e)}>
         <a class="files-open" href={t.href(f)} draggable={false} onClick={openFile(f)} {...(t.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>
