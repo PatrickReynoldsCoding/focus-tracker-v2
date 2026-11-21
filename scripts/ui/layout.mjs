@@ -122,7 +122,9 @@ async function grid(theme) {
 
   // ⋯: Auto height, Remove, Add panel, Reset.
   const menu = async (id) => {
-    await page.hover(`.lg-item[data-panel="${id}"]`);
+    // Near its top right corner, by the ⋯ (a seeded sticky note can sit over the middle of the board).
+    const at = await box(page, id);
+    await page.hover(`.lg-item[data-panel="${id}"]`, { position: { x: at.width - 30, y: 6 } });
     await page.click(`.lg-item[data-panel="${id}"] .lg-more`);
     await page.waitForSelector('.files-menu[role="menu"]');
   };
@@ -198,7 +200,8 @@ async function deskPills(theme) {
   await page.waitForTimeout(500);
   await shot(page, `${name}-start`);
   const names = await page.$$eval('.pl-pill', (els) => els.map((e) => e.textContent.trim()));
-  ok(names.length === 3 && names[0].startsWith('🎯Today') && names[1].startsWith('📚Notes') && names[2] === 'All', `${name}: the usual pills, not one per panel (${names.join(' | ')})`);
+  // Today, Notes, More (the panels in neither, such as Habits and the Pomodoro) and All.
+  ok(names.length === 4 && names[0].startsWith('🎯Today') && names[1].startsWith('📚Notes') && names[2].includes('More') && names[3] === 'All', `${name}: the usual pills, not one per panel (${names.join(' | ')})`);
   let ids = await page.$$eval('.lg-item', (els) => els.map((e) => e.dataset.panel));
   ok(ids.join() === 'today-list,plan-week', `${name}: the Today pill holds the Today list and this week (${ids.join(', ')})`);
   ok(!!(await page.$('.pl-page > .focus, .pl-page > .po-slot .focus')), `${name}: the focus card is pinned above the pills`);
@@ -323,7 +326,7 @@ async function pills(theme) {
   await page.waitForTimeout(400);
   await shot(page, `${name}-start`);
   const names = await page.$$eval('.pl-pill', (els) => els.map((e) => e.textContent.trim()));
-  ok(names.length === 3 && names[0].includes('Today') && names[1].includes('Notes') && names[2] === 'All', `${name}: the usual pills, the same as on a computer (${names.join(' | ')})`);
+  ok(names.length === 4 && names[0].includes('Today') && names[1].includes('Notes') && names[2].includes('More') && names[3] === 'All', `${name}: the usual pills, the same as on a computer (${names.join(' | ')})`);
   ok(!!(await page.$('.pl-page .focus.compact')), `${name}: the focus card is pinned, compact`);
   ok(/Today\s*\d/.test(names[0]), `${name}: pills show counts`);
   ok(!!(await page.$('#pl-panels .today-list')) && !(await page.$('#pl-panels .habits-panel')) && !(await page.$('#pl-panels .tp-list')), `${name}: the Today pill stacks the Today list and this week`);
@@ -533,6 +536,9 @@ async function arrange(theme) {
   // In the All pill: Remove, then + Add panel in the bar brings it back; Done.
   await pill(page, 'All');
   await page.waitForSelector('#pl-panels .lg-row[data-panel="habits"]');
+  // (In E-ink the panels are taller: Habits can start under the phone's tab bar.)
+  await page.locator('#pl-panels .lg-row[data-panel="habits"] h2').first().evaluate((e) => e.scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(300);
   const hb = await page.locator('#pl-panels .lg-row[data-panel="habits"] h2').first().boundingBox();
   await hold(page, cdp, hb.x + 20, hb.y + 8);
   await page.click('.lg-row[data-panel="habits"] .lg-arr-acts button:has-text("Remove")');
@@ -742,7 +748,8 @@ async function offlineAndFlags() {
       await p2.waitForSelector('.focus');
       await p2.waitForTimeout(500);
       ok(!(await p2.$('.lg-item, .lg-more, .pl-pill, .po-btn')), `flags off, ${label}: Today is the plain page`);
-      ok(!!(await p2.$('.habits-panel')) && (await p2.$$('.tp-list, .tp-note')).length >= 2, `flags off, ${label}: every panel is there, lists too`);
+      // (Habits may be its small version, v0.28.0, which has no .habits-panel.)
+      ok(!!(await p2.$('section.card h2:text-is("Habits")')) && (await p2.$$('.tp-list, .tp-note')).length >= 2, `flags off, ${label}: every panel is there, lists too`);
       await shot(p2, `flags-off-${label}`);
       await c2.close();
     }

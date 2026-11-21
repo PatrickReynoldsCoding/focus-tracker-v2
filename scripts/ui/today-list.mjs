@@ -203,7 +203,8 @@ for (const theme of ['dark', 'eink']) for (const [v, vp] of [['phone', PHONE], [
   try {
     const { page, ctx } = await open(browser, PHONE, errors, { name: 'flag-off' });
     await page.goto(`${B}/#/today`);
-    await page.waitForSelector('#pl-panels .habits-panel');
+    // (Habits may be its small version, v0.28.0, which has no .habits-panel.)
+    await page.waitForSelector('#pl-panels h2:text-is("Habits")');
     await settle(page);
     ok(!(await page.$('.today-list')) && !!(await page.$('#pl-panels h2:text-is("To do today")')), 'flag off: To do today and Habits are back in the Today pill');
     await shot(page, 'flag-off');
