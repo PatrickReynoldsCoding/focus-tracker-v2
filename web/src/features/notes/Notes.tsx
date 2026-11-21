@@ -1,6 +1,6 @@
 import { change, del, newId, optimistic, patch, post, put } from '../../core/api';
 import { useFlag } from '../../core/features';
-import { Panels } from '../../core/registry';
+import { Panels, ProjectLabel } from '../../core/registry';
 import { Board } from '../projects/Board';
 import { AddInput, ColorPicker, fmtDay, go, InlineEdit, Loading, MarkdownEditor, todayLocal, useData } from '../../core/ui';
 import { KIND_LABEL, type FullList, type Todo } from './model';
@@ -93,6 +93,7 @@ export function ListPage({ id }: { id: string }) {
         </h1>
         <div class="meta">
           <span class="tag">{KIND_LABEL[l.kind]}</span>
+          <ProjectLabel projectId={l.project_id} />
           <ColorPicker value={l.color} onPick={(color) => save({ color })} />
         </div>
       </div>

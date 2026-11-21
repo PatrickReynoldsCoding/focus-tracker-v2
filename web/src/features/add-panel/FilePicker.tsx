@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { get } from '../../core/api';
-import { useFileTypes, type FileItem, type FileTypeDef, type PanelAdderTarget } from '../../core/registry';
+import { ProjectLabel, useFileTypes, type FileItem, type FileTypeDef, type PanelAdderTarget } from '../../core/registry';
 import { Loading } from '../../core/ui';
 import { FolderIcon } from '../files/icons';
 
@@ -16,7 +16,7 @@ type Folder = {
   status?: string | null;
   location?: string | null;
 };
-type Crumb = { id: string; name: string };
+type Crumb = { id: string; name: string; project_id?: string | null };
 type Listing = { path: Crumb[]; folders: Folder[]; files: FileItem[] };
 type Files = NonNullable<PanelAdderTarget['files']>;
 
@@ -110,6 +110,8 @@ export function FilePicker({ files, onBack, onClose }: { place: string; files: F
     await files.add(f, m.t.panel?.(f) ?? null);
   };
 
+  // Inside a project's folder its files need no label saying so.
+  const inProject = list?.path.find((c) => c.project_id)?.project_id ?? null;
   const fileRow = (f: FileItem, key: string) => {
     const t = typeOf.get(f.type);
     if (!t) return null;
@@ -124,6 +126,7 @@ export function FilePicker({ files, onBack, onClose }: { place: string; files: F
             <strong>{f.name}</strong>
             <span class="muted small">{sub}</span>
           </span>
+          {f.project_id && f.project_id !== inProject && f.type !== 'project-note' && <ProjectLabel projectId={f.project_id} link={false} />}
           <span class="ap-go small">{here ? '✓ Here' : 'Add'}</span>
         </button>
       </li>

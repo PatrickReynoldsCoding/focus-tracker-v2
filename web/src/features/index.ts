@@ -30,5 +30,6 @@ import './layout';
 import './today-list';
 import './files';
 import './add-panel';
+import './project-labels';
 import './pomodoro';
 import './habits/ProjectHabits';

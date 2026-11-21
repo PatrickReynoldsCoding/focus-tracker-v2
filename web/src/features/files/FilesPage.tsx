@@ -5,7 +5,7 @@
 import type { VNode } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { del, get, newId, optimistic, patch, post, say } from '../../core/api';
-import { useFileTypes, type FileItem, type FileTypeDef } from '../../core/registry';
+import { ProjectLabel, useFileTypes, type FileItem, type FileTypeDef } from '../../core/registry';
 import { go, Loading, plainPreview, useData } from '../../core/ui';
 import { DeleteFolderDialog, MoveDialog, NameDialog, type Count } from './dialogs';
 import { FolderIcon } from './icons';
@@ -68,6 +68,9 @@ export function FilesPage({ route, params }: { route: string; params: string[] }
   const here = data.folder;
   const hereId = here?.id ?? null;
   const parentOfHere = data.path.length > 1 ? data.path[data.path.length - 2] : null;
+  // Inside a project's folder its files need no label saying so.
+  const inProject = data.path.find((c) => c.project_id)?.project_id ?? null;
+  const label = (f: FileItem) => (f.project_id && f.project_id !== inProject && f.type !== 'project-note' ? <ProjectLabel projectId={f.project_id} /> : null);
   const deep = !!dq || !!group;
   const known = data.files.filter((f) => typeOf(f));
   const hiddenFinished = !deep && !hereId && finished !== '1' ? data.folders.filter((f) => f.status && FINISHED.includes(f.status)) : [];
@@ -270,6 +273,7 @@ export function FilesPage({ route, params }: { route: string; params: string[] }
             </span>
           </span>
         </a>
+        {label(f)}
         {more(e)}
       </li>
     );
@@ -286,6 +290,7 @@ export function FilesPage({ route, params }: { route: string; params: string[] }
             <span class="files-sub">{sub(f)}</span>
           </span>
         </a>
+        {label(f)}
         {more(e)}
       </li>
     );

@@ -6,7 +6,7 @@ import { useState } from 'preact/hooks';
 import { change, get, optimistic, put } from '../../core/api';
 import { Adaptive } from '../../core/adaptive';
 import { useFlag } from '../../core/features';
-import type { Addable, PanelDef, TodayPanelProps } from '../../core/registry';
+import { ProjectLabel, type Addable, type PanelDef, type TodayPanelProps } from '../../core/registry';
 import { Dialog, Loading, MarkdownEditor, useData } from '../../core/ui';
 import { cardsOf, ListPanel, todosOf, type FullList, type SetList } from './ListBody';
 
@@ -28,6 +28,7 @@ function NoteSmall({ n, href }: { n: NoteItem; href: string }) {
     <section class="card tp-note panel-small" data-pat-top={n.color || undefined} style={n.color ? { borderTop: `4px solid var(--c-${n.color})` } : undefined}>
       <h2>
         <a href={href}>✎ {n.name}</a>
+        {n.kind === 'note' && <ProjectLabel projectId={n.project_id} />}
       </h2>
       <p class="muted">{text ? (text.length > SMALL_NOTE_CHARS ? `${text.slice(0, SMALL_NOTE_CHARS)}…` : text) : 'Empty. Open it to write.'}</p>
     </section>
@@ -58,6 +59,7 @@ function FullNotePanel({ n, href, setBody, onRemove, here }: { n: NoteItem; href
               {n.kind === 'project' ? ' · notes' : ''}
             </a>
           )}
+          {!here && n.kind === 'note' && <ProjectLabel projectId={n.project_id} />}
         </h2>
         {onRemove && (
           <button class="icon small" aria-label={`Remove ${n.name} from Today`} title="Remove from Today" onClick={onRemove}>
@@ -158,7 +160,7 @@ function LoadedList({ id }: { id: string }) {
   if ((data.kind as string) === 'note')
     return (
       <NotePanel
-        n={{ type: 'note', key: `list:${id}`, name: data.name, kind: 'note', color: data.color, body: data.body ?? '' }}
+        n={{ type: 'note', key: `list:${id}`, name: data.name, kind: 'note', project_id: data.project_id ?? undefined, color: data.color, body: data.body ?? '' }}
         setBody={(body) => setData((d) => ({ ...d, body }))}
       />
     );

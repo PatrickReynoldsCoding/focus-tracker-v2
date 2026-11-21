@@ -5,6 +5,7 @@ import { change, del, newId, optimistic, post } from '../../core/api';
 import { AddInput, fmtDay, todayLocal } from '../../core/ui';
 import { Adaptive } from '../../core/adaptive';
 import { useFlag } from '../../core/features';
+import { ProjectLabel } from '../../core/registry';
 import { ListTitle } from './ListDialog';
 import { OneAtATime, type QuoteItem } from './OneAtATime';
 
@@ -145,6 +146,7 @@ function ListSmall({ l, setList }: { l: FullList; setList: SetList }) {
       <div class="card-head">
         <h2>
           <ListTitle list={l} setList={setList as (fn: (l: any) => any) => void} prefix={l.kind === 'todo' ? '☐ ' : '≡ '} />
+          <ProjectLabel projectId={l.project_id} />
         </h2>
         <span class="muted">{total}</span>
       </div>
@@ -171,6 +173,7 @@ function FullListPanel({ l, setList, onRemove, count }: { l: FullList; setList: 
       <div class="card-head">
         <h2>
           <ListTitle list={l} setList={setList as (fn: (l: any) => any) => void} prefix={l.kind === 'todo' ? '☐ ' : '≡ '} />
+          <ProjectLabel projectId={l.project_id} />
         </h2>
         <span class="row tight">
           <span class="muted">{count}</span>

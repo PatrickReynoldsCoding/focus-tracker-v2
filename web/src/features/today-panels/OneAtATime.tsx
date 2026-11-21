@@ -3,6 +3,7 @@
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useEink } from '../../core/theme';
+import { ProjectLabel } from '../../core/registry';
 import { Markdown } from '../../core/ui';
 import { ListTitle, type ListSettingsProps } from './ListDialog';
 
@@ -67,6 +68,7 @@ export function OneAtATime({ list, setList, items, onRemove }: { list: ListSetti
       <div class="card-head">
         <h2>
           <ListTitle list={list} setList={setList} prefix="✦ " quote />
+          <ProjectLabel projectId={list.project_id} />
         </h2>
         <span class="row tight">
           <span class="pos">{order.length ? `${at + 1} / ${order.length}` : ''}</span>

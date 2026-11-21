@@ -6,7 +6,7 @@ import type { VNode } from 'preact';
 import { useState } from 'preact/hooks';
 import { change, del, get, mode, optimistic, patch, post } from '../../core/api';
 import { useFlag } from '../../core/features';
-import { registerFileType, registerPanel, registerPanelSource, registerRoute, registerTab, type Addable, type FileItem, type PanelDef, type TodayPanelProps } from '../../core/registry';
+import { ProjectLabel, registerFileType, registerPanel, registerPanelSource, registerRoute, registerTab, type Addable, type FileItem, type PanelDef, type TodayPanelProps } from '../../core/registry';
 import { useSignal } from '../../core/signal';
 import { FileGlyph, Loading, useData } from '../../core/ui';
 import { BoardGrid, NewBoardDialog, Preview } from './Boards';
@@ -120,6 +120,7 @@ function TodayBoard({ b, onRemove }: { b: Board; onRemove?: () => void }) {
           <button class="wb-name" onClick={() => openBoard(b.id)}>
             ✐ {b.name}
           </button>
+          <ProjectLabel projectId={b.project_id} />
         </h2>
         {onRemove && (
           <button class="icon small" aria-label={`Remove ${b.name} from Today`} title="Remove from Today" onClick={onRemove}>

@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { api, get, HttpError, mode, put, version } from '../../core/api';
 import type { Board as Host } from './host';
 import { favouriteTool, leaveBoard, MAX_SCENE_BYTES } from './model';
+import { ProjectLabel } from '../../core/registry';
 
 const AUTOSAVE_MS = 1500;
 /** Make a new preview at most this often while drawing (and always on Save and close). */
@@ -13,7 +14,7 @@ const THUMB_EVERY_MS = 20_000;
 /** fetch(..., { keepalive }) bodies must stay under 64 KB. */
 const KEEPALIVE_MAX = 60_000;
 
-type Loaded = { id: string; name: string; updated_at: string; scene: any };
+type Loaded = { id: string; name: string; project_id?: string | null; updated_at: string; scene: any };
 type Status = { kind: 'idle' | 'saving' | 'saved' | 'error' | 'too-big'; text?: string };
 
 const bytes = (s: string) => new TextEncoder().encode(s).length;
@@ -247,7 +248,10 @@ export function BoardEditor({ id }: { id: string }) {
         <button class="ghost small wb-back" onClick={saveAndClose} aria-label="Save and close" title="Save and close">
           ←
         </button>
-        <strong class="wb-title">{data?.name ?? 'Whiteboard'}</strong>
+        <span class="wb-name-line">
+          <strong class="wb-title">{data?.name ?? 'Whiteboard'}</strong>
+          <ProjectLabel projectId={data?.project_id} />
+        </span>
         <span class={`wb-status ${status.kind}`} role="status" aria-live="polite">
           {statusText}
         </span>

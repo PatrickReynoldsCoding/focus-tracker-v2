@@ -7,7 +7,8 @@
 
 import { useEffect, useState } from 'preact/hooks';
 import { newId, optimistic, post } from '../../core/api';
-import type { TodayPanelProps } from '../../core/registry';
+import { ProjectLabel, type TodayPanelProps } from '../../core/registry';
+import { useFlag } from '../../core/features';
 import { AddInput, fmtDay, go, Linkify, useData } from '../../core/ui';
 import { buildTodayList, type TodayItem, type TodayList as List } from '../../../../src/core/today-list';
 import { record, type SetHabits } from '../habits/actions';
@@ -17,14 +18,16 @@ import { CardDialog, type Card, type Column } from '../projects/Board';
 
 type Todo = { id: string; title: string; day: string | null; done: string | null; list_id?: string | null; project_id?: string | null };
 type CardIn = { id: string; title: string; day: string | null; done: string | null; project_id: string | null; list_id: string | null; from: string | null; in_last: boolean };
-export type TodayData = { day: string; todos: Todo[]; habits: Progress[]; cards?: CardIn[]; todo_lists?: Record<string, string> };
+export type TodayData = { day: string; todos: Todo[]; habits: Progress[]; cards?: CardIn[]; todo_lists?: Record<string, string>; todo_list_projects?: Record<string, string> };
 
 /** The list for this Today data (also used for the pill's count). */
 export function listOf(d: TodayData): List {
   const names = d.todo_lists ?? {};
+  const projects = d.todo_list_projects ?? {};
   return buildTodayList(d.day, {
     habits: d.habits,
-    todos: d.todos.map((t) => ({ ...t, list_name: (t.list_id && names[t.list_id]) || null })),
+    // A to-do is from a project when it says so, or when its list belongs to one.
+    todos: d.todos.map((t) => ({ ...t, list_name: (t.list_id && names[t.list_id]) || null, project_id: t.project_id || (t.list_id && projects[t.list_id]) || null })),
     cards: d.cards ?? [],
   });
 }
@@ -171,6 +174,8 @@ export function TodayList({ today, setToday }: { today: TodayData; setToday: Tod
 }
 
 function Section({ label, items, tick, notToday, open }: { label: string; items: TodayItem[]; tick: (x: TodayItem) => void; notToday: (x: TodayItem, on: boolean) => void; open: (x: TodayItem) => void }) {
+  // With project labels a card's project shows as its label, not as plain text too.
+  const labels = useFlag('project-labels');
   return (
     <div class="tl-sec">
       <div class="tl-label">{label}</div>
@@ -186,7 +191,8 @@ function Section({ label, items, tick, notToday, open }: { label: string; items:
                   {fmtDay(x.late)}
                 </span>
               )}
-              {x.from && (
+              {x.project_id && <ProjectLabel projectId={x.project_id} />}
+              {x.from && !(labels && x.kind === 'card' && x.project_id) && (
                 <span class="tl-from" title={x.from}>
                   {x.from}
                 </span>

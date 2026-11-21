@@ -1,0 +1,31 @@
+/* A project label: a small pill with an outline (so E-ink and colour-blind eyes still see it), a
+   tint from the shared tokens, and a long name cut short with an ellipsis. */
+.project-label {
+  display: inline-flex; align-items: center; min-width: 0; max-width: min(14em, 100%); flex: 0 1 auto;
+  font-size: 0.72rem; font-weight: 600; line-height: 1.5; padding: 0 7px; border-radius: 999px;
+  border: 1px solid var(--muted); background: var(--surface-2); color: var(--fg); text-decoration: none;
+  vertical-align: middle; white-space: nowrap;
+}
+.project-label-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+a.project-label:hover { border-color: var(--fg); }
+a.project-label:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.project-label[data-tint='red'] { background: var(--c-red); } .project-label[data-tint='orange'] { background: var(--c-orange); }
+.project-label[data-tint='yellow'] { background: var(--c-yellow); } .project-label[data-tint='green'] { background: var(--c-green); }
+.project-label[data-tint='teal'] { background: var(--c-teal); } .project-label[data-tint='blue'] { background: var(--c-blue); }
+.project-label[data-tint='purple'] { background: var(--c-purple); } .project-label[data-tint='pink'] { background: var(--c-pink); }
+html[data-theme='eink'] .project-label { background: var(--surface); border: 2px solid var(--fg); font-weight: 700; }
+
+/* Where it sits. */
+.file-card { position: relative; }
+.file-card > .project-label { position: absolute; top: 6px; left: 6px; max-width: calc(100% - 44px); z-index: 1; box-shadow: var(--shadow); }
+.file-row > .project-label { max-width: 38%; flex-shrink: 1; }
+.ap-row .project-label { max-width: 40%; flex-shrink: 1; }
+/* A panel's title with a label: the label follows the name and goes under it when there is no room. */
+.card-head h2:has(> .project-label) { display: flex; flex-wrap: wrap; align-items: center; column-gap: 6px; row-gap: 2px; min-width: 0; flex: 1 1 auto; }
+.card-head h2 > .project-label { max-width: 100%; }
+.page-head .project-label { font-size: 0.72rem; }
+.wb-bar .project-label { max-width: min(100%, 14em); flex-shrink: 0; }
+@media (max-width: 480px) { .wb-bar .project-label { flex-shrink: 1; font-size: 0.66rem; } }
+.tl-row .project-label { max-width: 9em; }
+@media (max-width: 480px) { .tl-row .project-label { max-width: 6.5em; } }
+@media (min-width: 900px) { .tl-row .project-label { max-width: 16em; } }
