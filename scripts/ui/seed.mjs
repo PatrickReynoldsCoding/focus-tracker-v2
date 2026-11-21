@@ -1,6 +1,8 @@
 import { launch, apiCtx } from './lib.mjs';
 const browser = await launch();
 const { post, put, get } = await apiCtx(browser);
+// The checks click through Today's pills on a computer, which are off by default (flag desktop-pills).
+await put('/features/desktop-pills', { enabled: true });
 const cat = await post('/categories', { label: 'Coding', color: 'blue' });
 const p1 = await post('/projects', { name: 'Focus Tracker v2', category_id: cat.id });
 const p2 = await post('/projects', { name: 'Garden shed' });

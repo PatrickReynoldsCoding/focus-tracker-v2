@@ -3,7 +3,7 @@
 // pill), Today's pills on a computer (each pill its own grid, Edit pill, New pill, Remove from a
 // pill) and on a phone (Today settings, swipes), arranging on a phone (a long press: move, height,
 // remove, add back; leaving it), and pop-out windows.
-// Needs a seeded server (seed.mjs). Usage: FT_URL=http://localhost:8787 node scripts/ui/layout.mjs [grid|desk-pills|pills|arrange|popout|offline]
+// Needs a seeded server (seed.mjs). Usage: FT_URL=http://localhost:8787 node scripts/ui/layout.mjs [grid|desk-plain|desk-pills|pills|arrange|popout|offline]
 import { mkdirSync } from 'node:fs';
 import { apiCtx, B, launch, open, OUT } from './lib.mjs';
 
@@ -20,6 +20,8 @@ const shot = (page, name) => page.screenshot({ path: `${OUT}/layout-${name}.png`
 /** The screen as it is (a full-page shot resizes the window, which closes an open menu). */
 const view = (page, name) => page.screenshot({ path: `${OUT}/layout-${name}.png` });
 const eink = () => localStorage.setItem('ft.theme', 'eink');
+
+await api.put('/features/desktop-pills', { enabled: true });
 
 // Data: two lists and a whiteboard on Today, a focus project, a fresh layout.
 const lists = await api.get('/lists');
@@ -301,6 +303,50 @@ if (!only || only === 'desk-pills') {
   await deskPills('light');
   await deskPills('eink');
 }
+
+
+// ---------------- a computer without the pills (flag desktop-pills, off by default) ----------------
+
+async function deskPlain() {
+  await api.put('/features/desktop-pills', { enabled: false });
+  try {
+    for (const theme of ['light', 'eink']) {
+      const name = `desk-plain-${theme}`;
+      const { page, ctx } = await open(browser, { width: 1280, height: 900 }, errors, { name, init: theme === 'eink' ? eink : undefined });
+      await page.goto(`${B}/#/today`);
+      await page.waitForSelector('.lg-item[data-panel="today-list"]');
+      await page.waitForTimeout(500);
+      await shot(page, `${name}-start`);
+      ok(!(await page.$('.pl-pill, .pl-row .pl-pill')), `${name}: no row of pills`);
+      ok(!(await page.$('.pl-bar button:has-text("Edit pill"), .pl-bar button:has-text("New pill")')), `${name}: no Edit pill or + New pill`);
+      ok(!!(await page.$('.pl-page > .focus, .pl-page > .po-slot .focus')), `${name}: the focus card is above the panels`);
+      const ids = await page.$$eval('.lg-item', (els) => els.map((e) => e.dataset.panel));
+      ok(ids.includes('today-list') && ids.includes('habits') && ids.some((i) => i.startsWith('list-')) && ids.some((i) => i.startsWith('wb-')), `${name}: every panel is shown in the grid (${ids.join(', ')})`);
+      await page.click('.pl-bar button:has-text("Add panel")');
+      await page.waitForSelector('dialog[open]');
+      ok(true, `${name}: + Add panel opens`);
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(300);
+      await page.click('.pl-gear');
+      await page.waitForSelector('dialog[open] .pl-settings');
+      const text = await page.$eval('dialog[open] .pl-settings', (e) => e.textContent);
+      ok(/no pills/.test(text) && /Focus card/.test(text) && !(await page.$('dialog[open] button:has-text("New pill")')), `${name}: Today settings keeps the focus card and says where the pills are`);
+      await shot(page, `${name}-settings`);
+      await page.keyboard.press('Escape');
+      await ctx.close();
+    }
+    // A phone is not affected.
+    const { page: ph, ctx: pc } = await open(browser, { width: 390, height: 800 }, errors, { name: 'desk-plain-phone', touch: true });
+    await ph.goto(`${B}/#/today`);
+    await ph.waitForSelector('.pl-pill');
+    ok(true, 'desk-plain: the phone still shows its pills');
+    await pc.close();
+  } finally {
+    await api.put('/features/desktop-pills', { enabled: true });
+  }
+}
+
+if (!only || only === 'desk-plain') await deskPlain();
 
 // ---------------- the phone's Today pills ----------------
 
