@@ -1,6 +1,6 @@
 # Instructions for Claude (and any other agent) working on Focus Tracker v2
 
-Read this file, then `docs/STATUS.md` (where the work is) and `docs/DECISIONS.md` (why it is built this way) before planning anything. The original spec is the owner's `SPEC.md` on Google Drive; v1 (`PatrickReynoldsCoding/focus-tracker`, Apps Script) is the requirements source, not code to port.
+Read this file, then `docs/HANDOVER-2026-11-21.md` (latest session: what is deployed and what is still to release), `docs/STATUS.md` (where the work is) and `docs/DECISIONS.md` (why it is built this way) before planning anything. The original spec is the owner's `SPEC.md` on Google Drive; v1 (`PatrickReynoldsCoding/focus-tracker`, Apps Script) is the requirements source, not code to port.
 
 ## Rules carried over from v1
 
