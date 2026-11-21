@@ -92,7 +92,7 @@ export function PillSheet({
   );
 }
 
-export function TodaySettings({ place, panels, pills, saved, view, onClose }: { place: string; panels: PanelDef<any>[]; pills: Pill[]; saved: boolean; view: View; onClose: () => void }) {
+export function TodaySettings({ place, panels, pills, saved, view, plain, onClose }: { plain?: boolean; place: string; panels: PanelDef<any>[]; pills: Pill[]; saved: boolean; view: View; onClose: () => void }) {
   const [editing, setEditing] = useState<{ pill: Pill; isNew: boolean } | null>(null);
   const { nameOf } = usePillOptions(place, panels);
 
@@ -125,6 +125,12 @@ export function TodaySettings({ place, panels, pills, saved, view, onClose }: { 
   return (
     <Dialog title="Today settings" onClose={onClose} wide>
       <div class="pl-settings">
+        {plain ? (
+          <section>
+            <h3>Pills</h3>
+            <p class="muted small">This computer shows every panel on one page, with no pills. Pills are for the phone, which follows Settings → Features → Today pills. To see them here too, turn on Settings → Features → Today pills on a computer; Edit pill, + New pill and this list of pills then appear.</p>
+          </section>
+        ) : (
         <section>
           <h3>Pills</h3>
           <p class="muted small">Each pill is a tab of Today with the panels you put in it, the same on every device. On a computer each pill has its own layout: drag a panel by its title, resize it from its corner, ⋯ for more. On a phone its panels stack: press and hold one to move it, change its height or remove it, and swipe on them to go to the next pill.</p>
@@ -189,6 +195,7 @@ export function TodaySettings({ place, panels, pills, saved, view, onClose }: { 
           {full && <span class="muted small">At most {MAX_PILLS} pills.</span>}
           {sw('pillAll', 'Show the All pill', 'at the end: every panel on Today, so nothing is out of reach')}
         </section>
+        )}
 
         <section>
           <h3>Focus card</h3>
@@ -206,17 +213,19 @@ export function TodaySettings({ place, panels, pills, saved, view, onClose }: { 
             ))}
           </div>
           <p class="muted small">
-            Above the pills, on every device.{' '}
+            {plain ? 'Above the panels' : 'Above the pills'}, on every device.{' '}
             {card === 'compact' ? 'The project and its session; More shows the rest.' : card === 'full' ? 'The whole focus card.' : 'No focus card on Today. The corner timer still shows a running session.'}
           </p>
         </section>
 
+        {!plain && (
         <section>
           <h3>Pill row</h3>
           {sw('pillCounts', 'Show counts on pills', 'such as to-dos still open')}
           {sw('pillSwipe', 'Swipe between pills', 'on a phone, on the panels; off: a swipe there changes tab')}
           {sw('pillLast', 'Open on the pill I used last', 'off: the first pill')}
         </section>
+        )}
       </div>
       {editing && (
         <PillSheet

@@ -146,6 +146,16 @@ describe('Today pills', () => {
     const list = await call('GET', '/features');
     for (const id of ['movable-panels', 'today-pills', 'popout-windows']) expect(list.find((f: any) => f.id === id)?.enabled).toBe(true);
   });
+
+  it('has the computer’s pills off by default, per profile, and the pill tools still work', async () => {
+    const m = await freshMode();
+    const flag = async () => (await call('GET', '/features', undefined, m)).find((f: any) => f.id === 'desktop-pills');
+    expect(await flag()).toMatchObject({ label: 'Today pills on a computer', enabled: false });
+    expect((await call('GET', '/features')).find((f: any) => f.id === 'desktop-pills')?.enabled).toBe(false);
+    await call('PUT', '/features/desktop-pills', { enabled: true }, m);
+    expect((await flag()).enabled).toBe(true);
+    expect((await call('GET', '/layout/today', undefined, m)).view).toBeDefined();
+  });
 });
 
 describe('a pill’s own grid', () => {

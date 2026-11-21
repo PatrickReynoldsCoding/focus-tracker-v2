@@ -74,6 +74,8 @@ function Pills({ place, props, panels, next }: PanelLayoutProps) {
   const m = useSignal(mode);
   const flags = useFlags();
   const phone = useMedia(PHONE);
+  // On a computer the pills are a flag (desktop-pills, off): without it Today is the All pill's page alone.
+  const plain = !phone && !flags['desktop-pills'];
   const data = useLayout(place);
   const [settings, setSettings] = useState(false);
   const [sheet, setSheet] = useState<{ pill: Pill; isNew: boolean } | null>(null);
@@ -94,9 +96,9 @@ function Pills({ place, props, panels, next }: PanelLayoutProps) {
       .map((id) => standIn(panels, id) ?? lookupPanel(place, id, flags))
       .filter((p, i, all): p is PanelDef<any> => !!p && !p.fixed && p.id !== PINNED && all.findIndex((q) => q?.id === p.id) === i);
   const entries = pills.map((pill) => ({ pill, list: panelsOf(pill) }));
-  if (view.pillAll !== false) entries.push({ pill: { id: ALL, name: 'All', icon: null, panels: movable.map((p) => p.id) }, list: movable });
+  if (view.pillAll !== false || plain) entries.push({ pill: { id: ALL, name: 'All', icon: null, panels: movable.map((p) => p.id) }, list: movable });
   // A pill whose panels have nothing to show now is left out of the row (an empty pill stays: it says so).
-  const shown = entries.filter((x) => x.pill.id === ALL || !x.pill.panels.length || x.list.some((p) => p.render(props)));
+  const shown = plain ? entries.filter((x) => x.pill.id === ALL) : entries.filter((x) => x.pill.id === ALL || !x.pill.panels.length || x.list.some((p) => p.render(props)));
 
   const [chosen, setChosenState] = useState<string | null>(() => chosenNow.get(m) ?? (view.pillLast !== false ? readLast(m) : null));
   useEffect(() => setChosenState(chosenNow.get(m) ?? (view.pillLast !== false ? readLast(m) : null)), [m]);
@@ -248,7 +250,8 @@ function Pills({ place, props, panels, next }: PanelLayoutProps) {
           <Slot key={p.id} node={p.render(props)} />
         ))}
       {focus && card !== 'hidden' && <Slot key={`focus-${card}`} node={(card === 'compact' && focus.compact ? focus.compact(props) : focus.render(props)) as VNode | null} />}
-      <div class="pl-bar">
+      <div class={`pl-bar ${plain ? 'plain' : ''}`}>
+        {!plain && (
         <div class="pl-row" role="tablist" aria-label="Today’s pills" ref={row} onKeyDown={(e) => keys(e as unknown as KeyboardEvent)}>
           {shown.map(({ pill }, i) => {
             const on = i === at;
@@ -272,22 +275,24 @@ function Pills({ place, props, panels, next }: PanelLayoutProps) {
             );
           })}
         </div>
+        )}
+        {plain && <div class="pl-row" />}
         {!phone && Adder && current && (
           <button class="ghost small pl-tool pl-add" title={`Put a panel or a file in “${current.pill.name}”`} onClick={() => setAdding(current.pill.id === ALL ? pageTarget(place, panels, props) : targetOf(current.pill))}>
             + Add panel
           </button>
         )}
-        {!phone && editable && (
+        {!phone && !plain && editable && (
           <button class="ghost small pl-tool" title={`Rename “${editable.name}” or choose its panels`} onClick={() => setSheet({ pill: editable, isNew: false })}>
             ✎ Edit pill
           </button>
         )}
-        {!phone && (
+        {!phone && !plain && (
           <button class="ghost small pl-tool" disabled={pills.length >= MAX_PILLS} title={pills.length >= MAX_PILLS ? `At most ${MAX_PILLS} pills` : 'Make a new pill'} onClick={() => setSheet({ pill: newPill(), isNew: true })}>
             + New pill
           </button>
         )}
-        <button class="pl-gear icon" aria-label="Today settings" title="Today settings: pills, focus card, switches" onClick={() => setSettings(true)}>
+        <button class="pl-gear icon" aria-label="Today settings" title={plain ? 'Today settings: focus card' : 'Today settings: pills, focus card, switches'} onClick={() => setSettings(true)}>
           ⚙
         </button>
       </div>
@@ -315,7 +320,7 @@ function Pills({ place, props, panels, next }: PanelLayoutProps) {
           <Slot key={p.id} node={p.render(props)} />
         ))}
       {adding && Adder && <Adder.component place={place} {...adding} onClose={() => setAdding(null)} />}
-      {settings && <TodaySettings place={place} panels={panels} pills={pills} saved={!!data?.pills} view={view} onClose={() => setSettings(false)} />}
+      {settings && <TodaySettings place={place} panels={panels} pills={pills} plain={plain} saved={!!data?.pills} view={view} onClose={() => setSettings(false)} />}
       {sheet && (
         <PillSheet
           place={place}

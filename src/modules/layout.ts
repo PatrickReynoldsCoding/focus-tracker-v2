@@ -184,8 +184,15 @@ export const layoutModule: Module = {
       id: 'today-pills',
       label: 'Today pills',
       description:
-        'Today shows the focus card, then a row of pills (tabs). Each pill shows the panels you put in it, on the phone and the computer alike; on a wide screen each pill has its own layout. “All” shows every panel on Today. Off: Today is one page.',
+        'On a phone, Today shows the focus card, then a row of pills (tabs); each pill shows the panels you put in it. On a computer the pills also show when “Today pills on a computer” is on, each with its own layout; “All” shows every panel on Today. Off: Today is one page everywhere.',
       default: true,
+    },
+    {
+      id: 'desktop-pills',
+      label: 'Today pills on a computer',
+      description:
+        'Off (usual): on a computer, Today shows the focus card and then every panel in one page, the layout you arranged (the same as the All pill), with + Add panel; there is no row of pills. On: the computer shows the row of pills as the phone does, each pill with its own layout, with Edit pill and + New pill. Needs “Today pills”. The phone is not affected: it follows “Today pills”.',
+      default: false,
     },
     {
       id: 'popout-windows',
@@ -265,7 +272,7 @@ export const layoutModule: Module = {
     {
       name: 'get_today_pills',
       description:
-        'Today’s pills (named tabs on Today, the same on every device; each shows the panels listed in it, in order), their switches, and the panel ids a pill can hold with their names. ' +
+        'Today’s pills (named tabs on Today, the same on every device; a computer shows them only while the “desktop-pills” switch is on, and shows every panel on one page otherwise; each shows the panels listed in it, in order), their switches, and the panel ids a pill can hold with their names. ' +
         `pills null means none are saved and the app shows its usual ones: ${USUAL_PILLS}. An “All” pill (every panel on Today) is added at the end unless view.pillAll is false.`,
       readOnly: true,
       feature: 'today-pills',

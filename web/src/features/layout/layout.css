@@ -95,6 +95,8 @@ html[data-theme='eink'] .lg-row-moving { outline: 3px solid #000; }
 .focus.compact { gap: 8px; }
 .focus.compact .card-head { align-items: center; }
 .focus.compact .focus-name { font-size: 1.1rem; min-width: 0; overflow-wrap: anywhere; }
+.pl-bar.plain { justify-content: flex-end; }
+.pl-bar.plain .pl-row { flex: 1; }
 .pl-bar { display: flex; align-items: center; gap: 4px; position: sticky; top: 58px; z-index: 4; background: var(--bg); padding: 4px 0; margin: 0 -4px; }
 .pl-row { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex: 1; padding: 2px 4px; min-width: 0; }
 .pl-row::-webkit-scrollbar { display: none; }
