@@ -4,12 +4,13 @@
 import type { VNode } from 'preact';
 import { useState } from 'preact/hooks';
 import { change, get, optimistic, put } from '../../core/api';
+import { Adaptive } from '../../core/adaptive';
 import { useFlag } from '../../core/features';
 import type { Addable, PanelDef, TodayPanelProps } from '../../core/registry';
 import { Dialog, Loading, MarkdownEditor, useData } from '../../core/ui';
 import { cardsOf, ListPanel, todosOf, type FullList, type SetList } from './ListBody';
 
-type NoteItem = { type: 'note'; key: string; name: string; kind: 'note' | 'project'; id?: string; project_id?: string; color: string | null; body: string };
+export type NoteItem = { type: 'note'; key: string; name: string; kind: 'note' | 'project'; id?: string; project_id?: string; color: string | null; body: string };
 type ListItem = FullList & { type: 'list'; key: string };
 type Item = NoteItem | ListItem;
 type Option = { key: string; list_id: string | null; project_id: string | null; name: string; kind: string; color: string | null };
@@ -18,17 +19,45 @@ type Option = { key: string; list_id: string | null; project_id: string | null; 
 const target = (i: { key: string }) => (i.key.startsWith('project:') ? { project_id: i.key.slice(8) } : { list_id: i.key.slice(5) });
 const ICON: Record<string, string> = { note: '✎', project: '✎', todo: '☐', list: '≡' };
 
-function NotePanel({ n, setBody, onRemove }: { n: NoteItem; setBody: (body: string) => void; onRemove?: () => void }) {
+const SMALL_NOTE_CHARS = 220;
+
+/** The small note: its title and the start of its text, to read. Open it for the editor. */
+function NoteSmall({ n, href }: { n: NoteItem; href: string }) {
+  const text = n.body.replace(/[#*_`>\[\]]/g, '').trim();
+  return (
+    <section class="card tp-note panel-small" data-pat-top={n.color || undefined} style={n.color ? { borderTop: `4px solid var(--c-${n.color})` } : undefined}>
+      <h2>
+        <a href={href}>✎ {n.name}</a>
+      </h2>
+      <p class="muted">{text ? (text.length > SMALL_NOTE_CHARS ? `${text.slice(0, SMALL_NOTE_CHARS)}…` : text) : 'Empty. Open it to write.'}</p>
+    </section>
+  );
+}
+
+/** A note as a panel, the same on Today and on a project's page. `here`: it is on that project's own page, so its title is not a link to itself. */
+export function NotePanel({ n, setBody, onRemove, here }: { n: NoteItem; setBody: (body: string) => void; onRemove?: () => void; here?: boolean }) {
   const href = n.kind === 'project' ? `#/p/${n.project_id}` : `#/n/${n.key.slice(5)}`;
+  return (
+    <Adaptive small={() => <NoteSmall n={n} href={href} />}>
+      <FullNotePanel n={n} href={href} setBody={setBody} onRemove={onRemove} here={here} />
+    </Adaptive>
+  );
+}
+
+function FullNotePanel({ n, href, setBody, onRemove, here }: { n: NoteItem; href: string; setBody: (body: string) => void; onRemove?: () => void; here?: boolean }) {
   const owner = n.kind === 'project' ? `project/${n.project_id}` : `list/${n.key.slice(5)}`;
   return (
     <section class="card tp-note" data-pat-top={n.color || undefined} style={n.color ? { borderTop: `4px solid var(--c-${n.color})` } : undefined}>
       <div class="card-head">
         <h2>
-          <a href={href}>
-            ✎ {n.name}
-            {n.kind === 'project' ? ' · notes' : ''}
-          </a>
+          {here ? (
+            '✎ Notes'
+          ) : (
+            <a href={href}>
+              ✎ {n.name}
+              {n.kind === 'project' ? ' · notes' : ''}
+            </a>
+          )}
         </h2>
         {onRemove && (
           <button class="icon small" aria-label={`Remove ${n.name} from Today`} title="Remove from Today" onClick={onRemove}>

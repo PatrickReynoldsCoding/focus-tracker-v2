@@ -3,6 +3,7 @@
 
 import { change, del, newId, optimistic, post } from '../../core/api';
 import { AddInput, fmtDay, todayLocal } from '../../core/ui';
+import { Adaptive } from '../../core/adaptive';
 import { useFlag } from '../../core/features';
 import { ListTitle } from './ListDialog';
 import { OneAtATime, type QuoteItem } from './OneAtATime';
@@ -117,6 +118,54 @@ export function ListPanel({ l, setList, onRemove }: { l: FullList; setList: SetL
     return <OneAtATime list={l} setList={setList} items={items} onRemove={onRemove} />;
   }
   const count = l.kind === 'todo' ? todosOf(l).filter((t) => !t.done).length : cardsOf(l).length;
+  return (
+    <Adaptive small={() => <ListSmall l={l} setList={setList} />}>
+      <FullListPanel l={l} setList={setList} onRemove={onRemove} count={count} />
+    </Adaptive>
+  );
+}
+
+const SMALL_ITEMS = 4;
+
+/** The small list: its title, how many items, and the first few (a to-do ticks). */
+function ListSmall({ l, setList }: { l: FullList; setList: SetList }) {
+  const todos = l.kind === 'todo' ? todosOf(l).filter((t) => !t.done) : [];
+  const cards = l.kind === 'todo' ? [] : cardsOf(l);
+  const total = todos.length + cards.length;
+  const tick = (t: Todo) =>
+    optimistic(
+      () => {
+        setList((d) => ({ ...d, groups: d.groups!.map((g) => ({ ...g, todos: g.todos.map((x) => (x.id === t.id ? { ...x, done: todayLocal() } : x)) })) }));
+        return () => setList((d) => ({ ...d, groups: d.groups!.map((g) => ({ ...g, todos: g.todos.map((x) => (x.id === t.id ? t : x)) })) }));
+      },
+      () => post(`/todos/${t.id}/tick`, { done: true }),
+    );
+  return (
+    <section class="card tp-list panel-small" style={l.color ? { borderTop: `4px solid var(--c-${l.color})` } : undefined}>
+      <div class="card-head">
+        <h2>
+          <ListTitle list={l} setList={setList as (fn: (l: any) => any) => void} prefix={l.kind === 'todo' ? '☐ ' : '≡ '} />
+        </h2>
+        <span class="muted">{total}</span>
+      </div>
+      <ul class="plain tp-items">
+        {todos.slice(0, SMALL_ITEMS).map((t) => (
+          <li key={t.id}>
+            <label>
+              <input type="checkbox" checked={false} onChange={() => tick(t)} /> <span>{t.title}</span>
+            </label>
+          </li>
+        ))}
+        {cards.slice(0, SMALL_ITEMS).map((c) => (
+          <li key={c.id}>{c.title}</li>
+        ))}
+      </ul>
+      {total > SMALL_ITEMS && <p class="muted small">+{total - SMALL_ITEMS} more</p>}
+    </section>
+  );
+}
+
+function FullListPanel({ l, setList, onRemove, count }: { l: FullList; setList: SetList; onRemove?: () => void; count: number }) {
   return (
     <section class="card tp-list" data-pat-top={l.color || undefined} style={l.color ? { borderTop: `4px solid var(--c-${l.color})` } : undefined}>
       <div class="card-head">

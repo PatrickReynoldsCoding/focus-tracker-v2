@@ -4,6 +4,7 @@ import { Panels, registerPanel, registerPlace, registerRoute, type ProjectPanelP
 import { AddInput, daysAgo, fmtDay, fmtMinutes, go, InlineEdit, Linkify, Loading, MarkdownEditor, todayLocal, useData } from '../../core/ui';
 import { Board, type Column } from './Board';
 import { CategorySelect } from './CategorySelect';
+import { NotePanel } from '../today-panels/OnToday';
 import { lastProject } from './last-project';
 
 type Criterion = { id: string; text: string; done: boolean };
@@ -94,11 +95,13 @@ registerPanel('project', {
   description: 'The project’s notes.',
   order: 20,
   oneCopy: ({ project }) => `note:project:${project.id}`,
-  render: ({ project }) => (
-    <section class="card">
-      <h2>Notes</h2>
-      <MarkdownEditor value={project.notes} note={{ kind: 'project', id: project.id }} placeholder="Notes for this project…" onSave={(body) => change(() => put(`/notes/of/project/${project.id}`, { body }))} />
-    </section>
+  // The same panel as a project's notes on Today (features/today-panels/OnToday.tsx).
+  render: ({ project, setProject }) => (
+    <NotePanel
+      here
+      n={{ type: 'note', key: `project:${project.id}`, name: project.name, kind: 'project', project_id: project.id, color: null, body: project.notes }}
+      setBody={(notes) => setProject((p: any) => ({ ...p, notes }))}
+    />
   ),
 });
 // The 'resources' panel (order 40) is registered by features/resources.

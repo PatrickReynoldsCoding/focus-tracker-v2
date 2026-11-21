@@ -32,6 +32,36 @@ export function startBanners() {
   refresh();
 }
 
+/** The small reminders: how many, and the first one to dismiss. */
+export function BannersSmall() {
+  const list = useSignal(banners);
+  if (!list.length) return null;
+  const first = list[0];
+  return (
+    <section class="tp-banner panel-small" role="region" aria-label="Reminders">
+      <div class="tp-banner-text">
+        <strong>{first.title}</strong>
+        {list.length > 1 && <span class="muted small">+{list.length - 1} more</span>}
+      </div>
+      <button
+        class="ghost small"
+        onClick={() =>
+          optimistic(
+            () => {
+              const before = banners.value;
+              banners.value = before.filter((x) => x.id !== first.id);
+              return () => (banners.value = before);
+            },
+            () => post(`/notifications/${first.id}/dismiss`),
+          )
+        }
+      >
+        Dismiss
+      </button>
+    </section>
+  );
+}
+
 export function Banners({ today }: TodayPanelProps) {
   const list = useSignal(banners);
   if (!list.length) return null;

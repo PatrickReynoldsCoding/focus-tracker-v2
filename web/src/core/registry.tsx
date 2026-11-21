@@ -7,6 +7,7 @@
 // the flag is off the entry is not shown.
 
 import type { ComponentChildren, ComponentType, VNode } from 'preact';
+import { Adaptive } from './adaptive';
 import { useFlags } from './features';
 import { signal } from './signal';
 
@@ -70,6 +71,8 @@ export interface PanelDef<P> {
   count?: (props: P) => string | number | null | undefined;
   /** A short version, for the top of Today above the pills (the focus card). */
   compact?: Render<P>;
+  /** The small ("mobile") version: shown while the panel is narrow (a phone, a small panel), and what an Android widget of the panel shows. */
+  small?: Render<P>;
   /** What it edits that may be on screen only once (a note: 'note:project:<id>'); while it is in a
    *  window, every other panel with the same key shows a placeholder. */
   oneCopy?: (props: P) => string | null;
@@ -257,7 +260,20 @@ export function registerPanel(place: 'settings', p: PanelDef<SettingsSectionProp
 export function registerPanel(place: 'habits', p: PanelDef<HabitsSectionProps>): void;
 export function registerPanel(place: string, p: PanelDef<any>): void;
 export function registerPanel(place: string, p: PanelDef<any>) {
-  add((panels[place] ??= []), p);
+  add((panels[place] ??= []), withSmallVersion(p));
+}
+
+/** A panel with a `small` version draws it while narrow (core/adaptive.tsx). A panel that draws nothing still draws nothing. */
+export function withSmallVersion<P>(p: PanelDef<P>): PanelDef<P> {
+  const small = p.small;
+  if (!small) return p;
+  return {
+    ...p,
+    render: (props) => {
+      const full = p.render(props);
+      return full ? <Adaptive small={() => small(props)}>{full}</Adaptive> : null;
+    },
+  };
 }
 
 const visible = <T extends { feature?: string }>(items: T[], flags: Record<string, boolean>) => items.filter((x) => !x.feature || flags[x.feature]);

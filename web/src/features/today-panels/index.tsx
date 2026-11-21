@@ -5,14 +5,14 @@
 import '../today/Today';
 import '../projects/ProjectPage';
 import { registerPanel, registerPanelSource } from '../../core/registry';
-import { Banners, startBanners } from './banners';
+import { Banners, BannersSmall, startBanners } from './banners';
 import { LinkedLists, ListSettings, ProjectNotesToday } from './ListSettings';
 import { AddToToday, addableOnToday, OnTodaySource, resolveOnToday } from './OnToday';
 import './today-panels.css';
 
 startBanners();
 
-registerPanel('today', { id: 'banners', title: 'Reminders', fixed: 'top', order: 5, wide: true, render: (p) => <Banners {...p} /> });
+registerPanel('today', { id: 'banners', title: 'Reminders', fixed: 'top', order: 5, wide: true, render: (p) => <Banners {...p} />, small: () => <BannersSmall /> });
 // Same id as the chip version in today/Today.tsx: this one replaces it with "+ Add to Today", and
 // each note and list on Today is its own panel (a source, so it can be moved, put in a pill or popped out).
 registerPanel('today', { id: 'on-today', title: 'Add to Today button', fixed: 'bottom', order: 60, render: () => <AddToToday /> });

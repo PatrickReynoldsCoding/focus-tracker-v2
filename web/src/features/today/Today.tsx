@@ -136,6 +136,44 @@ function FocusCard({ data, compact }: { data: TodayData; compact?: boolean }) {
   );
 }
 
+const SMALL_ITEMS = 4;
+
+/** The small To do today: the first few open to-dos to tick, and how many more. */
+function TodoSmall({ data, setData }: { data: TodayData; setData: (fn: (d: TodayData) => TodayData) => void }) {
+  const open = data.todos.filter((t) => !t.done);
+  const tick = (t: Todo) =>
+    optimistic(
+      () => {
+        setData((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, done: data.day } : x)) }));
+        return () => setData((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? t : x)) }));
+      },
+      () => post(`/todos/${t.id}/tick`, { done: true }),
+    );
+  return (
+    <section class="card panel-small">
+      <div class="card-head">
+        <h2>To do today</h2>
+        <span class="muted">{open.length}</span>
+      </div>
+      {open.length === 0 ? (
+        <p class="muted small">All done.</p>
+      ) : (
+        <ul class="checks">
+          {open.slice(0, SMALL_ITEMS).map((t) => (
+            <li key={t.id}>
+              <label>
+                <input type="checkbox" checked={false} onChange={() => tick(t)} />
+                <span>{t.title}</span>
+              </label>
+            </li>
+          ))}
+        </ul>
+      )}
+      {open.length > SMALL_ITEMS && <p class="muted small">+{open.length - SMALL_ITEMS} more</p>}
+    </section>
+  );
+}
+
 function TodoPanel({ data, setData }: { data: TodayData; setData: (fn: (d: TodayData) => TodayData) => void }) {
   const tick = (t: Todo) => {
     const done = t.done ? null : data.day;
@@ -214,7 +252,16 @@ registerPanel('today', {
   render: ({ today }) => <FocusCard data={today} />,
   compact: ({ today }) => <FocusCard data={today} compact />,
 });
-registerPanel('today', { id: 'todos', icon: '☐', title: 'To do today', description: 'To-dos for today, with tick and add.', order: 20, count: ({ today }) => today.todos.filter((t: Todo) => !t.done).length, render: ({ today, setToday }) => <TodoPanel data={today} setData={setToday} /> });
+registerPanel('today', {
+  id: 'todos',
+  icon: '☐',
+  title: 'To do today',
+  description: 'To-dos for today, with tick and add.',
+  order: 20,
+  count: ({ today }) => today.todos.filter((t: Todo) => !t.done).length,
+  render: ({ today, setToday }) => <TodoPanel data={today} setData={setToday} />,
+  small: ({ today, setToday }) => <TodoSmall data={today} setData={setToday} />,
+});
 registerPanel('today', {
   id: 'on-today',
   title: 'On Today',
@@ -231,27 +278,6 @@ registerPanel('today', {
             </a>
           ))}
         </div>
-      </section>
-    ) : null,
-});
-registerPanel('today', {
-  id: 'neglected',
-  icon: '⏳',
-  title: 'Waiting for you',
-  description: 'Active projects not touched for a while. Shown only when there are some.',
-  order: 80,
-  count: ({ today }) => today.neglected.length || null,
-  render: ({ today }) =>
-    today.neglected.length ? (
-      <section class="card">
-        <h2>Waiting for you</h2>
-        <ul class="plain">
-          {today.neglected.map((p: Project) => (
-            <li key={p.id}>
-              <a href={`#/p/${p.id}`}>{p.name}</a> <span class="muted">· {daysAgo(p.last_touched, today.day)}</span>
-            </li>
-          ))}
-        </ul>
       </section>
     ) : null,
 });
