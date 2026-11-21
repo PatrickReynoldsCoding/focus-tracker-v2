@@ -15,9 +15,20 @@ const m = schema.marks;
 const lex = (src: string): Token[] => new Lexer({ gfm: true, breaks: true }).lex(src.replace(/\r\n?/g, '\n'));
 
 export function parseMarkdown(src: string): PMNode {
-  const blocks = parseBlocks(lex(src || ''));
+  const blocks = parseBlocks(withBlankLines(lex(src || '')));
   return n.doc.create(null, blocks.length ? blocks : [n.paragraph.create()]);
 }
+
+/** Between two blocks one blank line is the normal gap (a "space" token of two newlines); each extra
+ *  blank line the writer typed becomes an empty paragraph, so it is still there after a save. */
+const BLANK_LINE_NEWLINES = 2;
+function withBlankLines(tokens: Token[]): Token[] {
+  const first = tokens.findIndex((t) => t.type !== 'space');
+  const last = tokens.length - 1 - [...tokens].reverse().findIndex((t) => t.type !== 'space');
+  return tokens.flatMap((t, i) => (t.type === 'space' && i > first && i < last ? extraBlankLines(t) : [t]));
+}
+const extraBlankLines = (space: Token): Token[] =>
+  Array.from({ length: Math.max(0, space.raw.length - BLANK_LINE_NEWLINES) }, () => ({ type: 'paragraph', raw: '', text: '', tokens: [] }) as Token);
 
 function parseBlocks(tokens: Token[]): PMNode[] {
   const out: PMNode[] = [];
@@ -137,13 +148,19 @@ function inline(tokens: Token[], marks: readonly Mark[] = []): PMNode[] {
 export function serializeMarkdown(doc: PMNode): string {
   const parts: string[] = [];
   let prev: PMNode | null = null;
+  let blankLines = 0;
   doc.forEach((block) => {
-    if (isEmptyPara(block)) return;
+    if (isEmptyPara(block)) {
+      blankLines++;
+      return;
+    }
     block = separateLists(prev, block);
+    if (parts.length) parts.push('\n\n' + '\n'.repeat(blankLines));
     parts.push(verifiedBlock(block));
     prev = block;
+    blankLines = 0;
   });
-  return parts.join('\n\n');
+  return parts.join('');
 }
 
 const isEmptyPara = (b: PMNode) => b.type === n.paragraph && b.childCount === 0;

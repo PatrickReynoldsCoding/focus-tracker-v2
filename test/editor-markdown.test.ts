@@ -45,6 +45,8 @@ const exact: Record<string, string> = {
   numberInText: 'Version 2. Not a list because it is mid line.',
   backslash: 'A path C:\\Users\\me and a literal \\*star.',
   strikeTilde: 'About ~5 minutes.',
+  extraBlankLine: 'Above\n\n\nBelow',
+  fewExtraBlankLines: 'Above\n\n\n\n\nBelow\n\n\n\nEnd',
 };
 
 // Odd or hand-written Markdown: may be tidied, but must show the same and be stable.
