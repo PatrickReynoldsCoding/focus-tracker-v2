@@ -6,7 +6,7 @@ import '../today/Today';
 import '../projects/ProjectPage';
 import { registerPanel, registerPanelSource } from '../../core/registry';
 import { Banners, BannersSmall, startBanners } from './banners';
-import { LinkedLists, ListSettings, ProjectNotesToday } from './ListSettings';
+import { LinkedLists, ListSettings } from './ListSettings';
 import { AddToToday, addableOnToday, OnTodaySource, resolveOnToday } from './OnToday';
 import './today-panels.css';
 
@@ -21,6 +21,5 @@ registerPanelSource('today', { id: 'on-today', order: 60, Provide: OnTodaySource
 // The list page (features/notes/Notes.tsx draws registerPanel('list', …) panels under its heading).
 registerPanel('list', { id: 'list-settings', order: 10, render: ({ list, setList }) => <ListSettings list={list} setList={setList} /> });
 
-registerPanel('project', { id: 'notes-today', title: 'Show notes on Today', attachTo: 'notes', order: 21, render: ({ project }) => <ProjectNotesToday projectId={project.id} /> });
 // Same id as the link chips in projects/ProjectPage.tsx: linked lists show in full instead.
 registerPanel('project', { id: 'lists', icon: '≡', title: 'Linked lists', description: 'Lists linked to this project, in full.', order: 60, render: ({ project }) => <LinkedLists project={project} /> });

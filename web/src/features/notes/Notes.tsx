@@ -93,9 +93,6 @@ export function ListPage({ id }: { id: string }) {
         </h1>
         <div class="meta">
           <span class="tag">{KIND_LABEL[l.kind]}</span>
-          <label class="inline">
-            <input type="checkbox" checked={l.show_today} onChange={() => save({ show_today: !l.show_today })} /> On Today
-          </label>
           <ColorPicker value={l.color} onPick={(color) => save({ color })} />
         </div>
       </div>

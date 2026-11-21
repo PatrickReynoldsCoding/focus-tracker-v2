@@ -34,7 +34,6 @@
 
 .tp-settings summary { cursor: pointer; font-weight: 600; min-height: 32px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .tp-settings[open] summary { margin-bottom: 10px; }
-.tp-note-toggle { margin-top: -6px; font-size: 0.9rem; }
 
 @media (min-width: 700px) {
   .grid.today .tp-note { grid-column: 1 / -1; }

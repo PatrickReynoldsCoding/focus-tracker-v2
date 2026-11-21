@@ -17,4 +17,3 @@
 .note-grid[data-draggable='true'] .note-card { cursor: grab; }
 .note-card > .small { display: block; }
 .section-title { margin-top: 6px; color: var(--muted); font-size: 0.9rem; }
-.project-switch { margin-left: 4px; }

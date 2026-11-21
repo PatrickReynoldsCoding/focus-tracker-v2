@@ -1,13 +1,13 @@
 // On a list's page: how it shows on Today (full list, or one at a time) and which project it
-// is linked to. On a project's page: the lists linked to it, and a switch to put its notes on Today.
+// is linked to. On a project's page: the lists linked to it.
 
 import { useState } from 'preact/hooks';
-import { change, patch, put, say } from '../../core/api';
+import { change, patch, say } from '../../core/api';
 import { useFlag } from '../../core/features';
-import { Loading, useData } from '../../core/ui';
+import { useData } from '../../core/ui';
 import { ListPanel, type FullList, type SetList } from './ListBody';
 
-type ListPage = { id: string; name: string; kind: 'list' | 'todo' | 'note'; project_id: string | null; display: 'full' | 'one'; seconds: number; show_today: boolean };
+type ListPage = { id: string; name: string; kind: 'list' | 'todo' | 'note'; project_id: string | null; display: 'full' | 'one'; seconds: number };
 
 export function ListSettings({ list, setList }: { list: ListPage; setList: (fn: (l: any) => any) => void }) {
   const oneFlag = useFlag('list-one-at-a-time');
@@ -109,25 +109,5 @@ export function LinkedLists({ project }: { project: { lists: { id: string }[] } 
         <LinkedList key={l.id} id={l.id} />
       ))}
     </>
-  );
-}
-
-/** "Show these notes on Today" under a project's notes. */
-export function ProjectNotesToday({ projectId }: { projectId: string }) {
-  const { data, setData } = useData<{ id: string; show_today: boolean }[]>(`/notes?project_id=${projectId}`);
-  if (!data) return <Loading />;
-  const on = !!data[0]?.show_today;
-  return (
-    <label class="inline tp-note-toggle">
-      <input
-        type="checkbox"
-        checked={on}
-        onChange={() => {
-          setData(() => [{ id: data[0]?.id ?? '', show_today: !on }]);
-          change(() => put('/today-panels/show', { project_id: projectId, on: !on }));
-        }}
-      />{' '}
-      Show these notes on Today
-    </label>
   );
 }

@@ -79,7 +79,6 @@ export function BoardGrid({
 
 function BoardOptions({ board, projects, onChange, onClose }: { board: Board; projects?: Project[]; onChange: (id: string, f: Partial<Board> | null) => void; onClose: () => void }) {
   const [name, setName] = useState(board.name);
-  const [today, setToday] = useState(board.show_today);
   const save = (fields: Partial<Board>, done?: string) =>
     optimistic(
       () => {
@@ -124,18 +123,6 @@ function BoardOptions({ board, projects, onChange, onClose }: { board: Board; pr
             </select>
           </label>
         )}
-        <label class="inline">
-          <input
-            type="checkbox"
-            checked={today}
-            onChange={(e) => {
-              const on = (e.target as HTMLInputElement).checked;
-              setToday(on);
-              save({ show_today: on }, on ? `${name.trim() || board.name} is on Today` : undefined);
-            }}
-          />
-          Show on Today
-        </label>
         <div class="row spread">
           <button
             type="button"

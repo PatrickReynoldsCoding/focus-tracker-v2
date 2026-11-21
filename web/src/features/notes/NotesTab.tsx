@@ -1,17 +1,13 @@
 // The Notes tab as cards, like Google Keep: one small card per note, list and to-do list
-// (drag to reorder, long press on a touch screen), optional cards for project notes,
-// and to-dos ticked straight on a to-do list's card.
+// (drag to reorder, long press on a touch screen), and to-dos ticked straight on a to-do list's card.
 
 import Sortable from 'sortablejs';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { optimistic, post, put } from '../../core/api';
-import { go, Loading, Markdown, plainPreview, useData } from '../../core/ui';
+import { optimistic, post } from '../../core/api';
+import { go, Loading, Markdown, useData } from '../../core/ui';
 import { NewDialog } from './NewDialog';
 import { KIND_ICON, KIND_LABEL, type Overview } from './model';
 import './notes.css';
-
-type ProjectNote = { project_id: string; name: string; preview: string; show_today: boolean };
-type ProjectNotes = { on: boolean; notes: ProjectNote[] };
 
 const ROW = 8; // px, the grid's row unit; a card spans as many rows as it is tall
 
@@ -39,12 +35,10 @@ function useMasonry(ref: { current: HTMLElement | null }, deps: unknown[]) {
 
 export function Notes() {
   const { data, error, setData } = useData<Overview[]>('/lists/overview');
-  const pn = useData<ProjectNotes>('/lists/project-notes');
   const [q, setQ] = useState('');
   const [kind, setKind] = useState<string>('');
   const [creating, setCreating] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
-  const projRef = useRef<HTMLDivElement>(null);
   const dataRef = useRef(data);
   dataRef.current = data;
   const justDragged = useRef(0);
@@ -54,10 +48,8 @@ export function Notes() {
 
   const matches = (text: string) => !q || text.toLowerCase().includes(q.toLowerCase());
   const shown = (data ?? []).filter((l) => (!kind || l.kind === kind) && matches(`${l.name} ${l.preview ?? ''} ${(l.items ?? []).map((i) => i.title).join(' ')}`));
-  const projects = !pn.data?.on || (kind && kind !== 'note') ? [] : pn.data.notes.filter((n) => matches(`${n.name} ${n.preview}`));
 
   useMasonry(gridRef, [shown.length, q, kind, data]);
-  useMasonry(projRef, [projects.length, q, kind, pn.data]);
 
   // Drag to reorder (long press on a touch screen). Saved with POST /api/lists/:id/move.
   const ready = !!data;
@@ -124,16 +116,6 @@ export function Notes() {
     );
   };
 
-  const setProjectNotes = (on: boolean) =>
-    optimistic(
-      () => {
-        const prev = pn.data;
-        pn.setData((d) => ({ ...d, on }));
-        return () => pn.setData(() => prev!);
-      },
-      () => put<ProjectNotes>('/lists/project-notes', { on }),
-    );
-
   return (
     <div class="stack notes-tab">
       <div class="page-head row">
@@ -151,10 +133,6 @@ export function Notes() {
             </button>
           ))}
         </div>
-        <label class="inline project-switch">
-          <input type="checkbox" checked={!!pn.data?.on} disabled={!pn.data} onChange={(e) => setProjectNotes((e.target as HTMLInputElement).checked)} />
-          Project notes
-        </label>
       </div>
       <div class="note-grid" ref={gridRef} data-draggable={canDrag ? 'true' : 'false'}>
         {shown.map((l) => {
@@ -194,27 +172,7 @@ export function Notes() {
           );
         })}
       </div>
-      {!shown.length && !projects.length && <p class="empty">{q || kind ? 'Nothing matches.' : 'Nothing here yet.'}</p>}
-      {projects.length > 0 && (
-        <>
-          <h2 class="section-title">Project notes</h2>
-          <div class="note-grid" ref={projRef}>
-            {projects.map((n) => (
-              <div key={n.project_id} class="note-card project-note" onClick={open(`/p/${n.project_id}`)}>
-                <h3>
-                  <span aria-hidden="true">▤</span>{' '}
-                  <a href={`#/p/${n.project_id}`} class="card-title">
-                    {n.name}
-                  </a>
-                </h3>
-                <p class="preview muted">{plainPreview(n.preview, 6, 260)}</p>
-                <span class="tag">Project notes</span>
-                {n.show_today && <span class="tag">Today</span>}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+      {!shown.length && <p class="empty">{q || kind ? 'Nothing matches.' : 'Nothing here yet.'}</p>}
       {creating && <NewDialog onClose={() => setCreating(false)} />}
     </div>
   );

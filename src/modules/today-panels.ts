@@ -114,7 +114,7 @@ export const todayPanelsModule: Module = {
     {
       name: 'show_on_today',
       description:
-        'Put a note, list or to-do list on the owner’s Today page as a full panel (or take it off with on=false). Give list_id for a note/list/to-do list, or project_id for a project’s notes. Panels keep the order they were added.',
+        'Put a note, list or to-do list on the owner’s Today page as a full panel (or take it off with on=false). Give list_id for a note/list/to-do list, or project_id for a project’s notes. Panels keep the order they were added. The app has no per-file switch for this: the owner uses + Add panel → Add file, and Remove on the panel (add_panel and remove_panel do the same and also handle pills and whiteboards).',
       input: z.object({ list_id: z.string().optional(), project_id: z.string().optional(), on: z.boolean().default(true) }),
       run: (ctx, a) => setOnToday(ctx, a, a.on),
     },
