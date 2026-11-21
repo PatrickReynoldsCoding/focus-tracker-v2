@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { change, del, logout, mode, patch, post, put, say } from '../../core/api';
 import { featureList, setFeature } from '../../core/features';
 import { Panels, registerPanel, registerTab } from '../../core/registry';
@@ -190,16 +190,82 @@ function Features() {
   );
 }
 
+type SectionLink = { id: string; title: string };
+
+const humanise = (id: string) => id.replace(/[-_]/g, ' ').replace(/^./, (c) => c.toUpperCase());
+
+/** The sections on the page (each panel's heading, or its name until it has loaded), kept up to date as panels load. */
+function useSections(root: { current: HTMLElement | null }): SectionLink[] {
+  const [sections, setSections] = useState<SectionLink[]>([]);
+  useEffect(() => {
+    const el = root.current;
+    if (!el) return;
+    let frame = 0;
+    const read = () => {
+      const found = [...el.querySelectorAll<HTMLElement>('.settings-section')].map((s) => ({ id: s.id, title: s.querySelector('h2')?.textContent?.trim() || humanise(s.dataset.panel ?? '') }));
+      setSections((old) => (JSON.stringify(old) === JSON.stringify(found) ? old : found));
+    };
+    const soon = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(read);
+    };
+    const watch = new MutationObserver(soon);
+    watch.observe(el, { childList: true, subtree: true, characterData: true });
+    read();
+    return () => (watch.disconnect(), cancelAnimationFrame(frame));
+  }, []);
+  return sections;
+}
+
 export function Settings() {
   const m = useSignal(mode);
+  const body = useRef<HTMLDivElement>(null);
+  const [query, setQuery] = useState('');
+  const sections = useSections(body);
+  const [hiddenIds, setHiddenIds] = useState<string[]>([]);
+  // Search hides the sections whose text (headings, labels, descriptions) does not contain the words typed.
+  useEffect(() => {
+    const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+    const hidden: string[] = [];
+    body.current?.querySelectorAll<HTMLElement>('.settings-section').forEach((s) => {
+      const text = (s.textContent ?? '').toLowerCase();
+      s.hidden = !words.every((w) => text.includes(w));
+      if (s.hidden) hidden.push(s.id);
+    });
+    setHiddenIds((old) => (old.join() === hidden.join() ? old : hidden));
+  }, [query, sections]);
+  const shown = (id: string) => !hiddenIds.includes(id);
   return (
     <div class="stack">
       <div class="page-head row">
         <h1>Settings</h1>
         <span class="tag">{m}</span>
       </div>
-      <div class="grid two">
-        <Panels place="settings" props={{}} />
+      <div class="settings-layout">
+        <nav class="settings-nav" aria-label="Settings sections">
+          <input type="search" placeholder="Search settings" aria-label="Search settings" value={query} onInput={(e) => setQuery((e.target as HTMLInputElement).value)} />
+          <ul>
+            {sections
+              .filter((s) => shown(s.id))
+              .map((s) => (
+                <li key={s.id}>
+                  <button onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{s.title}</button>
+                </li>
+              ))}
+          </ul>
+          {query && sections.every((s) => !shown(s.id)) && <p class="muted small">Nothing matches “{query}”.</p>}
+        </nav>
+        <div class="settings-sections" ref={body}>
+          <Panels
+            place="settings"
+            props={{}}
+            wrap={(p, node) => (
+              <div class="settings-section" id={`set-${p.id}`} data-panel={p.id} key={p.id}>
+                {node}
+              </div>
+            )}
+          />
+        </div>
       </div>
       <div class="row">
         <button class="ghost" onClick={logout}>

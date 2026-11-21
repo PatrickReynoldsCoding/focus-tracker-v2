@@ -214,6 +214,17 @@ function App() {
       return false;
     }
   });
+  const [sideHidden, setSideHidden] = useState(() => {
+    try {
+      return localStorage.getItem('ft.side') === 'hidden';
+    } catch {
+      return false;
+    }
+  });
+  const toggleSide = () => {
+    setSideHidden(!sideHidden);
+    localStorageSet('ft.side', sideHidden ? 'shown' : 'hidden');
+  };
   useEffect(() => {
     if (ok) loadFeatures();
   }, [ok]);
@@ -238,7 +249,7 @@ function App() {
   if (ok === null) return <p class="empty">Loading…</p>;
   if (!ok) return <Login />;
   return (
-    <div class={`shell ${wide ? 'wide' : ''}`}>
+    <div class={`shell ${wide ? 'wide' : ''}${sideHidden ? ' no-side' : ''}`}>
       <nav class="side" aria-label="Main">
         <div class="brand">Focus</div>
         {tabs.map((t) => (
@@ -264,6 +275,9 @@ function App() {
       </nav>
       <div class="main">
         <header class="top">
+          <button class="ghost side-toggle" aria-label={sideHidden ? 'Show the sidebar' : 'Hide the sidebar'} aria-pressed={!sideHidden} title={sideHidden ? 'Show the sidebar' : 'Hide the sidebar'} onClick={toggleSide}>
+            {sideHidden ? '☰' : '⇤'}
+          </button>
           <HeaderItems route={current} />
           <ModeSwitch />
           <SavingDot />
