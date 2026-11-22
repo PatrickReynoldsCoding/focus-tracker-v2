@@ -61,17 +61,20 @@ function checkSeconds(v: unknown) {
 /**
  * A list with its contents: its board (plain list), its groups with their to-dos (to-do: the old
  * shape; a done to-do shows in the group it was ticked in, and the Done column is not a group;
- * get_board gives the board itself) or the Markdown body (note).
+ * get_board gives the board itself) or the Markdown body (note). `board`: a to-do also gets its
+ * board (`columns`, Done last), which the web app's to-do screen draws (D41).
  */
-export async function fullList(ctx: Ctx, id: string) {
+export async function fullList(ctx: Ctx, id: string, opts: { board?: boolean } = {}) {
   const l = await get(ctx, listsEntity, id);
   if (l.kind === 'note') return { ...l, body: (await getNote(ctx, { list_id: id }))?.body ?? '' };
   if (l.kind === 'list') return { ...l, columns: await board(ctx, { list_id: id }) };
-  const [groups, todos] = await Promise.all([
+  const [groups, todos, columns] = await Promise.all([
     list(ctx, columnsEntity, { where: { list_id: id } }),
     readTodos(ctx, { where: { list_id: id }, limit: 2000 }),
+    opts.board ? board(ctx, { list_id: id }) : null,
   ]);
-  return { ...l, groups: groups.filter((g) => !g.is_done).map((g) => ({ ...g, todos: todos.filter((t) => t.group_id === g.id) })) };
+  const out = { ...l, groups: groups.filter((g) => !g.is_done).map((g) => ({ ...g, todos: todos.filter((t) => t.group_id === g.id) })) };
+  return columns ? { ...out, columns } : out;
 }
 
 /**
@@ -208,11 +211,12 @@ export const listsModule: Module = {
       await ctx.setSetting(PROJECT_NOTES_KEY, b.on ? '1' : null);
       return c.json(await projectNoteCards(ctx));
     });
-    api.get('/lists/:id/full', async (c) => c.json(await fullList(c.get('ctx'), c.req.param('id'))));
+    api.get('/lists/:id/full', async (c) => c.json(await fullList(c.get('ctx'), c.req.param('id'), { board: true })));
     api.post('/lists/:id/convert', async (c) => {
       const ctx = c.get('ctx');
       ctx.label = 'make list a to-do';
-      return c.json(await convertListToTodo(ctx, c.req.param('id')));
+      await convertListToTodo(ctx, c.req.param('id'));
+      return c.json(await fullList(ctx, c.req.param('id'), { board: true }));
     });
   },
   tools: [

@@ -51,7 +51,7 @@ export async function panels(ctx: Ctx) {
   ]);
   const items: Item[] = [];
   for (const l of lists) {
-    const full = (await fullList(ctx, String(l.id))) as Record<string, unknown>;
+    const full = (await fullList(ctx, String(l.id), { board: true })) as Record<string, unknown>;
     items.push({ ...full, type: l.kind === 'note' ? 'note' : 'list', key: `list:${l.id}`, today_at: (l.today_at as string | null) ?? (l.created as string) });
   }
   for (const n of projectNotes.results) {

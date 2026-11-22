@@ -69,8 +69,8 @@ describe('GET /api/today/list', () => {
     const p = await call('POST', '/projects', { name: 'Website' }, m);
     const card = await call('POST', '/tasks', { title: 'Fix footer', project_id: p.id, day }, m);
     await call('POST', '/tasks', { title: 'No day', project_id: p.id }, m);
-    const plain = await call('POST', '/lists', { name: 'Ideas', kind: 'list' }, m);
-    const item = await call('POST', '/tasks', { title: 'Book table', list_id: plain.id, day: addDays(day, -1) }, m);
+    const ideas = await call('POST', '/projects', { name: 'Ideas' }, m);
+    const item = await call('POST', '/tasks', { title: 'Book table', project_id: ideas.id, day: addDays(day, -1) }, m);
 
     const l = await call('GET', '/today/list', undefined, m);
     expect(l.day).toBe(day);
@@ -121,7 +121,7 @@ describe('GET /api/today/list', () => {
     expect(l.items.find((x: any) => x.id === plainCard.id)?.state ?? 'done').toBe('done');
 
     const list = await call('POST', '/lists', { name: 'Errands', kind: 'list' }, m);
-    const item = await call('POST', '/tasks', { title: 'Post office', list_id: list.id, day }, m);
+    const item = await call('POST', '/tasks', { title: 'Post office', list_id: list.id }, m);
     c = await call('POST', `/tasks/${item.id}/tick`, {}, m);
     expect([c.column_id, c.done]).toEqual([item.column_id, day]);
     // Undo takes a tick back (the move and the day together).

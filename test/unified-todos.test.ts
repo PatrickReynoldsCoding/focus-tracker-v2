@@ -208,15 +208,17 @@ describe('a list becomes a to-do', () => {
     const folder = await call('POST', '/folders', { name: 'Home' }, m);
     const l = await call('POST', '/lists', { name: 'Books', kind: 'list', folder_id: folder.id, show_today: true }, m);
     const [items] = await call('GET', `/boards/list/${l.id}`, undefined, m);
-    const a = await call('POST', '/tasks', { title: 'Dune', list_id: l.id, day }, m);
+    const a = await call('POST', '/tasks', { title: 'Dune', list_id: l.id }, m);
     const b = await call('POST', '/tasks', { title: 'Emma', list_id: l.id }, m);
     await call('POST', `/tasks/${b.id}/tick`, { done: true }, m); // a plain list's item only records the day
     expect((await call('GET', `/tasks/${b.id}`, undefined, m)).column_id).toBe(items.id);
     const p = await call('POST', '/projects', { name: 'Reading' }, m);
     const link = await call('POST', '/links', { from_kind: 'tasks', from_id: a.id, type: 'relates', to_kind: 'projects', to_id: p.id }, m);
     expect(link.from_kind).toBe('tasks');
-    // The Today list showed the item as a card.
-    expect((await call('GET', '/today/list', undefined, m)).items.map((x: any) => [x.kind, x.title])).toEqual([['card', 'Dune']]);
+    // A plain list's items have no day (D41).
+    await call('PATCH', `/tasks/${a.id}`, { day }, { ...m, expect: 400 });
+    expect(await toolError('set_card_day', { id: a.id, day, mode: m.mode })).toContain('to-do');
+    expect((await call('GET', '/today/list', undefined, m)).items).toEqual([]);
     // A list cannot change kind by hand.
     await call('PATCH', `/lists/${l.id}`, { kind: 'todo' }, { ...m, expect: 400 });
 
@@ -225,6 +227,11 @@ describe('a list becomes a to-do', () => {
     expect(t.groups.map((g: any) => [g.id, g.name, g.todos.map((x: any) => [x.id, x.done])])).toEqual([[items.id, 'Items', [[a.id, null], [b.id, day]]]]);
     const board = await call('GET', `/boards/list/${l.id}`, undefined, m);
     expect(board.map((c: any) => [c.name, c.is_done, c.cards.map((x: any) => x.id)])).toEqual([['Items', false, [a.id]], ['Done', true, [b.id]]]);
+    // The web app's screen gets the board too (Done last); Claude's get_list keeps the old shape.
+    expect(t.columns.map((c: any) => [c.name, c.is_done, c.cards.map((x: any) => x.id)])).toEqual([['Items', false, [a.id]], ['Done', true, [b.id]]]);
+    expect((await tool('get_list', { id: l.id, mode: m.mode })).columns).toBeUndefined();
+    // Now it is a to-do, its items can have a day.
+    await call('PATCH', `/tasks/${a.id}`, { day }, m);
     // Its items are to-dos now: in the Today list, in the Files tab as a to-do, links as to-dos.
     expect((await call('GET', '/today/list', undefined, m)).items.map((x: any) => [x.kind, x.title, x.state])).toEqual([['todo', 'Dune', 'open'], ['todo', 'Emma', 'done']]);
     expect((await call('GET', `/links?from_id=${a.id}`, undefined, m)).map((k: any) => [k.id, k.from_kind])).toEqual([[link.id, 'todos']]);

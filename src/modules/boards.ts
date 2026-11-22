@@ -22,6 +22,8 @@ export const LIST_FIRST_COLUMN = 'Items';
 export const DONE_NAME = 'Done';
 /** Flag: every project has one fixed Done column, always last; a card is done exactly when it is in it (src/modules/done-column.ts). */
 export const DONE_FLAG = 'done-column';
+/** Flag (web only): one screen for to-dos, lists and project boards with Board and List views (D41). */
+export const UNIFIED_FLAG = 'unified-board';
 
 export type BoardKind = 'project' | 'todo' | 'list';
 export type Owner = { project_id: string; list_id?: undefined } | { list_id: string; project_id?: undefined };
@@ -68,7 +70,7 @@ export const tasksEntity: Entity = {
     list_id: { type: 'text', ref: 'lists', cascade: true },
     note: { type: 'markdown' },
     color: { type: 'text' },
-    day: { type: 'day', desc: 'The day it is for: it shows in the Today list from that day until done (empty: no day)' },
+    day: { type: 'day', desc: 'The day it is for (a to-do’s due date): it shows in the Today list from that day until done (empty: no day). Not on a plain list’s items' },
     done: {
       type: 'day',
       desc: 'The day it was done. On a project or a to-do a card is done exactly while it is in the Done column: setting done moves it there, clearing it moves it out',
@@ -82,10 +84,12 @@ export const tasksEntity: Entity = {
       row.column_id = (await firstColumn(ctx, row.project_id as string | null, row.list_id as string | null)).id;
     }
     Object.assign(row, await ownerOfColumn(ctx, String(row.column_id)));
+    if (row.day) await refusePlainDay(ctx, row.list_id);
   },
   async beforeUpdate(ctx, before, patch) {
     if ('project_id' in patch || 'list_id' in patch) throw bad('Move a card by changing its column_id');
     if (patch.column_id) Object.assign(patch, await ownerOfColumn(ctx, String(patch.column_id)));
+    if (patch.day) await refusePlainDay(ctx, before.list_id);
     // Flag done-column off: a project card with a day is done while it is in its board's last column (D30).
     // Otherwise src/modules/done-column.ts keeps done in step with the Done column for every card.
     if (patch.column_id && !(await ctx.feature(DONE_FLAG)) && patch.column_id !== before.column_id && before.project_id && (patch.day ?? before.day) && !('done' in patch)) {
@@ -94,6 +98,12 @@ export const tasksEntity: Entity = {
     }
   },
 };
+
+/** A plain list has no days (D41): only a to-do's items (and project cards) are for a day. */
+async function refusePlainDay(ctx: Ctx, listId: unknown) {
+  if (listId && (await boardKind(ctx, { list_id: String(listId) })) === 'list')
+    throw bad('A plain list’s items have no day. Make the list a to-do first (convert_list_to_todo, or Convert to to-do on its page)');
+}
 
 // ---------- what kind of board ----------
 
@@ -279,6 +289,15 @@ export const boardsModule: Module = {
   id: 'boards',
   description: 'Boards of columns and cards: project boards, to-dos and plain lists.',
   entities: [columnsEntity, tasksEntity],
+  features: [
+    {
+      id: UNIFIED_FLAG,
+      label: 'One to-do screen',
+      description:
+        'To-dos, lists and project boards share one screen with a Board view (columns side by side) and a List view (groups with tick circles, done items folded into Done), and a plain list can be made a to-do. Off: no view switch; a project and a plain list show as a board and a to-do as a list, as before.',
+      default: true,
+    },
+  ],
   routes(api) {
     api.get('/boards/:kind/:id', async (c) => {
       const kind = c.req.param('kind');
@@ -342,7 +361,7 @@ export const boardsModule: Module = {
     },
     {
       name: 'set_card_day',
-      description: 'Put a card (a project board card, a to-do’s card or a plain list item) in the Today list from a day (YYYY-MM-DD), or take it out (day null). It stays until ticked. Clears an earlier tick of a plain list’s item.',
+      description: 'Put a card (a project board card or a to-do’s item) in the Today list from a day (YYYY-MM-DD, its due date), or take it out (day null). It stays until ticked. A plain list’s items have no day: convert the list to a to-do first.',
       input: z.object({ id: z.string(), day: z.string().nullable() }),
       run: (ctx, a) => setCardDay(ctx, a.id, a.day),
     },
