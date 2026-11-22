@@ -6,6 +6,7 @@ import './today/Today';
 import './habits/TodayHabits';
 import './habits/Habits';
 import './board';
+import './subtasks';
 import './projects/Projects';
 import './projects/ProjectPage';
 import './resources';

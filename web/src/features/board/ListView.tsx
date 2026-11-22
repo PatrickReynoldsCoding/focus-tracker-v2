@@ -34,6 +34,7 @@ function Row({ b, c, done, onOpen }: { b: BoardCtx; c: Card; done: boolean; onOp
         {preview && <span class="ub-note">{preview}</span>}
       </span>
       <Panels<CardTileProps> place="card-tile" props={{ card: c }} />
+      <Panels place="card-extra" props={{ card: c, b, view: 'list' }} />
     </li>
   );
 }

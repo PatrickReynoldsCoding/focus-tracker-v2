@@ -37,7 +37,7 @@ export function ColumnHead({ b, cols, col, count, what, earlier = '‹', later =
   );
 }
 
-function CardTile({ c, onOpen }: { c: Card; onOpen: (c: Card) => void }) {
+function CardTile({ b, c, onOpen }: { b: BoardCtx; c: Card; onOpen: (c: Card) => void }) {
   const preview = c.note ? plainPreview(c.note) : '';
   return (
     <li data-id={c.id} class={`kcard c-${c.color || 'none'}`} tabIndex={0} onClick={() => onOpen(c)} onKeyDown={(e) => e.key === 'Enter' && onOpen(c)}>
@@ -53,6 +53,7 @@ function CardTile({ c, onOpen }: { c: Card; onOpen: (c: Card) => void }) {
         </span>
       )}
       <Panels<CardTileProps> place="card-tile" props={{ card: c }} />
+      <Panels place="card-extra" props={{ card: c, b, view: 'board' }} />
     </li>
   );
 }
@@ -75,7 +76,7 @@ function ColumnView({ b, cols, col, group, onOpen, folded, onUnfold }: { b: Boar
       <ColumnHead b={b} cols={cols} col={col} count={col.cards.length} what="cards" />
       <ul class="cards ub-drag" ref={list} data-col={col.id}>
         {col.cards.map((c) => (
-          <CardTile key={c.id} c={c} onOpen={onOpen} />
+          <CardTile key={c.id} b={b} c={c} onOpen={onOpen} />
         ))}
       </ul>
       <AddInput placeholder={ADD[b.kind]} onAdd={(title) => addCard(b, col.id, title)} />

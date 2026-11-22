@@ -1,0 +1,27 @@
+/* Subtasks (D57): the chip and checklist in List view, the progress bar and checklist in Board view, the card dialog's section. */
+.sub-chip { flex: none; display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 1px 10px; font-size: 0.82rem; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 99px; white-space: nowrap; cursor: pointer; }
+.sub-chip:hover { border-color: var(--accent); }
+.sub-block { flex: 1 0 100%; min-width: 0; cursor: default; }
+.sub-in-list { flex-basis: calc(100% - 30px); margin: 0 0 6px 30px; padding-left: 8px; border-left: 2px solid var(--line); }
+.sub-in-list .add-input input { font-size: 0.88rem; min-height: 34px; }
+.sub-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.sub-item { display: flex; align-items: center; gap: 8px; min-height: 32px; font-size: 0.92rem; }
+.sub-item .sub-title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.sub-item.done .sub-title { text-decoration: line-through; color: var(--muted); }
+.sub-check { flex: none; width: 22px; height: 22px; min-height: 22px; padding: 0; border-radius: 6px; border: 2px solid var(--muted); background: transparent; color: var(--accent-fg); display: grid; place-items: center; font-size: 13px; font-weight: 800; line-height: 1; cursor: pointer; }
+.sub-check.small { width: 18px; height: 18px; min-height: 18px; border-radius: 5px; font-size: 11px; }
+.sub-check.on { background: var(--ok); border-color: var(--ok); }
+.sub-in-board { margin-top: 6px; }
+.sub-bar { height: 5px; background: var(--line); border-radius: 9px; overflow: hidden; }
+.sub-bar i { display: block; height: 100%; background: var(--ok); }
+.sub-foot { display: flex; justify-content: space-between; width: 100%; min-height: 28px; padding: 2px 0; background: transparent; border: 0; font: inherit; font-size: 0.82rem; color: var(--fg); cursor: pointer; }
+.sub-section { display: flex; flex-direction: column; gap: 6px; }
+.sub-head { margin: 0; font-size: 0.95rem; }
+.sub-section .sub-item { min-height: 40px; }
+.sub-section .sub-item .inline-edit { cursor: text; }
+html[data-theme='eink'] .sub-check { border-color: #000; }
+html[data-theme='eink'] .sub-check.on { background: #000; border-color: #000; color: #fff; }
+html[data-theme='eink'] .sub-bar { border: 2px solid #000; background: #fff; height: 9px; }
+html[data-theme='eink'] .sub-bar i { background: #000; }
+html[data-theme='eink'] .sub-chip { border: 2px solid #000; }
+html[data-theme='eink'] .sub-in-list { border-left-color: #000; }

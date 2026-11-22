@@ -59,3 +59,8 @@ ul.pi-items li.done .pi-title { text-decoration: line-through; color: var(--mute
 ul.pi-items li .tp-note-hint { text-decoration: none; }
 ul.pi-items.ub-drag:empty { min-height: 8px; }
 html[data-theme='eink'] ul.pi-items li { min-height: 44px; }
+
+/* Something under a card's row (D57: subtasks): List view's rows and Board view's cards wrap, the extra block takes a full line. */
+.ub-item { flex-wrap: wrap; }
+.kcard { flex-wrap: wrap; }
+.kcard-body { flex: 1 1 0; }

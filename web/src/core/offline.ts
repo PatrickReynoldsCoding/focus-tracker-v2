@@ -206,13 +206,13 @@ export function learn(data: unknown, depth = 0) {
 // ---------- which changes may wait ----------
 
 /** Kinds whose rows can be changed offline with the generic routes. */
-const KINDS = 'tasks|todos|columns|lists|criteria|stickies|habits|resources|projects|whiteboards|categories|backlog|log|links|folders';
+const KINDS = 'tasks|subtasks|todos|columns|lists|criteria|stickies|habits|resources|projects|whiteboards|categories|backlog|log|links|folders';
 const QUEUE_RULES: [method: string, path: RegExp][] = [
   // field edits (sent with base_updated_at)
   ['PATCH', new RegExp(`^/(${KINDS})/[\\w-]+$`)],
   // moves, ticks and habit check-ins
   ['POST', new RegExp(`^/(${KINDS})/[\\w-]+/move$`)],
-  ['POST', /^\/(todos|tasks)\/[\w-]+\/tick$/],
+  ['POST', /^\/(todos|tasks|subtasks)\/[\w-]+\/tick$/],
   ['POST', /^\/habits\/[\w-]+\/(check|not-today)$/],
   // moving files between folders (Files tab)
   ['POST', /^\/files\/move$/],
@@ -223,7 +223,7 @@ const QUEUE_RULES: [method: string, path: RegExp][] = [
   // page layouts (the whole layout each time, so the last one wins)
   ['PUT', /^\/layout\/[\w-]+\/(grid|pills|view|grids\/[\w-]+)$/],
   // deletes of small rows (not projects, lists, columns, boards or habits: big cascades)
-  ['DELETE', /^\/(tasks|todos|criteria|stickies|resources|links|log|backlog)\/[\w-]+$/],
+  ['DELETE', /^\/(tasks|subtasks|todos|criteria|stickies|resources|links|log|backlog)\/[\w-]+$/],
 ];
 const CREATE = new RegExp(`^/(${KINDS})$`);
 

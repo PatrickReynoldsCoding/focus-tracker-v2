@@ -20,18 +20,21 @@ import { CardDialog, type Card, type Column } from '../board';
 
 type Todo = { id: string; title: string; day: string | null; done: string | null; list_id?: string | null; project_id?: string | null };
 type CardIn = { id: string; title: string; day: string | null; done: string | null; project_id: string | null; list_id: string | null; from: string | null; in_last: boolean };
-export type TodayData = { day: string; todos: Todo[]; habits: Progress[]; cards?: CardIn[]; todo_lists?: Record<string, string>; todo_list_projects?: Record<string, string> };
+export type TodayData = { subtasks?: Record<string, [number, number]>; day: string; todos: Todo[]; habits: Progress[]; cards?: CardIn[]; todo_lists?: Record<string, string>; todo_list_projects?: Record<string, string> };
 
 /** The list for this Today data (also used for the pill's count). */
 export function listOf(d: TodayData): List {
   const names = d.todo_lists ?? {};
   const projects = d.todo_list_projects ?? {};
-  return buildTodayList(d.day, {
+  const list = buildTodayList(d.day, {
     habits: d.habits,
     // A to-do is from a project when it says so, or when its list belongs to one.
     todos: d.todos.map((t) => ({ ...t, list_name: (t.list_id && names[t.list_id]) || null, project_id: t.project_id || (t.list_id && projects[t.list_id]) || null })),
     cards: d.cards ?? [],
   });
+  // Subtasks follow their to-do or card here as a count (D57).
+  const subs = d.subtasks ?? {};
+  return { ...list, items: list.items.map((x) => (subs[x.id] && x.kind !== 'habit' ? { ...x, subtasks: subs[x.id] } : x)) };
 }
 
 /** "3 left", ✓ when all is done, nothing when there is nothing today. */
@@ -201,6 +204,7 @@ function Section({ label, items, tick, notToday, open, notesOf }: { label: strin
                 </span>
               )}
               {x.progress}
+              {x.subtasks && <span class="tag" title="Subtasks done">☑ {x.subtasks[0]}/{x.subtasks[1]}</span>}
             </span>
             {x.can_skip && (
               <button class="link small tl-act" aria-label={`Not today: ${x.title}`} onClick={() => notToday(x, true)}>

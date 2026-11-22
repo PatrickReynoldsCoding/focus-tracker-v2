@@ -3,6 +3,9 @@
 // list (columns only) are drawn by the same code. These helpers change a board on screen; the
 // server is told separately (features/board/actions.ts).
 
+/** A subtask (D57): a line of a card's checklist; `done` is the day it was ticked. */
+export type Subtask = { id: string; title: string; done: string | null; ord: number };
+
 export type Card = {
   id: string;
   title: string;
@@ -18,6 +21,8 @@ export type Card = {
   from_column_id?: string | null;
   project_id?: string | null;
   list_id?: string | null;
+  /** Its checklist (flag `subtasks`, D57); never ticks the card. */
+  subtasks?: Subtask[];
 };
 /** A column is a status (project), a group (to-do) or a column (plain list); `is_done` marks the fixed Done column. */
 export type Column = { id: string; name: string; cards: Card[]; is_done?: boolean };
