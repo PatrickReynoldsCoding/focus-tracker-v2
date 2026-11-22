@@ -318,3 +318,9 @@ My suggestion: 1.
 1. Should the Add panel's "Sticky notes" be a boxed view that holds the notes inside the panel (scrolling inside it) instead of a small card with buttons? Options: (a) card with buttons, notes float over the page (now); (b) a boxed panel, and the page layer hides while it is on Today. My suggestion: (a).
 2. Should each pill have its own notes? Options: (a) one set per profile for the whole of Today (now); (b) per pill. My suggestion: (a).
 3. Should notes also show in pop-out windows of Today? Options: (a) no (now); (b) yes. My suggestion: (a).
+
+## Notes always the editor (D63)
+1. Should the card dialog's note and habit notes also be always the editor? Options: (a) no, tap to edit as now; (b) yes. My suggestion: (a) (they sit in a dialog among other fields, and an editor there would open the keyboard at once on a phone).
+2. Done now only saves and lets go. Options: (a) keep the button (now); (b) hide it and rely on the "Saved" text. My suggestion: (a).
+3. Notes not near the screen show plain text until scrolled near. Options: (a) 300 px lead (now); (b) mount all at once. My suggestion: (a).
+4. On a phone the editor sits in the page (not full screen) and ⋯ Full screen goes full. Options: (a) now; (b) full screen on first tap as before. My suggestion: (a).

@@ -47,11 +47,9 @@ async function session(viewport, name) {
   current = page;
   return { ctx, page };
 }
-/** Leave the note editor: Done on a phone (full screen), a click outside on a desktop. */
+/** Let go of the note editor with its Done button (D63: the editor stays; Done saves). */
 async function leaveEditor(page) {
-  const done = page.locator('.ed-head button.primary');
-  if (await done.isVisible()) await done.click();
-  else await page.mouse.click(5, 300);
+  await page.locator('.ed-head button.primary, .ed-foot button').filter({ hasText: 'Done' }).first().click();
 }
 const badge = (page) => page.locator('.net').first();
 // The to-do on Today: in the Today list (flag today-panel; a ticked one folds away) or in To do today.
@@ -78,7 +76,7 @@ const shot = (page, n) => page.screenshot({ path: `${OUT}/offline-${n}.png` });
   await page.waitForSelector('.kcard >> text=Design schema');
   // On a phone the project page shows the small note: its editor is on the notes' own page.
   await page.goto(notesPage);
-  await page.waitForSelector('.ed-view >> text=phone first');
+  await page.waitForSelector('.ProseMirror >> text=phone first');
   await page.goto(`${B}/#/n/${shopping.id}`);
   await page.waitForSelector('text=Milk');
   await page.waitForTimeout(600); // saved copies are written after a short pause
@@ -106,13 +104,12 @@ const shot = (page, n) => page.screenshot({ path: `${OUT}/offline-${n}.png` });
   // 3. edit the project's note
   await page.waitForTimeout(600); // the saved copy is written after a short pause
   await page.goto(notesPage);
-  await page.locator('.ed-view', { hasText: 'phone first' }).click();
-  await page.waitForSelector('.ProseMirror');
+  await page.locator('.ProseMirror', { hasText: 'phone first' }).click();
   await page.keyboard.press('Control+End');
   await page.keyboard.type(' Written on the train.');
   await page.waitForTimeout(1500); // the editor saves after a pause
   await leaveEditor(page);
-  await page.waitForSelector('.ed-view >> text=Written on the train.');
+  await page.waitForSelector('.ProseMirror >> text=Written on the train.');
   await page.waitForFunction(() => /Offline · 3/.test(document.querySelector('.net')?.textContent ?? ''));
   ok(true, 'card and note wait too: "Offline · 3"');
   // 4. a change that needs a connection says so
@@ -131,7 +128,7 @@ const shot = (page, n) => page.screenshot({ path: `${OUT}/offline-${n}.png` });
   await page.waitForSelector('.kcard >> text=Card made offline');
   await shot(page, 'phone-project-offline');
   await page.goto(notesPage);
-  await page.waitForSelector('.ed-view >> text=Written on the train.');
+  await page.waitForSelector('.ProseMirror >> text=Written on the train.');
   ok(true, 'after a reload offline the new card and the note edit still show');
 
   // back online: sent in order
@@ -153,7 +150,7 @@ const shot = (page, n) => page.screenshot({ path: `${OUT}/offline-${n}.png` });
   await page.reload();
   await page.waitForSelector('.kcard >> text=MCP tools');
   await page.goto(notesPage); // the notes' page too, so its saved copy is fresh
-  await page.waitForSelector('.ed-view >> text=phone first');
+  await page.waitForSelector('.ProseMirror >> text=phone first');
   await page.goto(`${B}/#/p/${p1.id}`);
   await page.waitForSelector('.kcard >> text=MCP tools');
   await page.waitForTimeout(600);
@@ -166,8 +163,7 @@ const shot = (page, n) => page.screenshot({ path: `${OUT}/offline-${n}.png` });
   await page.locator('dialog button[aria-label=Close]').click();
   // edit the note offline
   await page.goto(notesPage);
-  await page.locator('.ed-view', { hasText: 'phone first' }).click();
-  await page.waitForSelector('.ProseMirror');
+  await page.locator('.ProseMirror', { hasText: 'phone first' }).click();
   await page.keyboard.press('Control+End');
   await page.keyboard.type(' Phone line.');
   await page.waitForTimeout(1500);
@@ -186,9 +182,7 @@ const shot = (page, n) => page.screenshot({ path: `${OUT}/offline-${n}.png` });
   ok(true, 'the screen reloads with the server version');
   await page.goto(notesPage);
   // the note: the editor's choice
-  await page.waitForSelector('.ed-draft >> text=made offline');
-  await shot(page, 'phone-note-clash');
-  await page.locator('.ed-draft button', { hasText: 'Choose' }).click();
+  // D63: the always-on editor opens with the refused offline text and the choice at once (no Restore banner).
   await page.waitForSelector('.ed-conflict');
   await shot(page, 'phone-note-choice');
   await page.locator('.ed-conflict button', { hasText: 'Keep both' }).click();

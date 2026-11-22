@@ -35,19 +35,20 @@ const lineY = (page, sel, text) => page.locator(sel).evaluate((root, t) => {
 
 /** The small note's checks on a page that shows it. */
 async function checkSmall(page, name, scope) {
-  const box = page.locator(`${scope} .tp-note-scroll`);
+  const box = page.locator(`${scope} .ed-scroll`);
   await box.waitFor();
+  await page.waitForTimeout(500);
   const sizes = await box.evaluate((e) => ({ sh: e.scrollHeight, ch: e.clientHeight, oy: getComputedStyle(e).overflowY }));
   ok(sizes.oy === 'auto' && sizes.sh > sizes.ch + 20, `${name}: the small note scrolls (${sizes.ch}px box, ${sizes.sh}px of text)`);
   const h1 = await page.locator(scope).first().evaluate((e) => e.getBoundingClientRect().height);
   ok(h1 < 460, `${name}: the panel keeps a fixed height (${Math.round(h1)}px) and does not follow the text`);
   const brs = await box.evaluate((e) => e.querySelectorAll('br').length);
   ok(brs >= 14, `${name}: single newlines are line breaks (${brs} breaks)`);
-  const blanks = await box.evaluate((e) => e.querySelectorAll('.md-blank').length);
-  ok(blanks === 2, `${name}: extra blank lines are kept (${blanks})`);
+  const blanks = await box.evaluate((e) => [...e.querySelectorAll('.ProseMirror > p')].filter((p) => !p.textContent.trim()).length);
+  ok(blanks >= 2, `${name}: extra blank lines are kept (${blanks})`);
   await box.evaluate((e) => (e.scrollTop = e.scrollHeight));
   await page.waitForTimeout(200);
-  ok(await page.locator(`${scope} .tp-note-scroll`).getByText('Last line of the note').isVisible(), `${name}: scrolling inside reaches the end of the note`);
+  ok(await page.locator(`${scope} .ed-scroll`).getByText('Last line of the note').isVisible(), `${name}: scrolling inside reaches the end of the note`);
   const gap = await box.evaluate((e) => {
     const ps = [...e.querySelectorAll('p')];
     const a = ps.find((p) => p.textContent.startsWith('First after three'));
@@ -87,7 +88,7 @@ async function run(name, viewport, opts = {}) {
     // Narrow it and make it shorter with the corner handle: the small version shows, in the height the owner set.
     await dragCorner(page, panel, -250, -400);
     const set = await page.locator(`${panel} .tp-note`).evaluate((e) => e.getBoundingClientRect().height);
-    const fit = await page.locator(`${panel} .tp-note-scroll`).evaluate((e) => ({ ch: e.clientHeight, sh: e.scrollHeight }));
+    const fit = await page.locator(`${panel} .ed-scroll`).evaluate((e) => ({ ch: e.clientHeight, sh: e.scrollHeight }));
     ok(set < 700 && fit.ch > 100 && fit.sh > fit.ch + 20, `${name}: a panel set to ${Math.round(set)}px high shows a ${fit.ch}px text box that scrolls (${fit.sh}px of text)`);
     await shot(page, `${name}-today-set`);
     // ⋯ Auto height: the text box keeps its own height, the panel does not grow with the note.
@@ -105,7 +106,7 @@ async function run(name, viewport, opts = {}) {
     await dragCorner(page, panel, 0, 208);
     const after = await page.locator(`${panel} .tp-note`).evaluate((e) => e.getBoundingClientRect().height);
     ok(after > before + 100, `${name}: dragging the corner makes the panel taller (${Math.round(before)} → ${Math.round(after)})`);
-    const box = await page.locator(`${panel} .tp-note-scroll`).evaluate((e) => ({ ch: e.clientHeight, sh: e.scrollHeight }));
+    const box = await page.locator(`${panel} .ed-scroll`).evaluate((e) => ({ ch: e.clientHeight, sh: e.scrollHeight }));
     ok(box.ch > 200 && box.ch < after && box.sh > box.ch, `${name}: the text box grew with the panel (${box.ch}px) and still scrolls (${box.sh}px)`);
     await shot(page, `${name}-today-tall`);
   }

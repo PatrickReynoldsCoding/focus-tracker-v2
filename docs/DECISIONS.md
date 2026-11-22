@@ -649,3 +649,18 @@ Why: more looks, and a quick sign of which profile is open.
 - The frame is Today's page (`.pl-page` / `.lg-page`); x stays a percentage of its width and the width is clamped as on project pages. The layer sits above the sticky pill bar so a note's ⋯ menu can be reached.
 - Buttons: the floating "＋ Sticky" and "Hide notes / Show notes" (hide is per device, separate for Today and for project pages). The Add panel type "Sticky notes" is a small card with the same two buttons, not a boxed copy of the notes (one set of notes, one place).
 - Same flag as before (`stickies`, per profile). Claude: `create_item` / `list_items` / `update_item` with kind `stickies`, no project_id for Today, `filters: {"project_id": null}` to list them, `mode` takes a profile name or id. No new tools.
+
+## D63. Notes are always the editor (owner, 2026-11-22: "Notes should ALWAYS show in the full rich-text editor view")
+
+Code: web `features/editor/Always.tsx` (new), `Editing.tsx` (`always`, `incoming`), `editor-always.css`, `MarkdownEditorProps.always` in `core/registry.tsx`; used by `NotePanel` and `NoteSmall` in `features/today-panels/OnToday.tsx`, a note's page (`features/notes/Notes.tsx`) and a project's notes page (`features/notes/files.tsx`); browser check `scripts/ui/note-always.mjs`. Web only, no migration, no flag (the `rich-editor` flag still turns the whole editor off).
+
+- **No read-only step**: the note panel on Today (full and small), a note's own page and a project's notes page open straight into the same editor you got after tapping (toolbar Text, B, I, S, Lists, Insert, undo and redo, ⋯, and Done). Autosave, drafts, the conflict choice (Keep mine / Use theirs / Keep both) and offline queueing are unchanged. The card dialog's note, habit notes and other `MarkdownEditor` uses keep the old tap-to-edit view (they are not "notes" in this sense).
+- **Done** has no view to go back to, so it saves now, lets go of the editor (blur, the phone's keyboard closes) and leaves full screen if that was on. The button stays: it is the clear "I am finished" signal and shows the editor is saved.
+- **No keyboard on load**: the editor is never focused when a page loads; it takes focus only when tapped. A tap outside saves at once (it no longer unmounts the editor).
+- **Phone**: the editor sits in the page with the toolbar on top and Done below (slimmer buttons, so all of them fit at 390 px), not full screen. ⋯ Full screen (now also on a phone) gives the old full-screen editor; Done or Back leaves it and keeps the editor in the page.
+- **Small panel (D39)**: the small note (a phone, or a panel under 420 px) is now the editor in a box that scrolls (about 14 lines, or the height the owner set with the handle). With `rich-editor` off it keeps the old read-only small note.
+- **Speed**: the editor code is a separate chunk. A note mounts its editor only when it is within 300 px of the screen; before that it shows its text in the same box, and a tap mounts it at once. So a Today page with many notes starts few editors.
+- **Changed elsewhere**: while nothing is unsaved here, a newer saved text (another device, Claude) replaces what the editor shows.
+- **A draft kept on the device** (unsaved or a refused offline save) is restored into the editor and saves again with the usual check; the old Restore / Discard banner is only for the other, tap-to-edit uses.
+
+Why: the extra tap before every edit slowed note taking, most of all on a phone.

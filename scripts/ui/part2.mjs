@@ -60,10 +60,10 @@ for (const [tname, t] of themes) {
     }
     // a note in the editor
     await page.goto(`${B}/#/n/${note}`);
-    await page.waitForSelector('.ed-view, .ed');
+    await page.waitForSelector('.ed.is-editing'); // D63: a note is always the editor
     await page.waitForTimeout(500);
     await page.screenshot({ path: `${OUT}/p2-${tname}-${vname}-note.png`, fullPage: true });
-    await page.click('.ed-view').catch(() => {});
+    await page.click('.ProseMirror').catch(() => {});
     await page.waitForTimeout(700);
     await page.screenshot({ path: `${OUT}/p2-${tname}-${vname}-note-editing.png` });
     if (tname === 'eink') { const c = await checkEink(page); if (c.colour.length || c.shadow || c.motion || c.small.length) console.log(`eink ${vname} note-edit`, JSON.stringify(c)); }

@@ -44,7 +44,7 @@ async function swipe(page, cdp, { from, to, y = 400, hold, steps = 10, end = tru
   await page.goto(`${B}/#/files`);
   await page.waitForSelector('.files .files-open');
   await page.locator('.files .files-open[href^="#/n/"]').first().click();
-  await page.waitForSelector('.ed, .ed-view');
+  await page.waitForSelector('.ed.is-editing');
   await page.waitForSelector('.back-btn');
   await page.screenshot({ path: `${OUT}/p3-phone-back-visible.png` });
   ok('Back button appears after opening a note: ' + (await hash(page)));
@@ -127,12 +127,12 @@ async function swipe(page, cdp, { from, to, y = 400, hold, steps = 10, end = tru
   }, '/habits');
   // the editor
   await page.goto(`${B}/#/n/${note}`);
-  await page.waitForSelector('.ed-view');
+  await page.waitForSelector('.ed.is-editing');
   await page.waitForTimeout(500);
-  let b = await page.locator('.ed-view').boundingBox();
+  let b = await page.locator('.ed.is-editing').boundingBox();
   await swipe(page, cdp, { from: 330, to: 100, y: b.y + 30 });
   if (!(await hash(page)).startsWith('#/n/')) fail('swipe over note view changed the page'); else ok('swipe ignored over the note');
-  await page.click('.ed-view'); await page.waitForTimeout(600);
+  await page.click('.ProseMirror'); await page.waitForTimeout(600);
   await swipe(page, cdp, { from: 330, to: 100, y: 300 });
   if (!(await hash(page)).startsWith('#/n/')) fail('swipe in the editor changed the page'); else ok('swipe ignored in the editor');
   await page.locator('.ed-head button, .ed-foot button').filter({ hasText: 'Done' }).first().click().catch(() => {});
