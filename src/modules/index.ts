@@ -32,6 +32,7 @@ import { todayListModule } from './today-list';
 import { todayPanelsModule } from './today-panels';
 import { todosModule } from './todos';
 import { whiteboardsModule } from './whiteboards';
+import { widgetsModule } from './widgets';
 
 export const MODULES: Module[] = [
   projectsModule,
@@ -65,6 +66,7 @@ export const MODULES: Module[] = [
   tagsModule,
   // After every module with files: deleting a project deletes or clears its files before its folder.
   filesModule,
+  widgetsModule,
   swiftbarModule,
   systemModule,
 ];
