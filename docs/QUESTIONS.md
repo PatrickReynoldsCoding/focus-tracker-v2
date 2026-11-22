@@ -135,3 +135,5 @@ Questions the owner could not be asked while an item was built. Each gives the d
 23. With Insights off the plain Log tab comes back (as before). Default: yes.
 24. The Android Today widget, quick add and notifications follow the profile open in the phone's app, not the server's default (the profile last opened on any device). Default: the phone's app.
 25. The widget's ✕ (Not today) is on to-dos, cards and weekly habits (daily habits have none, as on the web). Default: so.
+26. "All profiles" in a Settings section is chosen per visit and goes back to "<profile> only" on reload. Default: per visit (so a later change does not reach every profile by surprise).
+27. Values that were the same in every profile were kept as each profile's own, not made "all profiles" values. Default: kept as own (nothing changes); use All profiles to share one.
