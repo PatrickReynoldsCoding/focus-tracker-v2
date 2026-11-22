@@ -27,6 +27,7 @@ Updated 2026-11-22. Phases from the spec (`SPEC.md` §7).
 | Owner's item, 22 Nov (2) | v0.35.0: stage 2: one to-do screen for to-dos, plain lists and project boards, with Board and List views (remembered per device), tick into Done, drag between groups, Convert to to-do on a plain list, no days on plain lists; flag `unified-board` (D41). |
 | Owner's item, 22 Nov (3) | v0.36.0: category buttons on the Projects tab (design B), flag `category-buttons`, off by default, per profile (D42). |
 | Owner's item, 22 Nov (4) | v0.37.0: tags on any file (note, list, to-do, whiteboard, link, a project's notes): chips on Files and Add file, a Tags filter (several, No tag), a tag editor in ⋯ and on a file's page, Manage tags, Claude's tag tools; flag `tags`, migration 0023 (D43). Next: Android widgets showing every file with a tag. |
+| Owner's item, 22 Nov (5) | v0.38.0 and Android 0.4.0: every Android widget goes down to 2 cells wide with a narrow layout; new Files widget (a folder's, a tag's or all files, Keep-like cards with the start of each) and Single file widget (a note's text or a list's or to-do's items, to-dos tick from the widget), each with a settings screen (profile, source, length in characters or lines, order); server feeds `/api/widget/files` and `/api/widget/file/:kind/:id` (D44). Built and unit-checked; not tried on a phone or emulator. |
 | 9 Stretch | Parked: **export all data** button (wanted later), Work-mode PRs tab, fitness view. |
 
 ## Waiting for the owner

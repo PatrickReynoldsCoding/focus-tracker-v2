@@ -120,3 +120,14 @@ Questions the owner could not be asked while an item was built. Each gives the d
 11. Tags (D43): a whiteboard's full-screen editor has no tag editor (its bar is full on a phone); tag it from Files' ⋯ → Tags…. Default: as now.
 12. Tags (D43): Files' tag filter is cleared when you open another folder, like the type chips. Default: cleared. Keep it while moving between folders?
 13. Tags (D43): cards and rows show two tags then "+n". Default: two. More?
+
+## 0.38.0 and Android 0.4.0 (Files and Single file widgets, D44)
+
+14. The Files widget's default length is 200 characters per file and 30 files at most. Default: as said. More files (the server allows 50)?
+15. A folder's widget includes the folders inside it unless you untick that. Default: included.
+16. A to-do's items in the Files widget are its open ones only; ticked ones are left out. Default: open only.
+17. Tapping a file on the Files widget opens it in the app; to-dos are ticked only on the Single file widget. Default: as now. Tick from the Files widget too?
+18. A plain list's items cannot be ticked from the Single file widget (plain lists have no ticks). Default: they open the list.
+19. A whiteboard or link in a widget shows its title only (and a link its address). Default: off unless "Also show whiteboards and links" is ticked.
+20. Opening a file from a widget switches the app (and, with "follow the open profile" on, the Today widget and menu bar) to that widget's profile. Default: yes.
+21. The narrow layout starts below 200 dp wide (2 cells on most launchers). Default: 200 dp. Say if a 2-cell widget on your phone still looks cramped or a 3-cell one too small.
