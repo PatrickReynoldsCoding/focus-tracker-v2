@@ -16,6 +16,7 @@ import m0020 from '../../migrations/0020_habit_project.sql';
 import m0021 from '../../migrations/0021_profile_settings.sql';
 import m0022 from '../../migrations/0022_unified_todos.sql';
 import m0023 from '../../migrations/0023_tags.sql';
+import m0024 from '../../migrations/0024_setting_scope.sql';
 
 /** Every migration, in order. A new file in migrations/ needs a line here (a test checks). */
 export const MIGRATIONS: [name: string, sql: string][] = [
@@ -33,6 +34,7 @@ export const MIGRATIONS: [name: string, sql: string][] = [
   ['0021_profile_settings.sql', m0021],
   ['0022_unified_todos.sql', m0022],
   ['0023_tags.sql', m0023],
+  ['0024_setting_scope.sql', m0024],
 ];
 
 let done = false;

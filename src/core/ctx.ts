@@ -3,6 +3,7 @@
 
 import { bad } from './errors';
 import { newId } from './ids';
+import { keyKind } from './setting-scope';
 
 export interface Env {
   DB: D1Database;
@@ -62,7 +63,16 @@ export class Ctx {
     return dayIn(this.nowDate, await this.timezone());
   }
 
+  /** A setting as the profile uses it: its own value, or, for a setting that can be set for all
+   *  profiles (src/core/setting-scope.ts), the value for all profiles. */
   async setting(key: string, mode: string = this.mode): Promise<string | null> {
+    const own = await this.ownSetting(key, mode);
+    if (own !== null || mode === '' || keyKind(key) !== 'whole') return own;
+    return this.ownSetting(key, '');
+  }
+
+  /** The settings row of this mode only (no value for all profiles). */
+  async ownSetting(key: string, mode: string = this.mode): Promise<string | null> {
     const k = `${mode}\u0000${key}`;
     if (!this.settingsCache.has(k)) {
       const row = await this.db
@@ -72,6 +82,11 @@ export class Ctx {
       this.settingsCache.set(k, row?.value ?? null);
     }
     return this.settingsCache.get(k) ?? null;
+  }
+
+  /** Forget what was read (after a change written to several profiles at once). */
+  forgetSettings(): void {
+    this.settingsCache.clear();
   }
 
   async setSetting(key: string, value: string | null, mode: string = this.mode): Promise<void> {
@@ -89,6 +104,13 @@ export class Ctx {
   }
 
   async jsonSetting<T>(key: string, fallback: T, mode: string = this.mode): Promise<T> {
+    if (mode !== '' && keyKind(key) === 'object') {
+      // Fields set for all profiles, with the profile's own fields over them (D46).
+      const all = parseObject(await this.ownSetting(key, ''));
+      const own = parseObject(await this.ownSetting(key, mode));
+      if (!all && !own) return fallback;
+      return { ...(all ?? {}), ...(own ?? {}) } as T;
+    }
     const raw = await this.setting(key, mode);
     if (raw == null || raw === '') return fallback;
     try {
@@ -126,6 +148,16 @@ export class Ctx {
       ),
     );
     this.changes.length = 0;
+  }
+}
+
+function parseObject(raw: string | null): Record<string, unknown> | null {
+  if (!raw) return null;
+  try {
+    const v = JSON.parse(raw);
+    return v && typeof v === 'object' && !Array.isArray(v) ? v : null;
+  } catch {
+    return null;
   }
 }
 
