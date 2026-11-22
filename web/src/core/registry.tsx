@@ -132,7 +132,7 @@ export interface ProjectsPanelProps {
 }
 export interface CardSectionProps {
   card: any;
-  columns: { id: string; name: string }[];
+  columns: { id: string; name: string; is_done?: boolean }[];
   /** Change the card on screen and save the fields (PATCH /api/tasks/:id). */
   save: (fields: Record<string, unknown>) => void;
   /** Change the card on screen only (after a section saved some other way). null = it was deleted. */

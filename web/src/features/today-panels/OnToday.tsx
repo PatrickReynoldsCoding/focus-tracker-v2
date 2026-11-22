@@ -8,7 +8,7 @@ import { Adaptive } from '../../core/adaptive';
 import { useFlag } from '../../core/features';
 import { ProjectLabel, type Addable, type PanelDef, type TodayPanelProps } from '../../core/registry';
 import { Dialog, Loading, Markdown, MarkdownEditor, useData } from '../../core/ui';
-import { cardsOf, ListPanel, todosOf, type FullList, type SetList } from './ListBody';
+import { countOf, ListPanel, type FullList, type SetList } from './ListBody';
 
 export type NoteItem = { type: 'note'; key: string; name: string; kind: 'note' | 'project'; id?: string; project_id?: string; color: string | null; body: string };
 type ListItem = FullList & { type: 'list'; key: string };
@@ -134,7 +134,7 @@ function itemPanel(i: Item, data: Item[], setData: (fn: (d: Item[]) => Item[]) =
     order: 0,
     onRemove: remove,
     oneCopy: () => (i.type === 'note' ? `note:${i.key}` : null),
-    count: () => (i.type === 'list' ? (i.kind === 'todo' ? todosOf(i).filter((t) => !t.done).length : cardsOf(i).length) : null),
+    count: () => (i.type === 'list' ? countOf(i) : null),
     render: () =>
       i.type === 'note' ? (
         <NotePanel n={i} setBody={(body) => patchItem((x) => ({ ...x, body }) as Item)} onRemove={remove} />

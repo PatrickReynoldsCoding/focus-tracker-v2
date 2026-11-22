@@ -14,7 +14,7 @@ import { buildTodayList, type TodayItem, type TodayList as List } from '../../..
 import { record, type SetHabits } from '../habits/actions';
 import { HabitCards } from '../habits/HabitRow';
 import type { Progress } from '../habits/types';
-import { CardDialog, type Card, type Column } from '../projects/Board';
+import { CardDialog, type Card, type Column } from '../board';
 
 type Todo = { id: string; title: string; day: string | null; done: string | null; list_id?: string | null; project_id?: string | null };
 type CardIn = { id: string; title: string; day: string | null; done: string | null; project_id: string | null; list_id: string | null; from: string | null; in_last: boolean };

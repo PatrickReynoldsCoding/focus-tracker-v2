@@ -9,6 +9,7 @@ import { version } from '../../core/api';
 import { registerOverlay, registerPanel, type CardSectionProps, type CardTileProps } from '../../core/registry';
 import { fmtDay, todayLocal } from '../../core/ui';
 import { countOf, TodayList, type TodayData } from './TodayList';
+import { isPlainItem } from '../board/CardDialog';
 import './today-list.css';
 
 export const FLAG = 'today-panel';
@@ -30,8 +31,10 @@ registerPanel('today', {
 
 const addDays = (day: string, n: number) => new Date(Date.parse(`${day}T12:00:00Z`) + n * 864e5).toISOString().slice(0, 10);
 
-function CardDay({ card, save }: CardSectionProps) {
+function CardDay({ card, columns, save }: CardSectionProps) {
   const today = todayLocal();
+  // A plain list's items have no day (D41): only a to-do's and a project's cards.
+  if (isPlainItem(card, columns)) return null;
   const day: string | null = card.day ?? null;
   const set = (d: string | null) => save({ day: d, done: null });
   return (

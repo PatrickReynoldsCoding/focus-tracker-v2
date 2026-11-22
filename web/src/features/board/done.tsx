@@ -1,10 +1,11 @@
-// The Done column on a project board (DECISIONS D34, flag `done-column`): the board's fixed last
-// status. "Hide done" (projects.hide_done, saved on the server so every device shows the same)
-// folds it into a slim strip with its count; tapping the strip opens it again. Cards can still be
-// dropped on the strip.
+// The Done column (DECISIONS D34, D41): the fixed last column of a project (flag `done-column`) and
+// of every to-do. "Hide done" folds it: into a slim strip with its count in Board view, into its
+// heading in List view; tapping it opens it again, and cards can still be dropped on it. A
+// project's Hide done is saved on the server (projects.hide_done, the same on every device); a
+// to-do's on this device (features/board/memory.ts).
 
 import { optimistic, patch } from '../../core/api';
-import './done-column.css';
+import './done.css';
 
 export const DONE_FLAG = 'done-column';
 

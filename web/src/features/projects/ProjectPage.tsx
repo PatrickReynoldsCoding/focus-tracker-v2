@@ -2,7 +2,7 @@ import { useEffect } from 'preact/hooks';
 import { change, del, newId, optimistic, patch, post, put } from '../../core/api';
 import { Panels, registerPanel, registerPlace, registerRoute, type ProjectPanelProps } from '../../core/registry';
 import { AddInput, daysAgo, fmtDay, fmtMinutes, go, InlineEdit, Linkify, Loading, MarkdownEditor, todayLocal, useData } from '../../core/ui';
-import { Board, type Column } from './Board';
+import { TodoBoard, type Column } from '../board';
 import { CategorySelect } from './CategorySelect';
 import { NotePanel } from '../today-panels/OnToday';
 import { lastProject } from './last-project';
@@ -79,8 +79,9 @@ registerPlace<ProjectPanelProps>({
 
 registerRoute({ id: 'project', prefix: '/p', tab: 'projects', render: ({ params }) => <ProjectPage id={params[0]} /> });
 
-registerPanel('project', { id: 'board', title: 'Board', description: 'The project’s cards in their columns.', alwaysShown: true, order: 10, wide: true, render: ({ project, setProject }) => (
-    <Board
+registerPanel('project', { id: 'board', title: 'Board', description: 'The project’s cards in their columns: a board, or a to-do list.', alwaysShown: true, order: 10, wide: true, render: ({ project, setProject }) => (
+    <TodoBoard
+      kind="project"
       columns={project.columns}
       owner={{ project_id: project.id }}
       onColumns={(columns) => setProject((p) => ({ ...p, columns }))}

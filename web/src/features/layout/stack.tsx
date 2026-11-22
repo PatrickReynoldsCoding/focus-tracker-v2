@@ -31,7 +31,7 @@ const SLOP = 8; // px a finger may move before a hold counts as a scroll
 const MIN_PH = 120; // room for the Arrange handles
 const MAX_PH = 4000;
 /** Where a hold does not start arranging: there it selects text, edits or drags something else. */
-const NO_HOLD = 'input, textarea, select, [contenteditable], .ProseMirror, .ed, .md, .wb-full, .board, .sortable-chosen, dialog, [popover]';
+const NO_HOLD = 'input, textarea, select, [contenteditable], .ProseMirror, .ed, .md, .wb-full, .board, .ub-drag, .sortable-chosen, dialog, [popover]';
 
 const calm = () => isEink() || matchMedia('(prefers-reduced-motion: reduce)').matches;
 

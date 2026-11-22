@@ -4,7 +4,7 @@ import { get, mode, version } from '../../core/api';
 import { useFlag } from '../../core/features';
 import { signal, useSignal } from '../../core/signal';
 import { go, useData } from '../../core/ui';
-import { CardDialog, type Card, type Column } from '../projects/Board';
+import { CardDialog, type Card, type Column } from '../board';
 
 export const FLAG = 'issue-links';
 
