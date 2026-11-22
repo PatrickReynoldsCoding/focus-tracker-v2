@@ -3,11 +3,11 @@
 // at the bottom): tick into Done and back to its group, drag between groups and within one (a
 // mouse; a finger's press and hold on a phone), the dialog's Status picker, a day on a to-do's
 // item; Board view (columns side by side) remembered per board on this device, not on another;
-// Hide done of a to-do kept on the device. A plain list keeps its board, with no ticks and no day
-// picker, and Convert to to-do (with a confirmation) makes it a to-do. A project switches to List
-// view, ticks into Done and folds Done (saved on the project). Today's panel for a to-do ticks
-// and is not draggable (a long press arranges it). Old addresses (#/l/<id>, #/n/<id>, #/p/<id>,
-// panel list-<id>). Light, dark and E-ink at 390 and 1280 px; the flag off.
+// Hide done of a to-do kept on the device. A plain list opens in List view (D49) with no ticks and
+// no day picker, switches to Board, and Convert to to-do (with a confirmation) makes it a to-do. A
+// project switches to List view, ticks into Done and folds Done (saved on the project). Today's
+// panel for a to-do ticks and its items drag (D49; scripts/ui/panel-restyle.mjs drags them). Old
+// addresses (#/l/<id>, #/n/<id>, #/p/<id>, panel list-<id>). Light, dark and E-ink at 390 and 1280 px; the flag off.
 // Needs a seeded server (seed.mjs); makes its own to-do, list and project and deletes them.
 // Usage: FT_URL=http://localhost:8787 node scripts/ui/unified-board.mjs
 import { mkdirSync } from 'node:fs';
@@ -206,13 +206,18 @@ async function plainPage(name, vp, page) {
   await page.goto(`${B}/#/n/${plain.id}`);
   await page.waitForSelector('.ub-list, .board');
   await settle(page);
-  ok((await page.locator('.ub-seg').count()) === 0 && (await page.locator('.board .kcard').count()) === 2 && (await page.locator('.ub-tick').count()) === 0, `${name}: a plain list keeps its board look: no switch, no ticks`);
+  ok((await page.locator('.ub-seg button.on').textContent()).includes('List') && (await page.locator('.ub-list .ub-item').count()) === 2 && (await page.locator('.ub-tick, .ub-done').count()) === 0, `${name}: a plain list opens in List view: the switch, no ticks, no Done`);
+  await page.click('.ub-seg button:has-text("Board")');
+  await settle(page);
+  ok((await page.locator('.board .kcard').count()) === 2 && (await page.locator('.ub-tick').count()) === 0, `${name}: and Board view: its columns, no ticks`);
   await page.locator('.kcard:has-text("Dune")').click();
   await page.waitForSelector('dialog[open] label.inline:has(select)');
   ok((await page.locator('dialog[open] .card-day').count()) === 0 && (await page.locator('dialog[open] label.inline:has-text("Column")').count()) === 1, `${name}: a plain list's item has no day picker`);
   await page.keyboard.press('Escape');
   await sideways(page, vp.width, `${name} plain`);
   await shot(page, `${name}-plain`);
+  await page.click('.ub-seg button:has-text("List")');
+  await settle(page);
   // Convert, with a confirmation; turning it down changes nothing.
   page.once('dialog', (d) => d.dismiss());
   await page.click('button:has-text("Convert to to-do")');
@@ -269,7 +274,7 @@ async function todayPanel(name, page) {
   await settle(page);
   // A panel narrower than 420 px (a phone) shows the small version: the first few, a tick each.
   const small = (await panel.first().locator('.panel-small').count()) === 1;
-  ok((await panel.first().locator('li:has(input[type=checkbox])').count()) === 4 && (await panel.first().locator('.ub-drag').count()) === 0, `${name}: the to-do on Today${small ? ' (small)' : ''} shows its items with ticks, and nothing to drag (a long press arranges the panel)`);
+  ok((await panel.first().locator('li:has(input[type=checkbox])').count()) === 4 && (await panel.first().locator('.ub-drag').count()) >= 1, `${name}: the to-do on Today${small ? ' (small)' : ''} shows its items with ticks, and they can be dragged`);
   await panel.first().locator('li:has-text("Post letter") input[type=checkbox]').click();
   await settle(page, 700);
   ok(!!(await cardOf('Post letter')).done, `${name}: ticking on Today marks it done`);
@@ -348,7 +353,7 @@ for (const theme of ['dark', 'eink']) for (const [v, vp] of [['phone', PHONE], [
     await page.goto(`${B}/#/n/${plain.id}`);
     await page.waitForSelector('.ub');
     await settle(page);
-    ok((await page.locator('button:has-text("Convert to to-do")').count()) === 0, 'flag off: no Convert to to-do');
+    ok((await page.locator('button:has-text("Convert to to-do")').count()) === 0 && (await page.locator('.ub-seg').count()) === 0 && (await page.locator('.ub-plain .board').count()) === 1, 'flag off: a plain list is a board, with no switch and no Convert to to-do');
     await shot(page, 'flag-off');
     await ctx.close();
   } finally {
