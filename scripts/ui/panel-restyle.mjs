@@ -1,6 +1,6 @@
 // Browser check for the panel restyle (D49, flag panel-restyle; plain lists' List view behind
 // unified-board): the Habits panel on Today (and its small version on a phone) is one slim row per
-// habit like the Today list (circle to check in, Undo, the name opens Habits); a to-do's panel and
+// habit like the Today list (circle to check in, Undo, the name opens the habit dialog, D56); a to-do's panel and
 // a plain list's panel are the same component, a plain list's without checkboxes, items under their
 // group names; items drag to reorder and to another group (a mouse; a finger's press and hold in
 // the phone's small version) and a long press on the panel's head still arranges; a tap on an
@@ -148,8 +148,13 @@ async function habitsPanel(name, page, small) {
   ok((await doneToday('Stretch')) === 1, `${name}: Undo takes one session off`);
   await resetHabits();
   await stretch.locator('.tl-name').click();
-  await page.waitForFunction(() => location.hash === '#/habits');
-  ok(true, `${name}: the habit's name opens the Habits tab`);
+  await page.waitForSelector('dialog[open] .habit-dialog');
+  ok(true, `${name}: the habit's name opens its notes and settings (D56)`);
+  await page.keyboard.press('Escape');
+  await page.waitForSelector('dialog[open]', { state: 'detached' });
+  // Leave Today, so the next step's Today loads afresh (the API reset the habits behind its back).
+  await page.goto(`${B}/#/habits`);
+  await page.waitForSelector('.habits-page');
 }
 
 async function todoPanelDesk(name, page) {
