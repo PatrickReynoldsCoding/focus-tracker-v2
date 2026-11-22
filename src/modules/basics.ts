@@ -147,13 +147,6 @@ export const basicsModule: Module = {
       input: z.object({ id: z.string(), done: z.boolean().default(true) }),
       run: (ctx, a) => update(ctx, criteriaEntity, a.id, { done: a.done }),
     },
-    {
-      name: 'list_categories',
-      description: 'List the categories of the mode.',
-      readOnly: true,
-      input: z.object({}),
-      run: (ctx) => list(ctx, categoriesEntity),
-    },
   ],
 };
 

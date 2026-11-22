@@ -2,6 +2,7 @@
 import type { Module } from '../core/registry';
 import { addPanelModule } from './add-panel';
 import { basicsModule } from './basics';
+import { categoriesModule } from './categories';
 import { boardsModule } from './boards';
 import { doneColumnModule } from './done-column';
 import { filesModule } from './files';
@@ -40,6 +41,7 @@ export const MODULES: Module[] = [
   boardsModule,
   doneColumnModule,
   basicsModule,
+  categoriesModule,
   profilesModule,
   resourcesModule,
   relationsModule,
