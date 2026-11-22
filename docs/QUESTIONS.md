@@ -293,3 +293,10 @@ My suggestion: 1.
 2. Group colours follow the group's place (first green, second amber...). Should a group choose its own colour? Options: (a) by place (now); (b) a colour picker in the group's header. My suggestion: (a) until you want to match colours to meaning.
 3. Chips show the site's host (`docs.google.com`). Should they show the Markdown link's name instead when there is one? Options: (a) host chip, name as text (now, as in the mockup); (b) name in the chip. My suggestion: (a).
 4. Groups fold per device. Should they fold for all devices? Options: (a) per device (now); (b) saved on the list. My suggestion: (a).
+
+**Keep in mind look (0.47.0, D59)**
+1. The frosted glass always uses the accent colour, not the list's own colour (only the ✦ and the current dot use it). Options: (a) accent glass (now); (b) tint the glass with the list's colour. My suggestion: (a) to stay subtle.
+2. Dots are not tappable (too small to hit). Options: (a) not tappable (now); (b) tappable with a bigger invisible hit area. My suggestion: (a); swipe and tap cover it.
+3. The largest text is 72 px (short quotes in a big panel). Options: (a) 72 px (now); (b) a lower cap such as 48 px. My suggestion: (a), say if a one-word quote looks too big.
+4. Lora covers Latin letters only; other scripts fall back to Georgia. Options: (a) Latin only, 23 KB (now); (b) add Latin-extended, 13 KB more. My suggestion: (a).
+5. E-ink uses plain Georgia italic, not Lora, as you asked. Options: (a) Georgia (now); (b) Lora on E-ink too. My suggestion: (a).

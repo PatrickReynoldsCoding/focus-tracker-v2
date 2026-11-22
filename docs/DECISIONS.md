@@ -599,3 +599,15 @@ Code: web `features/board/ListItems.tsx` (`ListItem`, `GroupBox`), `list-look.cs
 - **Group header** on the list's page keeps its rename, ↑ ↓ and ✕ (delete group), as before.
 
 Why: long pasted addresses made rows hard to scan and the ✕ was easy to hit by accident.
+
+
+## D59. "Keep in mind": Lora italic on frosted glass, text fills the panel (owner, 2026-11-22: mockup variations D font and F background in docs/mockups/keep-in-mind-variations.html)
+
+Code: web `features/today-panels/OneAtATime.tsx` (`dotsFor`, the fit hook), `today-panels.css`, `fonts/` (Lora), `theme/eink.css`, `sw-plugin.ts`; browser check `scripts/ui/keep-in-mind.mjs`. Web only: no server, flag or setting changes (the list's "one at a time" display and its seconds work as before).
+
+- **Look**: a list shown one at a time is a subtle frosted-glass card (`linear-gradient(160deg, accent 16%, fg 4%)` over the surface, a 1 px hairline border, a small blur), so it stands out from the plain panels. Light and Dark use theme tokens, no hex. **E-ink**: white, black border, plain black bold italic Georgia, no glass, hollow dots.
+- **Font**: Lora italic 500, Latin subset (about 23 KB woff2), bundled in `web/src/features/today-panels/fonts/` and built into `assets/` with a hashed name. The service worker installs it with the app shell (`sw-plugin.ts`), so it works offline from the first visit. Stack: Lora, Georgia, Times New Roman, serif. Licence: SIL Open Font License 1.1 (text in `fonts/Lora-OFL.txt`); fine to bundle and redistribute with the licence. Latin-extended letters fall back to Georgia.
+- **Text fills the panel**: the quote is sized (13 to 72 px, a binary search) to the largest size that fits the panel's box, centred, so a short quote is big and a long one shrinks. It redoes on resize and when the font loads. A panel without a set height has a minimum height of 8.5 rem; a taller panel gives bigger text. The note under it scales with it.
+- **Moving on**: no big ‹ › buttons. Swipe left or right (40 px, mostly sideways), tap the left half (back) or right half (on) of the quote (a tap on a link does nothing), or the arrow keys when the quote has focus. Two hidden buttons ("Previous item", "Next item", shown when focused) keep it reachable for screen readers and Tab. The quote is a labelled carousel group.
+- **Dots**: one per item, the current one a short bar in the list's colour; more than nine items show a window of nine around the current one with smaller end dots. They are not buttons (too small to tap safely). The small "2 / 12" counter, the title (opens the list), ⚙ and ✕ stay in the head, quieter.
+- Timer and E-ink rules unchanged (it still does not turn by itself on E-ink).

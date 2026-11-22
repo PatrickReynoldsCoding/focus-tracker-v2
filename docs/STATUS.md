@@ -39,6 +39,7 @@ Updated 2026-11-22. Phases from the spec (`SPEC.md` §7).
 | Owner's item, 22 Nov (11) | v0.44.0: habits have notes (Markdown); tapping a habit's name anywhere opens one dialog with its notes at the top and its settings below; 📝 on habit rows with notes (D56, migration 0026). |
 | Owner's item, 22 Nov (subtasks) | v0.45.0: subtasks on cards and to-dos (flag `subtasks`, migration 0027): List view chip and indented rows, Board view progress bar and checklist, a setting for open or folded by default, Claude's `add_subtask` and `tick_subtask` (D57). |
 | Owner's item, 22 Nov (12) | v0.46.0: a plain list is list-only (no Board / List switch; a to-do keeps it) and has the new look, mockup B: group boxes with a coloured edge that fold (per device), two-line text with "more", web addresses and pasted Markdown links as one site-name chip, a ⋯ menu instead of ✕ (D58). |
+| Owner's item, 22 Nov (13) | v0.47.0: the "Keep in mind" panel (a list shown one at a time) is Lora italic on a frosted-glass card, text sized to fill it, swipe / tap a side / arrow keys and small dots instead of big arrows (D59). |
 | 9 Stretch | Parked: **export all data** button (wanted later), Work-mode PRs tab, fitness view. |
 
 ## Waiting for the owner
