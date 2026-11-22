@@ -9,6 +9,7 @@ import { KIND_ICON } from './model';
 import { NewDialog } from './NewDialog';
 
 const NOTES = { id: 'notes', label: 'Notes', order: 10 };
+const TODOS = { id: 'todos', label: 'To-dos', order: 15 };
 const LISTS = { id: 'lists', label: 'Lists', order: 20 };
 const rename = (f: FileItem, name: string) => patch(`/lists/${f.id}`, { name });
 const remove = (f: FileItem) => del(`/lists/${f.id}`);
@@ -53,7 +54,7 @@ registerFileType({
 });
 registerFileType({
   type: 'todo',
-  group: LISTS,
+  group: TODOS,
   label: 'To-do list',
   order: 20,
   icon: (_f, size) => (

@@ -81,7 +81,7 @@ async function desktop() {
   await settle(page);
   await shot(page, `${name}-picker`);
   const chips = await page.$$eval('dialog[open] .ap-chips .chip', (els) => els.map((e) => e.textContent.trim()));
-  ok(chips.join() === 'All,Notes,Lists,Whiteboards', `${name}: type chips without Links (${chips.join(', ')})`);
+  ok(chips.join() === 'All,Notes,To-dos,Lists,Whiteboards', `${name}: type chips without Links (${chips.join(', ')})`);
   const here = await page.$$eval('dialog[open] .ap-row:disabled strong', (els) => els.map((e) => e.textContent.trim()));
   ok(!here.includes('Ideas'), `${name}: a file on Today but not in this pill can still be added`);
   await page.click('dialog[open] .ap-chips .chip:has-text("Whiteboards")');
