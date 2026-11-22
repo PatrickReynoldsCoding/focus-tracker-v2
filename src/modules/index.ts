@@ -25,6 +25,7 @@ import { sessionsModule } from './sessions';
 import { stickiesModule } from './stickies';
 import { relationsModule } from './relations';
 import { swiftbarModule } from './swiftbar';
+import { tagsModule } from './tags';
 import { systemModule } from './system';
 import { todayModule } from './today';
 import { todayListModule } from './today-list';
@@ -61,6 +62,7 @@ export const MODULES: Module[] = [
   addPanelModule,
   stickiesModule,
   insightsModule,
+  tagsModule,
   // After every module with files: deleting a project deletes or clears its files before its folder.
   filesModule,
   swiftbarModule,

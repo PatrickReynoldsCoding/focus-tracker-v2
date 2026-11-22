@@ -43,6 +43,8 @@ export interface Module {
   afterWrite?(ctx: Ctx, e: Entity, row: import('./entity').Row, before: import('./entity').Row | null): Promise<void>;
   /** Kinds of rows the Files tab lists (src/core/files.ts). */
   files?: import('./files').FileSource[];
+  /** Things attached to every file that the Files listing shows and filters by (tags; src/core/files.ts). */
+  fileAddons?: import('./files').FileAddon[];
   /** Feature flags this module reads (src/core/features.ts). */
   features?: import('./features').Feature[];
   /** Old kinds kept for clients that still use them, stored as rows of another entity (D40: todos are cards). */

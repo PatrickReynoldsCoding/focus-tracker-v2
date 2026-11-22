@@ -77,6 +77,8 @@ export async function searchAll(ctx: Ctx, q: string, limit = 30) {
     one('backlog', ['title', 'note'], 'title'),
     one('resources', ['title', 'value', 'note'], 'title'),
     one('habits', ['name', 'description'], 'name'),
+    // Tags (D43): a tag's name finds the tag; list_files with tags finds its files.
+    (await ctx.feature('tags')) ? one('tags', ['name'], 'name') : [],
   ]);
   return groups.flat().slice(0, limit);
 }
@@ -144,7 +146,7 @@ export const projectsModule: Module = {
     },
     {
       name: 'search',
-      description: 'Search projects, cards, lists, to-dos, notes, backlog, resources and habits by text.',
+      description: 'Search projects, cards, lists, to-dos, notes, backlog, resources, habits and tags by text (a tag: list_files with tags gives its files).',
       readOnly: true,
       input: z.object({ query: z.string().min(1), limit: z.number().int().max(100).optional() }),
       run: (ctx, a) => searchAll(ctx, a.query, a.limit),

@@ -13,7 +13,7 @@ import type { Ctx } from '../core/ctx';
 import type { Entity, Row } from '../core/entity';
 import { bad } from '../core/errors';
 import { requireFeature } from '../core/features';
-import { likeOf, type FileItem, type FileSource } from '../core/files';
+import { likeOf, rowKindOf, type FileAddon, type FileItem, type FileSource } from '../core/files';
 import { allModules, entity, type Module } from '../core/registry';
 import { create, get, getRaw, list, remove, update } from '../core/store';
 
@@ -146,6 +146,12 @@ async function activeSources(ctx: Ctx, types?: string[]): Promise<FileSource[]> 
   return out;
 }
 
+async function activeAddons(ctx: Ctx): Promise<FileAddon[]> {
+  const out: FileAddon[] = [];
+  for (const a of allModules().flatMap((m) => m.fileAddons ?? [])) if (!a.feature || (await ctx.feature(a.feature))) out.push(a);
+  return out;
+}
+
 // ---------- listing ----------
 
 export interface ListFilesOptions {
@@ -158,6 +164,8 @@ export interface ListFilesOptions {
   q?: string | null;
   sort?: 'name' | 'changed';
   limit?: number;
+  /** Values for the addons' filters (FileAddon.filter.param), such as { tag: 'work,urgent' }. */
+  extra?: Record<string, string | undefined>;
 }
 
 export async function listFiles(ctx: Ctx, o: ListFilesOptions = {}) {
@@ -179,21 +187,37 @@ export async function listFiles(ctx: Ctx, o: ListFilesOptions = {}) {
 
   const q = (o.q ?? '').trim();
   const types = (o.types ?? []).filter(Boolean);
-  // A search or a type filter looks in the folder and every folder inside it (at the top: everywhere).
-  const deep = !!q || types.length > 0;
+  const addons = await activeAddons(ctx);
+  const filters = addons.flatMap((a) => (a.filter && o.extra?.[a.filter.param]?.trim() ? [{ f: a.filter, value: o.extra[a.filter.param]!.trim() }] : []));
+  // A search, a type filter or an addon's filter (a tag) looks in the folder and every folder inside it (at the top: everywhere).
+  const deep = !!q || types.length > 0 || filters.length > 0;
   const scope = current ? subtree(all, current) : null;
   const inScope = (folder: string | null) => (deep ? !scope || (!!folder && scope.has(folder)) : folder === current);
 
   const sources = await activeSources(ctx, types);
   const like = q ? likeOf(q) : null;
-  const found = (await Promise.all(sources.map((s) => s.list(ctx, like)))).flat();
+  const kindOfType = new Map(fileSources().map((s) => [s.type, rowKindOf(s)]));
+  const keyOf = (f: FileItem) => `${kindOfType.get(f.type) ?? f.type}:${f.id}`;
+  let found = (await Promise.all(sources.map((s) => s.list(ctx, like)))).flat();
+  if (like) {
+    // Files that match some other way (a tag's name) are found too.
+    const keys = new Set<string>();
+    for (const a of addons) if (a.search) for (const k of await a.search(ctx, like)) keys.add(k);
+    if (keys.size) {
+      const seen = new Set(found.map((f) => `${f.type}:${f.id}`));
+      const more = (await Promise.all(sources.map((s) => s.list(ctx, null)))).flat().filter((f) => keys.has(keyOf(f)) && !seen.has(`${f.type}:${f.id}`));
+      found = [...found, ...more];
+    }
+  }
+  for (const a of addons) if (a.decorate) await a.decorate(ctx, found, keyOf);
+  for (const { f, value } of filters) found = await f.apply(ctx, found, value);
   const here = current ? all.get(current)! : null;
   const files: (FileItem & { location?: string | null; project_name: string | null })[] = [];
   for (const f of found) {
     const folder = f.folder_id ?? (f.project_id ? (folderOfProject.get(f.project_id) ?? null) : null);
     if (!inScope(folder)) continue;
-    // A project's empty notes show only in the project's own folder.
-    if (f.quiet && (deep || !here || here.project_id !== f.project_id)) continue;
+    // A project's empty notes show only in the project's own folder (unless someone tagged them).
+    if (f.quiet && !f.tags?.length && (deep || !here || here.project_id !== f.project_id)) continue;
     files.push({ ...f, folder_id: folder, project_name: f.project_id ? (nameOf.get(f.project_id) ?? null) : null });
   }
 
@@ -217,7 +241,7 @@ export async function listFiles(ctx: Ctx, o: ListFilesOptions = {}) {
 
   const qLower = q.toLowerCase();
   const folders = [...all.values()]
-    .filter((f) => (deep ? !types.length && !!q && f.id !== current && inScope(f.parent_id) && f.name.toLowerCase().includes(qLower) : f.parent_id === current || (!current && f.parent_id && !all.has(f.parent_id))))
+    .filter((f) => (deep ? !types.length && !filters.length && !!q && f.id !== current && inScope(f.parent_id) && f.name.toLowerCase().includes(qLower) : f.parent_id === current || (!current && f.parent_id && !all.has(f.parent_id))))
     .map((f) => ({ ...f, status: f.project_id ? (statusOf.get(f.project_id) ?? null) : null, ...(deep ? { location: locationOf(f.parent_id) } : {}) }));
 
   const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true });
@@ -379,6 +403,7 @@ const listQuery = z.object({
   q: z.string().optional(),
   sort: z.enum(['name', 'changed']).optional(),
   limit: z.coerce.number().int().optional(),
+  tag: z.string().optional(),
 });
 const fileRef = z.object({ type: z.string().min(1).describe('note, todo, list, whiteboard, link, or folder'), id: z.string().min(1) });
 const moveBody = z.object({ items: z.array(fileRef).min(1).max(200), folder_id: z.string().nullable() });
@@ -405,7 +430,7 @@ export const filesModule: Module = {
       const ctx = c.get('ctx');
       await requireFeature(ctx, FLAG);
       const o = listQuery.parse(c.req.query());
-      return c.json(await listFiles(ctx, { folder: o.folder === 'root' ? null : o.folder, project: o.project, types: o.type?.split(','), q: o.q, sort: o.sort, limit: o.limit }));
+      return c.json(await listFiles(ctx, { folder: o.folder === 'root' ? null : o.folder, project: o.project, types: o.type?.split(','), q: o.q, sort: o.sort, limit: o.limit, extra: { tag: o.tag } }));
     });
     api.post('/files/move', async (c) => {
       const ctx = c.get('ctx');
@@ -437,7 +462,7 @@ export const filesModule: Module = {
     {
       name: 'list_files',
       description:
-        'List the Files tab: folders and files (notes, to-do lists, lists, whiteboards, links, project notes; each with project_id and project_name when it belongs to a project) in a folder (folder_id; none = top level) or a project’s folder (project_id). With query or type it searches that folder and everything inside it (names, note text, link addresses).',
+        'List the Files tab: folders and files (notes, to-do lists, lists, whiteboards, links, project notes; each with project_id and project_name when it belongs to a project, and its tags) in a folder (folder_id; none = top level) or a project’s folder (project_id). With query, type or tags it searches that folder and everything inside it (names, note text, link addresses, tag names). tags: files with all of these tags (names or ids); untagged: files with no tag.',
       readOnly: true,
       feature: FLAG,
       input: z.object({
@@ -445,10 +470,21 @@ export const filesModule: Module = {
         project_id: z.string().optional(),
         type: z.string().optional().describe('A type (note, todo, list, whiteboard, link, project-note) or group (notes, lists, whiteboards, links); several with commas'),
         query: z.string().optional(),
+        tags: z.array(z.string()).optional().describe('Only files with all of these tags (names or ids)'),
+        untagged: z.boolean().optional().describe('Only files with no tag'),
         sort: z.enum(['name', 'changed']).optional(),
         limit: z.number().int().max(2000).optional(),
       }),
-      run: (ctx, a) => listFiles(ctx, { folder: a.folder_id, project: a.project_id, types: a.type?.split(','), q: a.query, sort: a.sort, limit: a.limit }),
+      run: (ctx, a) =>
+        listFiles(ctx, {
+          folder: a.folder_id,
+          project: a.project_id,
+          types: a.type?.split(','),
+          q: a.query,
+          sort: a.sort,
+          limit: a.limit,
+          extra: { tag: a.untagged ? 'none' : a.tags?.length ? a.tags.join(',') : undefined },
+        }),
     },
     {
       name: 'create_folder',

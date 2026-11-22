@@ -30,6 +30,8 @@ export interface FileItem {
   thumbnail?: boolean;
   /** Listed only inside its project's folder (a project's empty notes). */
   quiet?: boolean;
+  /** Its tags (src/modules/tags.ts, while the tags flag is on). */
+  tags?: { id: string; name: string; color: string | null }[];
 }
 
 export interface FileSource {
@@ -41,6 +43,9 @@ export interface FileSource {
   label: string;
   /** The entity whose rows these are; it has a folder_id field, so they can be moved. None: fixed in place. */
   entity?: string;
+  /** The kind of row a file of this type is, for what is attached to files (tags): `entity` when
+   *  not given. A project's notes are the project's row ('projects'). */
+  rowKind?: string;
   /** Only listed while this flag is on. */
   feature?: string;
   /**
@@ -58,3 +63,24 @@ export interface FileSource {
 
 /** A LIKE pattern for a search, escaped with \\. */
 export const likeOf = (q: string) => `%${q.replace(/[\\%_]/g, (m) => '\\' + m)}%`;
+
+/** The kind of row a file of this source is (for tags and other things attached to files). */
+export const rowKindOf = (s: FileSource): string => s.rowKind ?? s.entity ?? s.type;
+
+/**
+ * Something attached to every file that the Files listing shows, filters and searches by, without
+ * the Files module knowing what it is (tags: src/modules/tags.ts). A module lists them in
+ * `Module.fileAddons`. `keyOf(file)` is `<row kind>:<id>`, the same for a file whatever its type.
+ */
+export interface FileAddon {
+  id: string;
+  /** Only used while this flag is on. */
+  feature?: string;
+  /** Add fields to each listed file (its tags). Runs on every file found, before filtering. */
+  decorate?(ctx: Ctx, files: FileItem[], keyOf: (f: FileItem) => string): Promise<void>;
+  /** Files that match a search some other way (a tag's name): their keys. */
+  search?(ctx: Ctx, like: string): Promise<Set<string>>;
+  /** A query parameter of GET /api/files (and list_files) that narrows the files; given a value,
+   *  the listing looks in the folder and everything inside it, as a search does. */
+  filter?: { param: string; apply(ctx: Ctx, files: FileItem[], value: string): Promise<FileItem[]> };
+}

@@ -83,7 +83,7 @@ export const notesModule: Module = {
   id: 'notes',
   description: 'Project notes and notes on the Notes tab, as Markdown.',
   entities: [notesEntity],
-  files: [{ type: 'project-note', group: 'notes', label: 'Project notes', list: projectNoteFiles, today: { prefix: 'pnote-', set: projectNoteOnToday } }],
+  files: [{ type: 'project-note', group: 'notes', label: 'Project notes', rowKind: 'projects', list: projectNoteFiles, today: { prefix: 'pnote-', set: projectNoteOnToday } }],
   // Read by the web app's note editor (web/src/features/editor).
   features: [
     {
