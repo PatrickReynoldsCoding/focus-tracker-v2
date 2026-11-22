@@ -2,6 +2,7 @@
 // Per day: what the day is for (the rotation), planned habit sessions (rings; filled once done) and to-dos.
 // To-dos move by dragging (mouse) or with Move, then "Put here" on a day (any screen).
 import { useEffect, useState } from 'preact/hooks';
+import { HabitName } from '../habits/HabitName';
 import { localStorageSet } from '../../core/api';
 import { useFlag } from '../../core/features';
 import { AddInput, go, Linkify, Loading, useData } from '../../core/ui';
@@ -63,7 +64,10 @@ function HabitPicker({ plan, pick, setPick }: { plan: Plan; pick: string | null;
       </div>
       {chosen && (
         <p class="muted small">
-          {chosen.name}: {chosen.level}
+          <HabitName id={chosen.id} name={chosen.name}>
+            {chosen.name}
+          </HabitName>
+          : {chosen.level}
           {chosen.per === 'week' ? ', any days of the week' : ''}. {chosen.done} done so far.
           {chosen.away_days_left_out ? ` Away days ask nothing (${chosen.away_days_left_out} left out).` : ''} A plan is only a plan: a session on another day still counts.
         </p>
@@ -79,7 +83,9 @@ function Rings({ plan, set, d, h }: { plan: Plan; set: SetPlan; d: PlanDay; h: P
   const label = `${h.name} on ${longDay(d.day)}: ${row.planned} planned, ${row.done} done`;
   return (
     <li class="plan-hab" aria-label={label}>
-      <span class="plan-hname">{h.name}</span>
+      <HabitName id={h.id} name={h.name} class="plan-hname">
+        {h.name}
+      </HabitName>
       <span class="plan-rings">
         {Array.from({ length: Math.min(marks, 12) }, (_, i) =>
           i < row.done ? (

@@ -1,4 +1,5 @@
 import { Loading } from '../../core/ui';
+import { HabitName } from '../habits/HabitName';
 import { HabitBars, dayLabel } from './charts';
 import { usePref, useInsights } from './prefs';
 import type { HabitHistory, HabitsData } from './types';
@@ -33,7 +34,11 @@ function Table({ data }: { data: HabitsData }) {
         <tbody>
           {data.habits.map((h) => (
             <tr key={h.id}>
-              <th scope="row">{h.name}</th>
+              <th scope="row">
+                <HabitName id={h.id} name={h.name}>
+                  {h.name}
+                </HabitName>
+              </th>
               {h.weeks.map((w) => (
                 <td key={w.week}>{cell(w)}</td>
               ))}
@@ -81,7 +86,11 @@ export function HabitsTab() {
           {data.habits.map((h) => (
             <section class="card" key={h.id}>
               <div class="ins-habit-head">
-                <h2>{h.name}</h2>
+                <h2>
+                  <HabitName id={h.id} name={h.name}>
+                    {h.name}
+                  </HabitName>
+                </h2>
                 <span class="muted small">{h.level}</span>
               </div>
               <p class="ins-ontarget">

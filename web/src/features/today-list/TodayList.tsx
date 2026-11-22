@@ -13,6 +13,8 @@ import { AddInput, fmtDay, go, Linkify, useData } from '../../core/ui';
 import { buildTodayList, type TodayItem, type TodayList as List } from '../../../../src/core/today-list';
 import { record, type SetHabits } from '../habits/actions';
 import { HabitCards } from '../habits/HabitRow';
+import { NotesMark } from '../habits/HabitName';
+import { openHabit } from '../habits/open';
 import type { Progress } from '../habits/types';
 import { CardDialog, type Card, type Column } from '../board';
 
@@ -109,11 +111,12 @@ export function TodayList({ today, setToday }: { today: TodayData; setToday: Tod
   };
   const openItem = (x: TodayItem) => {
     if (x.kind === 'card') return setCard(x.id);
-    if (x.kind === 'habit') return go('/habits');
+    if (x.kind === 'habit') return openHabit(x.id);
     go(x.list_id ? `/n/${x.list_id}` : '/notes');
   };
 
   // ---------- drawing ----------
+  const notesOf = (x: TodayItem) => (x.kind === 'habit' ? habits.get(x.id)?.notes : null);
   const prompts = today.habits.filter((h) => h.pending?.due || h.step_up || h.ask_stop);
   const openHabits = open.filter((x) => x.kind === 'habit');
   const openThings = open.filter((x) => x.kind !== 'habit');
@@ -134,8 +137,8 @@ export function TodayList({ today, setToday }: { today: TodayData; setToday: Tod
       {prompts.map((h) => (
         <HabitCards key={h.id} h={h} set={setHabits} />
       ))}
-      {openHabits.length > 0 && <Section label="Habits" items={openHabits} tick={tick} notToday={notToday} open={openItem} />}
-      {openThings.length > 0 && <Section label="To-dos" items={openThings} tick={tick} notToday={notToday} open={openItem} />}
+      {openHabits.length > 0 && <Section label="Habits" items={openHabits} tick={tick} notToday={notToday} open={openItem} notesOf={notesOf} />}
+      {openThings.length > 0 && <Section label="To-dos" items={openThings} tick={tick} notToday={notToday} open={openItem} notesOf={notesOf} />}
       {!list.items.length && <p class="muted small tl-empty">Nothing for today yet. Add a to-do here, or give a card a day.</p>}
       {done.length > 0 &&
         (open.length ? (
@@ -158,7 +161,7 @@ export function TodayList({ today, setToday }: { today: TodayData; setToday: Tod
               <span class={`tl-tick on ${x.kind === 'habit' ? '' : 'sq'}`} aria-hidden="true">
                 {x.state === 'skipped' ? '–' : '✓'}
               </span>
-              <Name x={x} open={openItem} />
+              <Name x={x} open={openItem} notes={notesOf(x)} />
               <span class="tl-meta">{x.state === 'skipped' ? 'not today' : x.progress ?? ''}</span>
               <button class="link small tl-act" aria-label={`${x.state === 'skipped' ? 'Back on today’s list' : 'Not done'}: ${x.title}`} onClick={() => takeBack(x)}>
                 {x.state === 'skipped' ? 'Back' : 'Undo'}
@@ -173,7 +176,7 @@ export function TodayList({ today, setToday }: { today: TodayData; setToday: Tod
   );
 }
 
-function Section({ label, items, tick, notToday, open }: { label: string; items: TodayItem[]; tick: (x: TodayItem) => void; notToday: (x: TodayItem, on: boolean) => void; open: (x: TodayItem) => void }) {
+function Section({ label, items, tick, notToday, open, notesOf }: { label: string; items: TodayItem[]; tick: (x: TodayItem) => void; notToday: (x: TodayItem, on: boolean) => void; open: (x: TodayItem) => void; notesOf: (x: TodayItem) => string | null | undefined }) {
   // With project labels a card's project shows as its label, not as plain text too.
   const labels = useFlag('project-labels');
   return (
@@ -183,7 +186,7 @@ function Section({ label, items, tick, notToday, open }: { label: string; items:
         {items.map((x) => (
           <li key={x.key} class="tl-row">
             <button class={`tl-tick ${x.kind === 'habit' ? '' : 'sq'}`} aria-label={x.kind === 'habit' ? `Done a session of ${x.title}` : `Done: ${x.title}`} onClick={() => tick(x)} />
-            <Name x={x} open={open} />
+            <Name x={x} open={open} notes={notesOf(x)} />
             <span class="tl-meta">
               {x.planned && <span class="tag">planned</span>}
               {x.late && (
@@ -211,9 +214,9 @@ function Section({ label, items, tick, notToday, open }: { label: string; items:
   );
 }
 
-/** The item's name: a tap opens it (its list, its card, the Habits tab); links in it still work. */
-function Name({ x, open }: { x: TodayItem; open: (x: TodayItem) => void }) {
-  const where = x.kind === 'card' ? 'Open the card' : x.kind === 'habit' ? 'Open Habits' : 'Open its list';
+/** The item's name: a tap opens it (its list, its card, a habit's notes and settings, D56); links in it still work. */
+function Name({ x, open, notes }: { x: TodayItem; open: (x: TodayItem) => void; notes?: string | null }) {
+  const where = x.kind === 'card' ? 'Open the card' : x.kind === 'habit' ? 'Open its notes and settings' : 'Open its list';
   return (
     <span
       class="tl-name"
@@ -228,6 +231,7 @@ function Name({ x, open }: { x: TodayItem; open: (x: TodayItem) => void }) {
         <Linkify text={x.title} />
       </span>
       {x.size && <small> · {x.size}</small>}
+      {x.kind === 'habit' && <NotesMark notes={notes} />}
     </span>
   );
 }

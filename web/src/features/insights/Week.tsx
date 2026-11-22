@@ -1,4 +1,5 @@
 import { useFlag } from '../../core/features';
+import { HabitName } from '../habits/HabitName';
 import { fmtMinutes, Loading } from '../../core/ui';
 import { DayBars, rangeLabel, TargetBar } from './charts';
 import { usePref, useInsights } from './prefs';
@@ -84,7 +85,9 @@ export function Week() {
             {w.habits.map((h) => (
               <li key={h.id} class="ins-habit-row">
                 <div class="ins-habit-head">
-                  <span class="ins-habit-name">{h.name}</span>
+                  <HabitName id={h.id} name={h.name} class="ins-habit-name">
+                    {h.name}
+                  </HabitName>
                   <span class="muted small">{h.level}</span>
                 </div>
                 <TargetBar counted={h.counted} over={h.over} target={h.status === 'paused' || h.status === 'partial' ? 0 : h.target} light={h.status === 'open'} />
