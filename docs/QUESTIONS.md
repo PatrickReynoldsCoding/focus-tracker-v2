@@ -11,17 +11,17 @@ New questions from later work go at the end, under "Still open", in the same sty
 
 Applied, or being applied in the next batch.
 
-- [Pills Q1] A new note or list put on Today goes into the pill on screen and into All. Being applied.
+- [Pills Q1] A new note or list put on Today goes into the pill on screen and into All. Done in 0.43.0 (D55: Add file already did this).
 - [Pills Q3] Focus card size, shared or per device: owner does not mind. Ignored, stays shared.
 - [Files Q3] The folder decides the project. Kept.
-- Files layout (new feature): Files root shows one "Projects" folder. Inside it is a folder per category, and inside each a folder per project. Projects with no category go in "No category". Queued.
-- [Profiles Q6] Opening a profile does not make it the default. The default stays the one chosen in Manage profiles. Being applied.
-- Claude can be told "add X to Y in my work profile". Every tool's profile argument will accept a profile name (any case) as well as the id, and the connector instructions will say so. Queued.
+- Files layout (new feature): Files root shows one "Projects" folder. Inside it is a folder per category, and inside each a folder per project. Projects with no category go in "No category". Done in 0.43.0 (D52).
+- [Profiles Q6] Opening a profile does not make it the default. The default stays the one chosen in Manage profiles. Done in 0.43.0 (D54).
+- Claude can be told "add X to Y in my work profile". Every tool's profile argument will accept a profile name (any case) as well as the id, and the connector instructions will say so. Done in 0.43.0 (D54).
 - [0.35.0 Q2] A to-do's Done starts folded, remembered per device. Kept.
-- Board view: the folded Done strip sits at the far right of the board. Queued.
+- Board view: the folded Done strip sits at the far right of the board. Done in 0.43.0 (D55).
 - [0.35.0 Q1] Board or List view stays per device. Kept.
 - [0.35.0 Q9] Category buttons only, no drop-down beside them. Kept.
-- [0.35.0 Q10] Tags: every file linked to a project, and the project and its notes, gets an automatic tag with the project name. It follows renames and shows in the Files tag filter, widgets and Claude's list_files. Project notes can have extra tags, and any file can have several. Queued.
+- [0.35.0 Q10] Tags: every file linked to a project, and the project and its notes, gets an automatic tag with the project name. It follows renames and shows in the Files tag filter, widgets and Claude's list_files. Project notes can have extra tags, and any file can have several. Done in 0.43.0 (D53).
 - [Widgets Q17] The Files widget lets you tick to-do items directly. Tapping the title opens the file. Queued.
 - [Widgets Q14] Files widget stays at 30 files and 200 characters by default. Kept.
 - [Widgets Q20 and Q24] Opening a file from a widget switches the app to that widget's profile. But no widget follows the open profile any more: every widget (Today, Files, Single file) picks a profile in its setup screen, can change it in its settings, and keeps it. Quick add and notifications still follow the app's open profile. Queued.
@@ -230,6 +230,38 @@ My suggestion: 1.
 2. Keep a ticked item for a while with ☑, tap again to untick.
 
 My suggestion: 1 (Undo in the app covers a mis-tap).
+
+### Files tree and automatic tags (0.43.0)
+
+**[0.43.0 Q1] "No category" shows inside Projects even when no project is in it. Hide it when empty?**
+1. Always show it (as now: it is where a project's folder goes to lose its category).
+2. Only when a project has no category.
+
+My suggestion: 1 (Move… needs it as a place to go).
+
+**[0.43.0 Q2] A project's folder can no longer go into a folder of your own (it always sits in its category's folder). Allow it again?**
+1. No (as now): Projects › category › project only.
+2. Yes, and then it shows only in your folder, not under Projects.
+
+My suggestion: 1 (one place for every project).
+
+**[0.43.0 Q3] The automatic project tag is not shown on file cards, rows and page headers while project labels are on (the label already names the project). Show it there too?**
+1. Hide it there (as now); it shows in the Tags row, the tag editor, widgets and Claude.
+2. Show it everywhere, next to the label.
+
+My suggestion: 1 (the same name twice on one card is noise).
+
+**[0.43.0 Q4] The "No tag" filter ignores the automatic project tag (a project's file with no tag of its own counts as untagged). Change it?**
+1. Ignore it (as now).
+2. Count it: only files with no project and no tag.
+
+My suggestion: 1 (No tag is for finding files you have not tagged).
+
+**[0.43.0 Q5] Searching Files for a project's name now finds every file of that project (through its tag). Keep it?**
+1. Keep it (as now).
+2. Only names, text and folders, as before.
+
+My suggestion: 1.
 
 ### Other
 
