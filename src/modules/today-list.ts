@@ -5,6 +5,7 @@
 
 import { z } from 'zod';
 import type { Ctx } from '../core/ctx';
+import { bad } from '../core/errors';
 import { requireFeature } from '../core/features';
 import type { Module } from '../core/registry';
 import type { Row } from '../core/entity';
@@ -125,6 +126,17 @@ export const todayListModule: Module = {
       const ctx = c.get('ctx');
       await requireFeature(ctx, TODAY_LIST_FLAG);
       return c.json(await todayList(ctx));
+    });
+    // "Not today" for any item of the list (the Android widget): {kind, id, on}; on false puts it back. Returns the list.
+    api.post('/today/not-today', async (c) => {
+      const ctx = c.get('ctx');
+      await requireFeature(ctx, TODAY_LIST_FLAG);
+      const b = await c.req.json<{ kind?: unknown; id?: unknown; on?: unknown }>().catch(() => ({}) as { kind?: unknown; id?: unknown; on?: unknown });
+      const kind = KINDS.find((k) => k === b.kind);
+      if (!kind || typeof b.id !== 'string' || !b.id) throw bad('Send {"kind": "todo" | "card" | "habit", "id": "…"} (and "on": false to put it back)');
+      const on = b.on !== false;
+      ctx.label = on ? 'not today' : 'back on today';
+      return c.json(await tickItem(ctx, { kind, id: b.id, not_today: on }));
     });
   },
   tools: [

@@ -90,7 +90,7 @@ describe('GET /api/today/list', () => {
     expect(t.todo_lists).toEqual({ [other.id]: 'Shopping' });
     const s = await call('GET', '/status', undefined, m);
     expect(s.today_list.left).toBe(6);
-    expect(s.today_list.items[0]).toEqual({ kind: 'habit', id: daily.id, title: 'Stretch', progress: '0/2', late: null });
+    expect(s.today_list.items[0]).toEqual({ kind: 'habit', id: daily.id, title: 'Stretch', progress: '0/2', late: null, can_skip: false });
   });
 
   it('ticks a project card into Done and back, and a list item in place', async () => {
@@ -145,6 +145,35 @@ describe('GET /api/today/list', () => {
     l = await call('GET', '/today/list', undefined, m);
     expect(l.items[0].state).toBe('open');
     await call('POST', `/habits/${h.id}/not-today`, {}, { ...m, expect: 400 });
+  });
+
+  it('puts a to-do, a card or a weekly habit off for today from the widget, and the status leaves them out', async () => {
+    const m = await fresh();
+    const { day } = await call('GET', '/today', undefined, m);
+    const t = await call('POST', '/todos', { title: 'Post parcel', day }, m);
+    const keep = await call('POST', '/todos', { title: 'Ring bank', day }, m);
+    const p = await call('POST', '/projects', { name: 'Shed' }, m);
+    const card = await call('POST', '/tasks', { title: 'Paint door', project_id: p.id, day }, m);
+    const h = await call('POST', '/habits', { name: 'Piano', sessions: 2, per: 'week' }, m);
+    let s = await call('GET', '/status', undefined, m);
+    expect(s.today_list.items.map((x: any) => [x.title, x.can_skip])).toEqual([['Piano', true], ['Post parcel', true], ['Ring bank', true], ['Paint door', true]]);
+
+    let l = await call('POST', '/today/not-today', { kind: 'todo', id: t.id }, m);
+    expect(l.items.find((x: any) => x.id === t.id).state).toBe('skipped');
+    await call('POST', '/today/not-today', { kind: 'card', id: card.id, on: true }, m);
+    await call('POST', '/today/not-today', { kind: 'habit', id: h.id }, m);
+    s = await call('GET', '/status', undefined, m);
+    expect(s.today_list.items.map((x: any) => x.id)).toEqual([keep.id]);
+    expect(s.today_list.left).toBe(1);
+    expect(s.todos_due.map((x: any) => x.id)).toEqual([keep.id]);
+    expect(s.habits_left).toEqual([]);
+
+    l = await call('POST', '/today/not-today', { kind: 'todo', id: t.id, on: false }, m);
+    expect(l.items.find((x: any) => x.id === t.id).state).toBe('open');
+    s = await call('GET', '/status', undefined, m);
+    expect(s.todos_due.map((x: any) => x.id).sort()).toEqual([t.id, keep.id].sort());
+    await call('POST', '/today/not-today', { kind: 'note', id: t.id }, { ...m, expect: 400 });
+    await call('POST', '/today/not-today', { kind: 'todo' }, { ...m, expect: 400 });
   });
 });
 

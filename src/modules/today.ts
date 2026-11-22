@@ -240,15 +240,17 @@ export async function today(ctx: Ctx) {
 /** Small and cheap: for widgets, the menu bar and quick polls. */
 export async function status(ctx: Ctx) {
   const day = await ctx.today();
-  const [focus, session, todos, habits, notes, extra] = await Promise.all([
+  const [focus, session, todos, habits, notes, extra, hide] = await Promise.all([
     focusOf(ctx, day),
     currentSession(ctx),
     todosForDay(ctx, day),
     habitProgressIfOn(ctx, day),
     pendingNotifications(ctx),
     ctx.feature(TODAY_LIST_FLAG).then(async (on) => (on ? { cards: await cardsForDay(ctx, day), names: await todoListNames(ctx) } : null)),
+    notTodayKeys(ctx, day),
   ]);
-  const list = extra && buildTodayList(day, { habits, todos: withListNames(todos, extra.names), cards: extra.cards, hide: await notTodayKeys(ctx, day) });
+  const list = extra && buildTodayList(day, { habits, todos: withListNames(todos, extra.names), cards: extra.cards, hide });
+  const putOff = new Set(hide);
   return {
     mode: ctx.mode,
     day,
@@ -265,13 +267,14 @@ export async function status(ctx: Ctx) {
       planned: session.planned,
     },
     pomodoro: await currentPomodoro(ctx),
-    todos_due: todos.filter((t) => !t.done).map((t) => ({ id: t.id, title: t.title, day: t.day })),
+    // Leaves out what was put off for today ("Not today"), as the Today list does.
+    todos_due: todos.filter((t) => !t.done && !putOff.has(`todo:${t.id}`)).map((t) => ({ id: t.id, title: t.title, day: t.day })),
     habits_left: habits.filter((h) => h.left > 0).map((h) => ({ id: h.id, name: h.name, left: h.left, per: h.per })),
     // The Today list's open items (flag today-panel; null while it is off), for clients that show one list.
     today_list: list && {
       left: list.left,
       done: list.done,
-      items: list.items.filter((x) => x.state === 'open').map((x) => ({ kind: x.kind, id: x.id, title: x.title, progress: x.progress ?? null, late: x.late ?? null })),
+      items: list.items.filter((x) => x.state === 'open').map((x) => ({ kind: x.kind, id: x.id, title: x.title, progress: x.progress ?? null, late: x.late ?? null, can_skip: x.kind !== 'habit' || !!x.can_skip })),
     },
     notifications: notes,
   };
