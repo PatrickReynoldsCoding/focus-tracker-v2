@@ -87,6 +87,16 @@ async function interact(page, name, card, ctx) {
   await row(page, 'Stretch').locator('.tl-tick').click();
   await settle(page);
   ok((await row(page, 'Stretch').textContent()).includes('1/2'), `${name}: one session of Stretch: still there, 1/2`);
+  // Not today on a daily habit too, then back on the list at once (Stretch is checked again below).
+  ok(await row(page, 'Stretch').locator('.tl-act').count() === 1, `${name}: a daily habit has Not today`);
+  await row(page, 'Stretch').locator('.tl-act').click();
+  await settle(page);
+  ok(!(await openRows(page)).includes('Stretch'), `${name}: Not today takes the daily habit Stretch off`);
+  await api.post(`/habits/${(await api.get('/habits')).find((h) => h.name === 'Stretch').id}/not-today`, { on: false });
+  await page.reload();
+  await page.waitForSelector('.today-list');
+  await settle(page);
+  ok((await openRows(page)).includes('Stretch'), `${name}: Stretch is back on the list`);
   // Not today on a weekly habit.
   await row(page, 'Guitar').locator('.tl-act').click();
   await settle(page);

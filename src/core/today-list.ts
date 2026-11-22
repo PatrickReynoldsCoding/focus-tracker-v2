@@ -87,7 +87,7 @@ export function habitItem(h: TodayHabitIn): TodayItem | null {
   if (!weekly) {
     if (h.skipped_today && h.done_today < target) return { ...base, state: 'skipped', progress: null };
     const done = h.done_today >= target;
-    return { ...base, state: done ? 'done' : 'open', progress: target > 1 ? `${Math.min(h.done_today, target)}/${target}` : null };
+    return { ...base, state: done ? 'done' : 'open', progress: target > 1 ? `${Math.min(h.done_today, target)}/${target}` : null, can_skip: done ? undefined : true };
   }
   const progress = `${Math.min(h.done_this_period, target)}/${target} wk`;
   if (h.done_today > 0) return { ...base, state: 'done', progress };

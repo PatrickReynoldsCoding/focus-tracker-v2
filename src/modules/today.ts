@@ -274,7 +274,7 @@ export async function status(ctx: Ctx) {
     today_list: list && {
       left: list.left,
       done: list.done,
-      items: list.items.filter((x) => x.state === 'open').map((x) => ({ kind: x.kind, id: x.id, title: x.title, progress: x.progress ?? null, late: x.late ?? null, can_skip: x.kind !== 'habit' || !!x.can_skip })),
+      items: list.items.filter((x) => x.state === 'open').map((x) => ({ kind: x.kind, id: x.id, title: x.title, progress: x.progress ?? null, late: x.late ?? null, can_skip: x.can_skip ?? true })),
     },
     notifications: notes,
   };

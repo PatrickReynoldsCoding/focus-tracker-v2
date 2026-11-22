@@ -23,6 +23,12 @@ describe('the builder (src/core/today-list.ts)', () => {
     expect(habitItem({ ...h, skipped_today: true })).toMatchObject({ state: 'skipped' });
     expect(habitItem({ ...h, done_this_period: 3 })).toBeNull();
   });
+  it('lets a daily habit be put off for today until it is done', () => {
+    const d = { ...h, per: 'day', target: 1, done_today: 0 };
+    expect(habitItem(d)).toMatchObject({ state: 'open', can_skip: true });
+    expect(habitItem({ ...d, skipped_today: true })).toMatchObject({ state: 'skipped' });
+    expect(habitItem({ ...d, done_today: 1 })?.can_skip).toBeUndefined();
+  });
   it('keeps a daily habit until today’s sessions are done', () => {
     const d = { ...h, per: 'day', target: 3, done_today: 1, done_this_period: 1 };
     expect(habitItem(d)).toMatchObject({ state: 'open', progress: '1/3' });
@@ -90,7 +96,7 @@ describe('GET /api/today/list', () => {
     expect(t.todo_lists).toEqual({ [other.id]: 'Shopping' });
     const s = await call('GET', '/status', undefined, m);
     expect(s.today_list.left).toBe(6);
-    expect(s.today_list.items[0]).toEqual({ kind: 'habit', id: daily.id, title: 'Stretch', progress: '0/2', late: null, can_skip: false });
+    expect(s.today_list.items[0]).toEqual({ kind: 'habit', id: daily.id, title: 'Stretch', progress: '0/2', late: null, can_skip: true });
   });
 
   it('ticks a project card into Done and back, and a list item in place', async () => {
@@ -145,6 +151,26 @@ describe('GET /api/today/list', () => {
     l = await call('GET', '/today/list', undefined, m);
     expect(l.items[0].state).toBe('open');
     await call('POST', `/habits/${h.id}/not-today`, {}, { ...m, expect: 400 });
+  });
+
+  it('puts a daily habit off for today: not left, no prompt, back tomorrow, no penalty', async () => {
+    const m = await fresh();
+    const h = await call('POST', '/habits', { name: 'Stretch', sessions: 2, per: 'day', next_prompt: '2020-01-01T08:00:00Z' }, m);
+    let s = await call('GET', '/status', undefined, m);
+    expect(s.today_list.items[0]).toMatchObject({ id: h.id, can_skip: true });
+    expect(s.notifications.some((n: any) => n.kind === 'habit')).toBe(true);
+    let l = await call('POST', '/today/not-today', { kind: 'habit', id: h.id }, m);
+    expect(l.items.find((x: any) => x.id === h.id).state).toBe('skipped');
+    s = await call('GET', '/status', undefined, m);
+    expect(s.today_list.left).toBe(0);
+    expect(s.habits_left).toEqual([]);
+    expect(s.notifications.some((n: any) => n.kind === 'habit')).toBe(false);
+    const p = await call('GET', '/habits/progress', undefined, m);
+    expect(p[0]).toMatchObject({ skipped_today: true, left: 0 });
+    l = await call('POST', '/today/not-today', { kind: 'habit', id: h.id, on: false }, m);
+    expect(l.items.find((x: any) => x.id === h.id).state).toBe('open');
+    s = await call('GET', '/status', undefined, m);
+    expect(s.notifications.some((n: any) => n.kind === 'habit')).toBe(true);
   });
 
   it('puts a to-do, a card or a weekly habit off for today from the widget, and the status leaves them out', async () => {
