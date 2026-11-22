@@ -18,7 +18,7 @@ class TodayWidgetTest {
       "todos_due":[{"id":"t1","title":"Post parcel","day":"2026-11-22"},{"id":"t2","title":"Ring bank","day":"2026-11-20"}],
       "habits_left":[{"id":"h1","name":"Stretch","left":1,"per":"day"},{"id":"h2","name":"Piano","left":2,"per":"week"}],
       "today_list":{"left":5,"done":0,"items":[
-        {"kind":"habit","id":"h1","title":"Stretch","progress":null,"late":null,"can_skip":false},
+        {"kind":"habit","id":"h1","title":"Stretch","progress":null,"late":null,"can_skip":true},
         {"kind":"habit","id":"h2","title":"Piano","progress":"0/2 wk","late":null,"can_skip":true},
         {"kind":"todo","id":"t2","title":"Ring bank","progress":null,"late":"2026-11-20","can_skip":true},
         {"kind":"todo","id":"t1","title":"Post parcel","progress":null,"late":null,"can_skip":true},
@@ -61,7 +61,7 @@ class TodayWidgetTest {
     @Test fun listsTheTodayListWithKindsAndNotToday() {
         val s = Status.parse(JSONObject(personalStatus))
         assertEquals(listOf("habit:h1", "habit:h2", "todo:t2", "todo:t1", "card:c1"), s.items.map { "${it.kind}:${it.id}" })
-        assertEquals(listOf(false, true, true, true, true), s.items.map { it.canSkip })
+        assertEquals(listOf(true, true, true, true, true), s.items.map { it.canSkip })
         assertEquals("0/2 wk", s.items[1].detail)
         assertEquals("From 2026-11-20", s.items[2].detail)
         assertNull(s.items[3].detail)
@@ -74,7 +74,7 @@ class TodayWidgetTest {
         // Flag today-panel off: today_list is null.
         val s = Status.parse(JSONObject(personalStatus.replace(Regex("\"today_list\":\\{.*]},", RegexOption.DOT_MATCHES_ALL), "\"today_list\":null,")))
         assertEquals(listOf("todo:t1", "todo:t2", "habit:h1", "habit:h2"), s.items.map { "${it.kind}:${it.id}" })
-        assertEquals(listOf(true, true, false, true), s.items.map { it.canSkip })
+        assertEquals(listOf(true, true, true, true), s.items.map { it.canSkip })
     }
 
     @Test fun anAnswerThatIsNotAStatusIsAnErrorNotAnEmptyList() {

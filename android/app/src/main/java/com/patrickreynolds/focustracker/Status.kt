@@ -31,8 +31,8 @@ data class Status(
         val plannedSecondsLeft: Long? = null,
         val plannedTimeUp: Boolean = false,
     )
-    /** `kind`: todo, card or habit; `canSkip`: it can be put off with Not today. */
-    data class Item(val id: String, val title: String, val detail: String?, val kind: String = "todo", val canSkip: Boolean = false)
+    /** `kind`: todo, card or habit; `canSkip`: the server says it can be put off with Not today (every row can since 0.4.2; the widget shows ✕ on all). */
+    data class Item(val id: String, val title: String, val detail: String?, val kind: String = "todo", val canSkip: Boolean = true)
     data class Notice(val id: String, val title: String, val body: String?, val seen: Boolean)
 
     companion object {
@@ -46,13 +46,13 @@ data class Status(
                 (l.optJSONArray("items") ?: throw JSONException("No items in the Today list")).objects().map {
                     val kind = it.getString("kind")
                     val detail = if (kind == "habit") it.str("progress") else it.str("late")?.let { d -> "From $d" }
-                    Item(it.getString("id"), it.getString("title"), detail, kind, it.optBoolean("can_skip", kind != "habit"))
+                    Item(it.getString("id"), it.getString("title"), detail, kind, it.optBoolean("can_skip", true))
                 }
             }
             val todos = o.optJSONArray("todos_due").objects().map { Item(it.getString("id"), it.getString("title"), null, "todo", true) }
             val habits = o.optJSONArray("habits_left").objects().map {
                 val per = if (it.str("per") == "week") "this week" else "today"
-                Item(it.getString("id"), it.getString("name"), "${it.optInt("left")} left $per", "habit", it.str("per") == "week")
+                Item(it.getString("id"), it.getString("name"), "${it.optInt("left")} left $per", "habit", true)
             }
             val focus = o.optJSONObject("focus")
             val s = o.optJSONObject("session")

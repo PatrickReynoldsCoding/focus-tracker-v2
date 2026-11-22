@@ -199,7 +199,7 @@ class TodayWidget : AppWidgetProvider() {
                 val base = Intent().putExtra(EXTRA_ID, item.id).putExtra(EXTRA_KIND, item.kind).apply { if (s.mode != null) putExtra(EXTRA_MODE, s.mode) }
                 row.setOnClickFillInIntent(R.id.row, Intent(base).putExtra(EXTRA_ACTION, TodayText.tickAction(item.kind)))
                 // ✕ = Not today (its own fill-in intent: a tap on it does not tick the row).
-                row.setViewVisibility(R.id.skip, if (item.canSkip) View.VISIBLE else View.GONE)
+                row.setViewVisibility(R.id.skip, View.VISIBLE)
                 row.setOnClickFillInIntent(R.id.skip, Intent(base).putExtra(EXTRA_ACTION, "nottoday"))
                 items.addItem(n++, row)
             }
