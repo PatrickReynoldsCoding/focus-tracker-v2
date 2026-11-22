@@ -57,6 +57,7 @@ export const habitsEntity: Entity = {
     category_id: { type: 'text', ref: 'categories' },
     project_id: { type: 'text', ref: 'projects', desc: 'The one project this habit belongs to (empty: none). The habit then also shows on that project’s page.' },
     description: { type: 'markdown', desc: 'The why and any anchor: "after coffee"' },
+    notes: { type: 'markdown', desc: 'The habit’s notes: anything useful for doing it (Markdown). Shown at the top of the habit’s dialog in the app.' },
     status: { type: 'text', enum: HABIT_STATUS, default: 'active' },
     started: { type: 'day' },
     next_prompt: { type: 'time', desc: 'When the next step-up prompt falls due (the app sets it)' },
@@ -350,6 +351,8 @@ export interface HabitProgress {
   skipped_today: boolean;
   left: number;
   small_version: string | null;
+  /** The habit's notes (Markdown), null when it has none. */
+  notes: string | null;
   /** The level that applies to this period, as text: "3 a week, 30 min". */
   level: string;
   size: string | null;
@@ -414,6 +417,7 @@ export async function habitProgress(ctx: Ctx, day?: string): Promise<HabitProgre
       skipped_today: skipped,
       left: target == null || skipped ? 0 : Math.max(0, target - period),
       small_version: (h.small_version as string | null) ?? null,
+      notes: (h.notes as string | null) || null,
       level: formatLevel(level),
       size: level.size == null ? null : formatLevel({ ...level, sessions: null }),
       goal: (h.goal as string | null) ?? null,
@@ -655,7 +659,7 @@ export const habitsModule: Module = {
       name: 'habit_progress',
       description:
         'Active habits with sessions done today / this week, how many are left, the level that applies now, the last 7 days (or the week), ' +
-        'a waiting level change (pending) and a step-up prompt that is due (step_up, with options).',
+        'a waiting level change (pending), a step-up prompt that is due (step_up, with options) and the habit’s notes (Markdown; change them with update_item, field notes).',
       readOnly: true,
       feature: HABITS_FLAG,
       input: z.object({ day: z.string().optional() }),
@@ -705,8 +709,8 @@ export const habitsModule: Module = {
         'Note an idea for a habit the owner is not starting yet (name, optional why). It is shown in its own group on the Habits tab and never on Today. ' +
         'To start it later, update_item the habit with status "active" and its sessions, per, size, goal.',
       feature: HABITS_FLAG,
-      input: z.object({ name: z.string().min(1), description: z.string().optional() }),
-      run: (ctx, a) => create(ctx, habitsEntity, { name: a.name, description: a.description, status: 'aspiring' }),
+      input: z.object({ name: z.string().min(1), description: z.string().optional(), notes: z.string().optional().describe('Notes and useful information (Markdown)') }),
+      run: (ctx, a) => create(ctx, habitsEntity, { name: a.name, description: a.description, notes: a.notes, status: 'aspiring' }),
     },
   ],
 };
