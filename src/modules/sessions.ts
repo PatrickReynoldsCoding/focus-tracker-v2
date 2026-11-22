@@ -138,6 +138,14 @@ export async function lastLength(ctx: Ctx): Promise<number | null> {
   return v && Number.isInteger(n) && n >= 1 && n <= MAX_MIN ? n : 25;
 }
 
+/** A planned length sent for the setting: minutes, or null / "none" for no limit (stored as 'none'). */
+function parseLength(v: unknown): string {
+  if (v === 'none') return 'none';
+  const n = typeof v === 'string' && v.trim() !== '' ? Number(v) : v;
+  if (typeof n !== 'number' || !Number.isInteger(n) || n < 1 || n > MAX_MIN) throw bad(`The planned length must be whole minutes from 1 to ${MAX_MIN}, or "none" for no limit`);
+  return String(n);
+}
+
 function checkMinutes(v: unknown, field: string): number | null {
   if (v === null) return null;
   if (typeof v !== 'number' || !Number.isInteger(v) || v < 1 || v > MAX_MIN) throw bad(`${field} must be whole minutes from 1 to ${MAX_MIN}, or null for no limit`);
@@ -314,6 +322,8 @@ const minutes = z.number().int().min(1).max(MAX_MIN);
 export const sessionsModule: Module = {
   id: 'sessions',
   description: 'Work sessions: start, pause, resume, a pomodoro that waits for a click, planned length, finish with a note.',
+  // The planned length a new session starts with (the last one chosen): this profile's or every profile's (D46).
+  scopedSettings: [{ id: 'session.length', key: LENGTH_KEY, label: 'Planned length of a new session', section: 'pomodoro', parse: parseLength }],
   features: [
     {
       id: 'pomodoro-waits-for-click',

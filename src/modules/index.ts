@@ -22,6 +22,7 @@ import { categoryButtonsModule } from './category-buttons';
 import { projectsModule } from './projects';
 import { resourcesModule } from './resources';
 import { sessionsModule } from './sessions';
+import { settingScopeModule } from './setting-scope';
 import { stickiesModule } from './stickies';
 import { relationsModule } from './relations';
 import { swiftbarModule } from './swiftbar';
@@ -68,5 +69,6 @@ export const MODULES: Module[] = [
   filesModule,
   widgetsModule,
   swiftbarModule,
+  settingScopeModule,
   systemModule,
 ];

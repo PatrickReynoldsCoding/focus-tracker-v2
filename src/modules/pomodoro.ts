@@ -11,6 +11,7 @@ import type { Ctx } from '../core/ctx';
 import { bad } from '../core/errors';
 import type { Module } from '../core/registry';
 import { pauseSession, resumeSession, storedSession } from './sessions';
+import { onOff, wholeNumber as wholeNumberSetting } from '../core/setting-scope';
 
 export type PomodoroPhase = 'work' | 'break' | 'long_break';
 
@@ -167,6 +168,15 @@ export async function pomodoroNotices(ctx: Ctx) {
 
 export const pomodoroModule: Module = {
   id: 'pomodoro',
+  // Settings → Pomodoro: each can be set for this profile or for all (D46).
+  scopedSettings: [
+    { id: 'pomodoro.work', key: 'pomodoro.work', label: 'Work (min)', section: 'pomodoro', parse: wholeNumberSetting(1, 180, 'Work') },
+    { id: 'pomodoro.break', key: 'pomodoro.break', label: 'Break (min)', section: 'pomodoro', parse: wholeNumberSetting(1, 120, 'Break') },
+    { id: 'pomodoro.long_break', key: 'pomodoro.long_break', label: 'Long break (min)', section: 'pomodoro', parse: wholeNumberSetting(1, 180, 'Long break') },
+    { id: 'pomodoro.rounds', key: 'pomodoro.rounds', label: 'Rounds before a long break', section: 'pomodoro', parse: wholeNumberSetting(1, 12, 'Rounds') },
+    { id: 'pomodoro.breaks_pause_session', key: 'pomodoro.breaks_pause_session', label: 'A break also pauses the session timer', section: 'pomodoro', parse: onOff('breaks_pause_session') },
+    { id: 'swiftbar.show_pomodoro', key: 'swiftbar.show_pomodoro', label: 'Pomodoro countdown in the Mac menu bar', section: 'pomodoro', parse: onOff('show_pomodoro') },
+  ],
   description: 'A Pomodoro timer on its own (not tied to a session): work periods, short and long breaks, waits for a click between periods.',
   routes(api) {
     api.get('/pomodoro', async (c) => c.json({ pomodoro: await currentPomodoro(c.get('ctx')), config: await pomodoroConfig(c.get('ctx')) }));

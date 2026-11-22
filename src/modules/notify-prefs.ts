@@ -2,12 +2,14 @@
 // clients show notifications. The server applies them (notifications.ts), so every
 // client obeys without changes. Stored per profile (mode) as one JSON setting `notify`, with
 // the daily nudge's hour and "untouched for N days" (nudge.hour, nudge.days). It was one setting
-// for every profile until v0.30.0 (D17); D35 made it per profile, as the owner asked.
+// for every profile until v0.30.0 (D17); D35 made it per profile, as the owner asked. Each part can
+// also be set for every profile (D46): the switches, quiet hours, devices, the nudge's hour and days.
 
 import { z } from 'zod';
 import type { Ctx } from '../core/ctx';
 import { bad } from '../core/errors';
 import type { Module } from '../core/registry';
+import { parseScope, scopedSetting, SCOPES, wholeNumber, writeScoped, type Scope, type ScopedSetting } from '../core/setting-scope';
 
 export const CLIENTS = ['android', 'swiftbar', 'web'] as const;
 export type NotifyClient = (typeof CLIENTS)[number];
@@ -127,27 +129,71 @@ export async function describePrefs(ctx: Ctx) {
   };
 }
 
-export async function updatePrefs(ctx: Ctx, input: unknown) {
+const SWITCHES = ['enabled', 'reminders', 'habits', 'nudge', 'session'] as const;
+const SWITCH_LABELS: Record<(typeof SWITCHES)[number], string> = {
+  enabled: 'Notifications on or off',
+  reminders: 'Reminders',
+  habits: 'Habit prompts',
+  nudge: 'Daily nudge',
+  session: 'Pomodoro and session alerts',
+};
+
+/** Each part of the notification settings, settable for this profile or for every profile (D46). */
+const aSwitch = (v: unknown) => {
+  if (typeof v !== 'boolean') throw bad('Send true or false');
+  return v;
+};
+const fullQuiet = (v: unknown) => {
+  const q = { ...DEFAULT_PREFS.quiet, ...(PatchSchema.shape.quiet.parse(v) ?? {}) };
+  if (q.enabled && q.from === q.to) throw bad('Quiet hours need different start and end times');
+  return q;
+};
+const fullClients = (v: unknown) => ({ ...DEFAULT_PREFS.clients, ...(PatchSchema.shape.clients.parse(v) ?? {}) });
+
+export const notifySettings: ScopedSetting[] = [
+  ...SWITCHES.map((k) => ({ id: `notify.${k}`, key: 'notify', field: k, label: SWITCH_LABELS[k], section: 'notifications', parse: aSwitch })),
+  { id: 'notify.quiet', key: 'notify', field: 'quiet', label: 'Quiet hours', section: 'notifications', parse: fullQuiet },
+  { id: 'notify.clients', key: 'notify', field: 'clients', label: 'Show on', section: 'notifications', parse: fullClients },
+  { id: 'nudge.hour', key: 'nudge.hour', label: 'Daily nudge not before', section: 'notifications', parse: wholeNumber(0, 23, 'nudge_hour') },
+  { id: 'nudge.days', key: 'nudge.days', label: 'Daily nudge: untouched for (days)', section: 'notifications', parse: wholeNumber(1, 365, 'nudge_days') },
+];
+
+export async function updatePrefs(ctx: Ctx, input: unknown, scope: Scope = 'profile') {
   const patch = PatchSchema.parse(input);
-  const cur = await ctx.jsonSetting<Partial<NotifyPrefs>>('notify', {});
-  const next: Partial<NotifyPrefs> = { ...cur };
-  for (const k of ['enabled', 'reminders', 'habits', 'nudge', 'session'] as const) if (patch[k] !== undefined) next[k] = patch[k];
-  if (patch.quiet) next.quiet = { ...DEFAULT_PREFS.quiet, ...(cur.quiet ?? {}), ...patch.quiet } as NotifyPrefs['quiet'];
-  if (patch.clients) next.clients = { ...DEFAULT_PREFS.clients, ...(cur.clients ?? {}), ...patch.clients } as NotifyPrefs['clients'];
-  if (next.quiet && next.quiet.enabled && next.quiet.from === next.quiet.to) throw bad('Quiet hours need different start and end times');
-  await ctx.setSetting('notify', JSON.stringify(next));
-  if (patch.nudge !== undefined) await ctx.setSetting('nudge.enabled', null); // the switch above replaces the older setting
-  if (patch.nudge_hour !== undefined) await ctx.setSetting('nudge.hour', String(patch.nudge_hour));
-  if (patch.nudge_days !== undefined) await ctx.setSetting('nudge.days', String(patch.nudge_days));
-  return describePrefs(ctx);
+  const cur = await getPrefs(ctx);
+  // Only what is sent is written, each part on its own, so a part set for every profile stays so.
+  const writes: [id: string, value: unknown][] = [];
+  for (const k of SWITCHES) if (patch[k] !== undefined) writes.push([`notify.${k}`, patch[k]]);
+  if (patch.quiet) {
+    const quiet = { ...cur.quiet, ...patch.quiet };
+    if (quiet.enabled && quiet.from === quiet.to) throw bad('Quiet hours need different start and end times');
+    writes.push(['notify.quiet', quiet]);
+  }
+  if (patch.clients) writes.push(['notify.clients', { ...cur.clients, ...patch.clients }]);
+  if (patch.nudge_hour !== undefined) writes.push(['nudge.hour', patch.nudge_hour]);
+  if (patch.nudge_days !== undefined) writes.push(['nudge.days', patch.nudge_days]);
+  const cleared = new Set<string>();
+  for (const [id, value] of writes) for (const m of (await writeScoped(ctx, scopedSetting(id), value, scope)).cleared) cleared.add(m);
+  if (patch.nudge !== undefined) {
+    // The switch above replaces the older per-profile setting.
+    if (scope === 'all') await ctx.db.prepare("DELETE FROM settings WHERE key = 'nudge.enabled'").run();
+    await ctx.setSetting('nudge.enabled', null);
+  }
+  return { ...(await describePrefs(ctx)), scope, cleared: [...cleared] };
 }
+
+const scopeArg = z.enum(SCOPES).optional().describe('"profile" (the usual): only this profile. "all": every profile (clears what other profiles set for themselves).');
 
 export const notifyPrefsModule: Module = {
   id: 'notify-prefs',
   description: 'Notification settings: master switch, kinds, quiet hours and which clients show them.',
+  scopedSettings: notifySettings,
   routes(api) {
     api.get('/notification-settings', async (c) => c.json(await describePrefs(c.get('ctx'))));
-    api.put('/notification-settings', async (c) => c.json(await updatePrefs(c.get('ctx'), await c.req.json())));
+    api.put('/notification-settings', async (c) => {
+      const { scope, ...body } = await c.req.json<Record<string, unknown>>();
+      return c.json(await updatePrefs(c.get('ctx'), body, parseScope(scope ?? c.req.query('scope'))));
+    });
   },
   tools: [
     {
@@ -161,9 +207,9 @@ export const notifyPrefsModule: Module = {
     {
       name: 'set_notification_settings',
       description:
-        'Change notification settings; send only what changes. enabled = master switch; reminders, habits, nudge, session = per kind; quiet = { enabled, from: "22:00", to: "07:00" } (may cross midnight; notifications wait until it ends); clients = { android, swiftbar, web } booleans; nudge_hour (0-23) and nudge_days. Changes only the profile (mode) given, or the default one.',
-      input: PatchSchema,
-      run: (ctx, a) => updatePrefs(ctx, a),
+        'Change notification settings; send only what changes. enabled = master switch; reminders, habits, nudge, session = per kind; quiet = { enabled, from: "22:00", to: "07:00" } (may cross midnight; notifications wait until it ends); clients = { android, swiftbar, web } booleans; nudge_hour (0-23) and nudge_days. Changes only the profile (mode) given, or the default one, unless scope is "all": then every profile gets these values (other profiles lose their own values for them).',
+      input: PatchSchema.extend({ scope: scopeArg }),
+      run: (ctx, { scope, ...a }) => updatePrefs(ctx, a, parseScope(scope)),
     },
   ],
 };

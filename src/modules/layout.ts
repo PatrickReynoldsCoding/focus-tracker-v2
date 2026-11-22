@@ -7,13 +7,16 @@
 //   layout.<page>.grids  { <pill id>: { items, removed: [] } }                              (each pill's own desktop grid)
 //   layout.<page>.view   { focusCard, pillCounts, pillSwipe, pillLast, pillAll }           (switches)
 // The browser draws everything (web/src/features/layout/); the server only checks and keeps it.
-// Pop-out windows are kept on each device (localStorage), not here.
+// Pop-out windows are kept on each device (localStorage), not here. Today's view switches can each be
+// set for this profile or for every profile (D46); the grids and pills name the profile's own files, so
+// they stay the profile's.
 
 import { z } from 'zod';
 import { requireFeature } from '../core/features';
 import type { Ctx } from '../core/ctx';
 import { bad } from '../core/errors';
 import type { Module } from '../core/registry';
+import { parseScope, scopedSetting, SCOPES, writeScoped, type Scope, type ScopedSetting } from '../core/setting-scope';
 import { setSettingWithUndo } from '../core/store';
 
 export const COLUMNS = 12;
@@ -169,9 +172,41 @@ export async function pillPanels(ctx: Ctx) {
   ];
 }
 
+const VIEW_LABELS: Record<keyof View, string> = {
+  focusCard: 'Focus card',
+  pillCounts: 'Show counts on pills',
+  pillSwipe: 'Swipe between pills',
+  pillLast: 'Open on the pill I used last',
+  pillAll: 'Show the All pill',
+};
+
+/** Today's view switches, each settable for this profile or for every profile. */
+const viewSettings: ScopedSetting[] = (Object.keys(VIEW_LABELS) as (keyof View)[]).map((k) => ({
+  id: `today-view.${k}`,
+  key: 'layout.today.view',
+  field: k,
+  label: VIEW_LABELS[k],
+  section: 'today-view',
+  parse: (v: unknown) => cleanView({ [k]: v })[k],
+}));
+
+/** Change some of a page's view switches; on Today each one goes to this profile or to every profile. */
+export async function saveView(ctx: Ctx, p: string, change: View, scope: Scope = 'profile'): Promise<{ view: View; cleared: string[] }> {
+  if (p !== 'today') {
+    if (scope === 'all') throw bad('Only Today’s view can be set for every profile');
+    const next = { ...(await ctx.jsonSetting<View>(`layout.${p}.view`, {})), ...change };
+    await ctx.setSetting(`layout.${p}.view`, JSON.stringify(next));
+    return { view: next, cleared: [] };
+  }
+  const cleared = new Set<string>();
+  for (const [k, v] of Object.entries(change)) for (const m of (await writeScoped(ctx, scopedSetting(`today-view.${k}`), v, scope)).cleared) cleared.add(m);
+  return { view: await ctx.jsonSetting<View>('layout.today.view', {}), cleared: [...cleared] };
+}
+
 export const layoutModule: Module = {
   id: 'layout',
   description: 'Where panels sit on each page (desktop grid), the phone’s Today pills and their switches.',
+  scopedSettings: viewSettings,
   features: [
     {
       id: 'movable-panels',
@@ -263,9 +298,8 @@ export const layoutModule: Module = {
     api.put('/layout/:page/view', async (c) => {
       const ctx = c.get('ctx');
       const p = page(c.req.param('page'));
-      const next = { ...(await ctx.jsonSetting<View>(`layout.${p}.view`, {})), ...cleanView(await c.req.json()) };
-      await ctx.setSetting(`layout.${p}.view`, JSON.stringify(next));
-      return c.json(next);
+      const { scope, ...body } = ((await c.req.json()) ?? {}) as Record<string, unknown>;
+      return c.json((await saveView(ctx, p, cleanView(body), parseScope(scope ?? c.req.query('scope')))).view);
     });
   },
   tools: [
@@ -286,17 +320,18 @@ export const layoutModule: Module = {
       name: 'set_today_pills',
       description:
         'Replace Today’s pills with this list (the whole list, in order; null = back to the usual pills). Each pill: id (letters, digits, - or _; keep an existing pill’s id), name (1–24 characters), icon (one of get_today_pills’ icons, or null) and panels (panel ids from get_today_pills, top to bottom). ' +
-        'Optionally change the switches in view: focusCard (compact, full, hidden), pillCounts, pillSwipe, pillLast, pillAll (show the All pill). The pills change can be undone.',
+        'Optionally change the switches in view: focusCard (compact, full, hidden), pillCounts, pillSwipe, pillLast, pillAll (show the All pill); with view_scope "all" those switches change in every profile (the pills stay this profile’s). The pills change can be undone.',
       feature: 'today-pills',
       input: z.object({
         pills: z.array(z.object({ id: z.string(), name: z.string(), icon: z.string().nullable().optional(), panels: z.array(z.string()) })).nullable(),
         view: z.record(z.string(), z.unknown()).optional(),
+        view_scope: z.enum(SCOPES).optional().describe('"profile" (the usual) or "all": the view switches for every profile.'),
       }),
       run: async (ctx, a) => {
         const pills = a.pills ? cleanPills({ pills: a.pills }) : null;
         const change = a.view ? cleanView(a.view) : null;
         await savePills(ctx, 'today', pills);
-        if (change) await ctx.setSetting('layout.today.view', JSON.stringify({ ...(await ctx.jsonSetting<View>('layout.today.view', {})), ...change }));
+        if (change) await saveView(ctx, 'today', change, parseScope(a.view_scope));
         return readLayout(ctx, 'today').then(({ pills, view }) => ({ pills, view }));
       },
     },
