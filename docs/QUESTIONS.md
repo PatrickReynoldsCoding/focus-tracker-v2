@@ -111,8 +111,8 @@ Questions the owner could not be asked while an item was built. Each gives the d
 2. A to-do's Hide done is per device and folded by default; a project's stays on the server. Default: as now. Should a to-do's be saved on the server too (needs a column)?
 3. A project opens in Board view and a to-do in List view until switched, on a phone too. Default: as now. Should a project open in List view on a phone?
 4. The "Stack columns" toggle of the old board is gone (List view replaces it). Default: gone.
-5. A plain list has no switch and keeps its board look. Default: as now. Should a plain list have a List view too (without ticks)?
-6. The small version of a to-do on Today cannot be dragged (a long press arranges the panel). Default: as now; drag on the to-do's page.
+5. A plain list has no switch and keeps its board look. Default: as now. Should a plain list have a List view too (without ticks)? **Answered in 0.42.0 (D49): yes, and it opens in List view.**
+6. The small version of a to-do on Today cannot be dragged (a long press arranges the panel). Default: as now; drag on the to-do's page. **Answered in 0.42.0 (D49): items drag; a long press on the panel's head arranges.**
 7. The old to-do page's date box on each row is gone: a to-do's day is set in its dialog (Today, Tomorrow or a date) and shows as a tag. Default: as now.
 8. Category buttons (D42): a category with no projects in the current status view is hidden, and counts follow the status chips and search. Default: as described. Should hidden categories always show, or counts ignore the status chips?
 9. Category buttons replace the Category drop-down while the flag is on. Default: replace. Keep both?
@@ -137,3 +137,12 @@ Questions the owner could not be asked while an item was built. Each gives the d
 25. The widget's ✕ (Not today) is on to-dos, cards and weekly habits (daily habits have none, as on the web). Default: so.
 26. "All profiles" in a Settings section is chosen per visit and goes back to "<profile> only" on reload. Default: per visit (so a later change does not reach every profile by surprise).
 27. Values that were the same in every profile were kept as each profile's own, not made "all profiles" values. Default: kept as own (nothing changes); use All profiles to share one.
+
+## 0.42.0 (slim panels, D49)
+
+28. A plain list opens in List view (groups stacked) on every device until switched to Board; the choice is kept per list on each device, as a to-do's. Default: List.
+29. The slim Habits panel has no day strip or dots; earlier days are changed on the Habits tab. Default: as now. Want a "Days" toggle back on each row?
+30. A habit's circle always adds a session (also past the target); Undo takes one off today. A met habit shows ticked and struck through but stays in the panel. Default: as said. Should met habits fold away like the Today list's done ones?
+31. The small (phone) version of a list panel drags among the four items it shows (a drop next to an item of another group moves it into that group); groups are named only in the full panel. Default: as said.
+32. In a panel, tapping an item's name opens its dialog (it used to tick a to-do; the checkbox ticks). Default: opens the dialog.
+33. One flag, `panel-restyle` (on, per profile), covers the slim Habits panels, a plain list's panel, the list title opening the list and dragging in panels; the plain list's List view follows `unified-board`. Default: as said.
