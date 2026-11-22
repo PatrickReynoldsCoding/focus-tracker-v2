@@ -229,3 +229,13 @@ html[data-theme='eink'] .theme-swatch.sw-light { background: #fff; }
 html[data-theme='eink'] .theme-swatch.sw-dark { background: #000; color: #fff; }
 html[data-theme='eink'] .theme-swatch.sw-system { background: linear-gradient(105deg, #fff 50%, #000 50%); color: #888; }
 html[data-theme='eink'] .side-collapse, html[data-theme='eink'] .side-width { min-width: 44px; }
+/* Where a setting change applies (D46): the choice, "Own value" and the count in All profiles mode. */
+html[data-theme='eink'] .scope-choice { background: #fff; border: 2px solid #000; }
+html[data-theme='eink'] .scope-seg { border: 3px solid #000; }
+html[data-theme='eink'] .scope-seg button { color: #000; min-height: 44px; }
+html[data-theme='eink'] .scope-seg button + button { border-left: 2px solid #000; }
+html[data-theme='eink'] .scope-seg button.on { background: #000; color: #fff; box-shadow: none; }
+html[data-theme='eink'] .scope-seg button.on::before { content: '✓ '; }
+html[data-theme='eink'] .scope-own { border: 2px dashed #000; color: #000; font-weight: 700; }
+html[data-theme='eink'] .scope-use-global { color: #000; min-height: 44px; font-weight: 700; }
+html[data-theme='eink'] .scope-others { background: #fff; border: 2px solid #000; color: #000; font-weight: 700; }
