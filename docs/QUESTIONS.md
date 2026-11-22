@@ -179,6 +179,24 @@ My suggestion: 2 (same behaviour as the list).
 
 My suggestion: 1 (skipping is meant to be allowed).
 
+**[0.44.0 Q1] Habits already had a hidden "description" field (Claude and aspiring ideas used it). Merge it into the new notes?**
+1. Keep both; the dialog shows notes only (as now).
+2. Move descriptions into notes and drop the field.
+
+My suggestion: 1 (nothing to migrate; ask again if it confuses).
+
+**[0.44.0 Q2] In Plan my week the habit chips pick which habit to plan, so they do not open the dialog; the names on each day and the line under the chips do. Fine?**
+1. Yes (as now).
+2. A long press on a chip opens it too.
+
+My suggestion: 1.
+
+**[0.44.0 Q3] Should Search (and Claude's search) look in habit notes?**
+1. No, as now.
+2. Yes.
+
+My suggestion: 2, next time search is touched.
+
 ### Profiles and settings
 
 **[0.38.0 Q26] "All profiles" in Settings goes back to one profile on reload. Remember it?**

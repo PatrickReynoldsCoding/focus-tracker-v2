@@ -36,6 +36,7 @@ Updated 2026-11-22. Phases from the spec (`SPEC.md` §7).
 | Owner's item, 22 Nov (9) | v0.42.1 / Android 0.4.2: "Not today" on every Today row, daily habits too (web, widget, menu bar); a put-off habit does not prompt today (D50). |
 | Owner's item, 22 Nov (10) | Android 0.5.0: every widget (Today, Files, Single file) keeps the profile chosen in its settings (the Today widget has settings and ⚙ now), says "Profile removed: tap to choose" when it is gone, and older Today widgets keep the profile they used; the Files widget ticks a to-do's items (D51). Built and unit-checked; not tried on a phone. |
 | Owner's answers, 22 Nov | v0.43.0: Files shows one Projects folder with a folder per category (order, colour) and No category, then the projects' folders; moving a project's folder to another category's folder changes its category (D52, migration 0025). Every file of a project has an automatic, read-only tag with the project's name; a project's notes have their own tags (D53). Opening a profile no longer makes it the default; Claude takes a profile's name as `mode` (D54). The folded Done strip sits at the board's right edge; Add file's pill behaviour confirmed (D55). |
+| Owner's item, 22 Nov (11) | v0.44.0: habits have notes (Markdown); tapping a habit's name anywhere opens one dialog with its notes at the top and its settings below; 📝 on habit rows with notes (D56, migration 0026). |
 | 9 Stretch | Parked: **export all data** button (wanted later), Work-mode PRs tab, fitness view. |
 
 ## Waiting for the owner
