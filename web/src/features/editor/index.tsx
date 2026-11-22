@@ -198,9 +198,10 @@ registerMarkdownEditor({ id: 'rich', feature: 'rich-editor', component: NoteEdit
 offline.registerConflictHandler((e) => {
   const note = /^\/notes\/of\/(project|list)\/([\w-]+)$/.exec(e.path);
   const card = /^\/tasks\/([\w-]+)$/.exec(e.path);
-  const text = note ? e.body?.body : card ? e.body?.note : undefined;
+  const habit = /^\/habits\/([\w-]+)$/.exec(e.path);
+  const text = note ? e.body?.body : card ? e.body?.note : habit ? e.body?.notes : undefined;
   if (e.method === 'GET' || typeof text !== 'string') return null;
-  const key = note ? `note:${note[1]}:${note[2]}` : `card:${card![1]}`;
+  const key = note ? `note:${note[1]}:${note[2]}` : card ? `card:${card[1]}` : `habit:${habit![1]}`;
   const base = (note ? e.body?.base : e.body?.base_updated_at) as string | null | undefined;
   setDraft(key, { text, baseText: '\u0000', base: base ?? null, at: e.at, clash: true });
   return `Not applied: your offline change to ${e.label}. It was changed on another device too. Open it and choose: Keep mine, Use theirs or Keep both.`;

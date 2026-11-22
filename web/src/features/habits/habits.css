@@ -55,3 +55,11 @@ ol.steps .step.last { background: var(--accent-soft); border-color: var(--accent
 .hr-row.done .tl-title { text-decoration: line-through; color: var(--muted); }
 html[data-theme='eink'] .habits-slim .tl-row .tl-tick { width: 30px; height: 30px; min-height: 0; min-width: 0; border-width: 3px; }
 .habits-slim .card-head .row { gap: 10px; align-items: baseline; }
+
+/* The habit dialog (D56) and the notes mark on rows */
+.habit-name { cursor: pointer; }
+.habit-name:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.habit-notes-mark { flex: none; font-size: 0.8rem; padding-left: 4px; }
+.habit-dialog { gap: 18px; }
+.habit-sub { margin: 0 0 6px; font-size: 0.85rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.habit-notes .ed-view, .habit-notes .md-view { min-height: 4.5em; }

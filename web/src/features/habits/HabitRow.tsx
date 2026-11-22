@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import { answerPending, answerStepUp, record, type SetHabits } from './actions';
+import { HabitName } from './HabitName';
 import type { Progress } from './types';
 import './habits.css';
 
@@ -174,7 +175,9 @@ export function HabitLine({ h, set, strip }: { h: Progress; set: SetHabits; stri
   return (
     <div class={`habit ${met ? 'met' : ''}`}>
       <div class="habit-top">
-        <strong>{h.name}</strong>
+        <HabitName id={h.id} name={h.name} notes={h.notes}>
+          <strong>{h.name}</strong>
+        </HabitName>
         <span class="muted small">
           {h.target ? `${Math.min(h.done_this_period, h.target)} of ${h.target} ${h.per === 'week' ? 'this week' : 'today'}` : `${h.done_today} today`}
           {h.size ? ` · ${h.size}` : ''}

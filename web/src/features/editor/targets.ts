@@ -74,6 +74,26 @@ export function cardTarget(id: string, onSaved: (note: string) => void): Target 
   };
 }
 
+/** A habit's notes (habits.notes, D56). As a card's note: the server checks base_updated_at, also offline. */
+export function habitTarget(id: string, onSaved: (notes: string) => void): Target {
+  const path = `/habits/${id}`;
+  return {
+    key: `habit:${id}`,
+    place: 'habit',
+    versioned: true,
+    async read() {
+      const { data } = await send('GET', path);
+      return { text: String(data.notes ?? ''), version: data.updated_at ?? null };
+    },
+    async write(text, base, keepalive) {
+      const { status, data } = await send('PATCH', path, base == null ? { notes: text } : { notes: text, base_updated_at: base }, keepalive);
+      if (status === 409) throw new Conflict(String(data.current?.notes ?? ''), data.current?.updated_at ?? null);
+      onSaved(text);
+      return { version: isQueued(data) ? base : (data?.updated_at ?? null) };
+    },
+  };
+}
+
 /** Anything else: just the caller's onSave, no conflict check. */
 export function plainTarget(value: () => string, onSave: (v: string) => unknown, key?: string): Target {
   return {

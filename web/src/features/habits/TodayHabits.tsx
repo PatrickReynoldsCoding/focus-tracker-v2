@@ -2,6 +2,8 @@ import { registerPanel } from '../../core/registry';
 import { record } from './actions';
 import { HabitCards, HabitLine } from './HabitRow';
 import { HabitRows, useRestyle } from './HabitRows';
+import { HabitName } from './HabitName';
+import './HabitDialog';
 import type { Progress } from './types';
 import './habits.css';
 
@@ -77,7 +79,10 @@ function HabitsSmall({ data, setData }: { data: TodayData; setData: (fn: (d: Tod
         {data.habits.map((h) => (
           <li key={h.id} class="row spread">
             <span>
-              {h.name} <span class="muted small">{h.left === 0 ? 'done' : `${h.left} left`}</span>
+              <HabitName id={h.id} name={h.name} notes={h.notes}>
+                {h.name}
+              </HabitName>{' '}
+              <span class="muted small">{h.left === 0 ? 'done' : `${h.left} left`}</span>
             </span>
             <button class="icon small" aria-label={`Done a session of ${h.name}`} onClick={() => record(set, h, h.day, 1)}>
               +

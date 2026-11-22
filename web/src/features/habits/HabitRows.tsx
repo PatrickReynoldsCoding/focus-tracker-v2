@@ -1,12 +1,12 @@
 // The Habits panel as slim rows (D49, flag `panel-restyle`), the same look as the Today list's
-// habit lines (D30): a circle to check in (one session), the name (opens the Habits tab), how far
+// habit lines (D30): a circle to check in (one session), the name (opens the habit's notes and settings, D56), how far
 // it is ("1/2", "2/3 wk") and Undo for a session done today. A habit whose target is met is
 // ticked and struck through. Waiting prompts (Accept a new level, step-up) show above, as before.
 
 import { useFlag } from '../../core/features';
-import { go } from '../../core/ui';
 import { record, type SetHabits } from './actions';
 import { HabitCards } from './HabitRow';
+import { HabitName } from './HabitName';
 import type { Progress } from './types';
 import '../today-list/today-list.css';
 
@@ -31,17 +31,10 @@ function HabitRowSlim({ h, set }: { h: Progress; set: SetHabits }) {
       <button class={`tl-tick${met ? ' on' : ''}`} aria-label={`Done a session of ${h.name}`} title="Done a session" onClick={() => record(set, h, h.day, 1)}>
         {met ? '✓' : ''}
       </button>
-      <span
-        class="tl-name"
-        role="button"
-        tabIndex={0}
-        title="Open Habits"
-        onClick={() => go('/habits')}
-        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), go('/habits'))}
-      >
+      <HabitName id={h.id} name={h.name} notes={h.notes} class="tl-name">
         <span class="tl-title">{h.name}</span>
         {h.size && <small> · {h.size}</small>}
-      </span>
+      </HabitName>
       <span class="tl-meta">
         {(h.planned_today ?? 0) > h.done_today && <span class="tag">planned</span>}
         {h.skipped_today && !met && <span>not today</span>}

@@ -2,7 +2,9 @@ import { useState } from 'preact/hooks';
 import { change, del, newId, optimistic, patch, post } from '../../core/api';
 import { Panels, registerTab, type HabitsSectionProps } from '../../core/registry';
 import { AddInput, InlineEdit, Loading, useData } from '../../core/ui';
-import { EditHabitDialog } from './EditHabit';
+import { HabitDialog } from './HabitDialog';
+import { HabitName, NotesMark } from './HabitName';
+import { openHabit } from './open';
 import { HabitCards, HabitLine } from './HabitRow';
 import { NewHabitDialog } from './NewHabit';
 import type { Habit, Progress } from './types';
@@ -85,7 +87,10 @@ export function Habits() {
                   return (
                     <li key={h.id} class="idea">
                       <div class="idea-name">
-                        <InlineEdit value={h.name} placeholder="Name" onSave={(v) => v && change(() => patch(`/habits/${h.id}`, { name: v }))} />
+                        <span class="row tight">
+                          <InlineEdit value={h.name} placeholder="Name" onSave={(v) => v && change(() => patch(`/habits/${h.id}`, { name: v }))} />
+                          <NotesMark notes={h.notes} />
+                        </span>
                         {h.intention || h.description ? <span class="muted small">{h.intention ?? h.description}</span> : null}
                       </div>
                       <button class="icon small" aria-label={`Move ${h.name} up`} disabled={!m.up} onClick={m.up}>
@@ -93,6 +98,9 @@ export function Habits() {
                       </button>
                       <button class="icon small" aria-label={`Move ${h.name} down`} disabled={!m.down} onClick={m.down}>
                         ▼
+                      </button>
+                      <button class="small" aria-label={`Notes for ${h.name}`} onClick={() => openHabit(h.id)}>
+                        Notes
                       </button>
                       <button class="small" onClick={() => setCreating(h)}>
                         Start
@@ -112,7 +120,9 @@ export function Habits() {
                       </div>
                     ) : (
                       <div class="habit-main">
-                        <strong>{h.name}</strong>
+                        <HabitName id={h.id} name={h.name} notes={h.notes}>
+                          <strong>{h.name}</strong>
+                        </HabitName>
                         <span class="muted small">{[h.sessions ? `${h.sessions} a ${h.per ?? 'day'}` : null, h.size].filter(Boolean).join(', ') || h.intention}</span>
                       </div>
                     )}
@@ -129,7 +139,7 @@ export function Habits() {
       })}
       {!habits.length && <p class="empty">No habits yet.</p>}
       {creating !== undefined && <NewHabitDialog habit={creating} onClose={() => setCreating(undefined)} />}
-      {editing && <EditHabitDialog habit={editing} onMove={mover(editing)} onClose={() => setEditing(null)} />}
+      {editing && <HabitDialog id={editing.id} onMove={mover(editing)} onClose={() => setEditing(null)} />}
     </div>
   );
 }

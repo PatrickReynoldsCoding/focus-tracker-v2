@@ -14,7 +14,10 @@ export type Habit = {
   category_id: string | null;
   project_id: string | null;
   description: string | null;
+  /** Notes and useful information (Markdown, D56). */
+  notes?: string | null;
   status: string;
+  updated_at?: string;
   started: string | null;
   next_prompt: string | null;
 };
@@ -39,6 +42,8 @@ export type Progress = {
   skipped_today: boolean;
   left: number;
   small_version: string | null;
+  /** The habit's notes (Markdown), null when none. */
+  notes?: string | null;
   level: string;
   size: string | null;
   goal: string | null;

@@ -1,20 +1,21 @@
 import { useState } from 'preact/hooks';
 import { change, del, patch } from '../../core/api';
-import { Dialog, useData } from '../../core/ui';
+import { useData } from '../../core/ui';
 import type { Habit } from './types';
 
 type Category = { id: string; label: string };
 
-/** Edit a habit: its words, level, goal and pace; move it up or down; pause, end or delete it. */
-export function EditHabitDialog({
+/** A habit's settings (the lower part of the habit dialog, HabitDialog.tsx): its words, level, goal
+ *  and pace; move it up or down (on the Habits tab); pause, end or delete it. */
+export function EditHabitForm({
   habit,
   onClose,
   onMove,
 }: {
   habit: Habit;
   onClose: () => void;
-  /** Move within its group; undefined when it cannot go that way. */
-  onMove: { up?: () => void; down?: () => void };
+  /** Move within its group; undefined when it cannot go that way. None: no move buttons (opened away from the Habits tab). */
+  onMove?: { up?: () => void; down?: () => void };
 }) {
   const { data: cats } = useData<Category[]>('/categories');
   const { data: projects } = useData<{ id: string; name: string; status: string }[]>('/projects');
@@ -29,9 +30,9 @@ export function EditHabitDialog({
   };
 
   return (
-    <Dialog title="Edit habit" onClose={onClose}>
       <form
-        class="stack"
+        class="stack habit-settings"
+        aria-label="Settings"
         onSubmit={(e) => {
           e.preventDefault();
           const { id, ...fields } = h;
@@ -58,7 +59,7 @@ export function EditHabitDialog({
       >
         <label>
           Name
-          <input required value={h.name} onInput={text('name')} autoFocus />
+          <input required value={h.name} onInput={text('name')} />
         </label>
         <label>
           Why (your intention)
@@ -134,14 +135,16 @@ export function EditHabitDialog({
           </label>
         </div>
         {h.prompts === 'at goal' && <p class="muted small">You said you are at your goal. Tick “Prompts on” to be asked again.</p>}
-        <div class="row">
-          <button type="button" aria-label="Move up" disabled={!onMove.up} onClick={onMove.up}>
-            ▲ Move up
-          </button>
-          <button type="button" aria-label="Move down" disabled={!onMove.down} onClick={onMove.down}>
-            ▼ Move down
-          </button>
-        </div>
+        {onMove && (
+          <div class="row">
+            <button type="button" aria-label="Move up" disabled={!onMove.up} onClick={onMove.up}>
+              ▲ Move up
+            </button>
+            <button type="button" aria-label="Move down" disabled={!onMove.down} onClick={onMove.down}>
+              ▼ Move down
+            </button>
+          </div>
+        )}
         <div class="row">
           {habit.status === 'active' && (
             <button type="button" onClick={() => status('paused', 'Paused. Paused weeks do not count against a step-up.')}>
@@ -175,6 +178,5 @@ export function EditHabitDialog({
           <button class="primary">Save</button>
         </div>
       </form>
-    </Dialog>
   );
 }
