@@ -74,7 +74,7 @@ class WidgetFeedTest {
         // The narrow layouts the 2-cell size uses exist and keep the ids the code sets.
         val layouts = File(dir.parentFile, "layout")
         val narrow = File(layouts, "widget_today_narrow.xml").readText()
-        for (id in listOf("background", "header", "focus", "next", "add", "session_row", "timer", "pomodoro", "action", "list", "empty")) assertTrue(id, narrow.contains("id/$id\""))
+        for (id in listOf("background", "header", "focus", "next", "add", "settings", "session_row", "timer", "pomodoro", "action", "list", "empty")) assertTrue(id, narrow.contains("id/$id\""))
         for (name in listOf("widget_item.xml", "widget_item_narrow.xml")) {
             val item = File(layouts, name).readText()
             for (id in listOf("row", "mark", "title", "detail", "skip")) assertTrue("$name $id", item.contains("id/$id\""))

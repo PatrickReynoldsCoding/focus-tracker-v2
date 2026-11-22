@@ -33,13 +33,16 @@
             </intent-filter>
         </receiver>
         <receiver android:name=".AlarmReceiver" android:exported="false" />
-        <!-- What the Files and Single file widgets show (asked when one is added, and from its ⚙ or a long press). Exported: the launcher opens it. -->
+        <!-- Each widget's settings (its profile; what the Files and Single file widgets show): asked when one is added, and from its ⚙ or a long press. Exported: the launcher opens it. -->
         <activity android:name=".WidgetSetupActivity" android:exported="true" android:taskAffinity="" android:excludeFromRecents="true"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
             </intent-filter>
         </activity>
+        <!-- A Files widget row's tap: tick a to-do's item or open the file (WidgetTap.kt). Shows nothing. -->
+        <activity android:name=".WidgetTapActivity" android:exported="false" android:theme="@android:style/Theme.NoDisplay"
+            android:taskAffinity="" android:excludeFromRecents="true" android:noHistory="true" />
         <receiver android:name=".FilesWidget" android:exported="false" android:label="@string/files_widget_name">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />

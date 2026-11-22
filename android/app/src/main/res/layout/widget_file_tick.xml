@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A to-do's item in a Files widget card: the tick ticks it (WidgetTap), its own fill-in, so the card's tap still opens the file. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/tick" android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="34dp">
+    <TextView android:id="@+id/mark" android:layout_width="26dp" android:layout_height="wrap_content" android:gravity="center"
+        android:text="☐" android:textColor="@color/accent" android:textSize="17sp" android:contentDescription="Tick" />
+    <TextView android:id="@+id/label" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:paddingStart="4dp"
+        android:textColor="@color/fg" android:textSize="13sp" android:maxLines="2" android:ellipsize="end" />
+</LinearLayout>

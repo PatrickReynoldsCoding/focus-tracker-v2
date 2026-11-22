@@ -9,7 +9,8 @@ import kotlin.concurrent.thread
 
 /**
  * Wakes the app at the next pomodoro or "Time is up" moment so the notification is not up to
- * 15 minutes late (the worker only polls that often). Rescheduled whenever the status is fetched.
+ * 15 minutes late (the worker only polls that often). Set from the app's open profile, as the notifications are
+ * (RefreshWorker.notifyNew and scheduleAlarm), never from a widget's profile.
  */
 object AlarmScheduler {
     private fun pending(context: Context): PendingIntent = PendingIntent.getBroadcast(

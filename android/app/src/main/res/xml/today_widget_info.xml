@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 2 cells wide at the least (110 dp: Android 11's 2-cell size; targetCellWidth on 12+). -->
+<!-- 2 cells wide at the least (110 dp: Android 11's 2-cell size; targetCellWidth on 12+). Its profile is chosen on adding (WidgetSetupActivity), again from ⚙ or a long press (12+). -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="110dp"
     android:minHeight="180dp"
@@ -11,5 +11,7 @@
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/widget_today"
     android:previewLayout="@layout/widget_today"
+    android:configure="com.patrickreynolds.focustracker.WidgetSetupActivity"
+    android:widgetFeatures="reconfigurable"
     android:description="@string/widget_description"
     android:widgetCategory="home_screen" />

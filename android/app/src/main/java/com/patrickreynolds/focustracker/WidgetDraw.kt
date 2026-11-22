@@ -10,7 +10,7 @@ import android.view.View
 import android.widget.RemoteViews
 import kotlin.concurrent.thread
 
-/** What the Files and Single file widgets share: fetching with a saved copy, opening a file, the header. */
+/** What the widgets share: fetching with a saved copy (Files and Single file), opening a file, settings, the header. */
 object WidgetDraw {
     /** Request codes: each widget gets its own block, so their PendingIntents never replace each other's. */
     fun code(widgetId: Int, n: Int) = 100_000 + widgetId * 10 + n
@@ -40,6 +40,14 @@ object WidgetDraw {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
         )
 
+    /** The Files widget's rows: one template for ticking an item and opening a file (WidgetTap). */
+    fun tapTemplate(context: Context, widgetId: Int): PendingIntent =
+        PendingIntent.getActivity(
+            context, code(widgetId, 5),
+            Intent(context, WidgetTapActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
+        )
+
     /** A row's fill-in for openTemplate: the file's page, or a link's address in the browser. */
     fun fileIntent(f: WidgetFile, profile: String): Intent =
         if (f.route == null && f.url != null) Intent().putExtra(MainActivity.EXTRA_OPEN_URL, f.url)
@@ -54,12 +62,15 @@ object WidgetDraw {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-    /** The header and the note under it, and smaller text and padding when narrow. */
+    /** The header and the note under it, and smaller text and padding when narrow. With the profile removed, the title, the note and the empty list open the settings. */
     fun header(context: Context, v: RemoteViews, widgetId: Int, title: String, note: String?, width: WidgetSizes.Width) {
         v.setTextViewText(R.id.title, title)
         v.setTextViewText(R.id.note, note ?: "")
         v.setViewVisibility(R.id.note, if (note.isNullOrEmpty()) View.GONE else View.VISIBLE)
         v.setOnClickPendingIntent(R.id.settings, settings(context, widgetId))
+        val removed = note == WidgetProfile.REMOVED
+        v.setOnClickPendingIntent(R.id.note, if (removed) settings(context, widgetId) else null)
+        v.setOnClickPendingIntent(R.id.empty, if (removed) settings(context, widgetId) else null)
         if (width == WidgetSizes.Width.NARROW) {
             val pad = dp(context, 7)
             v.setViewPadding(android.R.id.background, pad, pad, pad, pad)
@@ -83,7 +94,7 @@ object WidgetDraw {
             thread {
                 val cfg = store.config(id)
                 when {
-                    cfg == null -> draw(id, null, null, null, null)
+                    cfg == null || cfg.mode.isEmpty() -> draw(id, null, null, null, null)
                     !prefs.ready -> draw(id, cfg, store.saved(id), "Open the app to connect", null)
                     else -> {
                         val fresh = runCatching { Api(prefs, fast = true, mode = cfg.mode).get(path(cfg)) }
@@ -92,6 +103,8 @@ object WidgetDraw {
                             val gone = (e as? ApiException)?.status == 404
                             val saved = store.saved(id)
                             when {
+                                // Its profile was deleted: say so (never fall back to another profile).
+                                WidgetProfile.isRemoved(e) -> draw(id, cfg, null, null, WidgetProfile.REMOVED)
                                 gone -> draw(id, cfg, null, null, "Not found (deleted?) · ⚙ to choose again")
                                 saved != null -> draw(id, cfg, saved, savedNote(store, id), null)
                                 else -> draw(id, cfg, null, null, e.message ?: "Cannot reach the tracker")

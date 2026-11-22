@@ -55,7 +55,7 @@ data class FilesFeed(val sourceName: String?, val sourceId: String?, val missing
 }
 
 /**
- * One Files or Single file widget's settings (chosen in WidgetSetupActivity). `source` is "all",
+ * One widget's settings (a Today widget uses only `mode`, its profile). One Files or Single file widget's settings (chosen in WidgetSetupActivity). `source` is "all",
  * "folder" (sourceId a folder id, or "root") or "tag" (sourceId a tag id). The length is `max`
  * characters or `max` lines (`unit`).
  */
@@ -140,7 +140,7 @@ class WidgetStore(context: Context) {
 
     fun saved(id: Int): String? = p.getString("data.$id", null)
     fun savedAt(id: Int): Long = p.getLong("at.$id", 0L)
-    fun save(id: Int, json: String) = p.edit().putString("data.$id", json).putLong("at.$id", System.currentTimeMillis()).apply()
+    fun save(id: Int, json: String, at: Long = System.currentTimeMillis()) = p.edit().putString("data.$id", json).putLong("at.$id", at).apply()
 
     fun forget(id: Int) = p.edit().remove("cfg.$id").remove("data.$id").remove("at.$id").apply()
 }

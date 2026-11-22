@@ -19,7 +19,7 @@ class Prefs(context: Context) {
         set(v) = p.edit().putString("mode", v).apply()
     val ready get() = url.isNotEmpty() && token.isNotEmpty()
 
-    /** The profile open in this phone's app ("" = not known yet): the Today widget, quick add and notifications use it (TodayProfile). */
+    /** The profile open in this phone's app ("" = not known yet): quick add and notifications use it (TodayProfile). Widgets have their own (WidgetProfile). */
     var appProfile: String
         get() = p.getString("app_profile", "") ?: ""
         set(v) = p.edit().putString("app_profile", v).apply()
@@ -28,6 +28,11 @@ class Prefs(context: Context) {
     var profileLabels: String
         get() = p.getString("profile_labels", "") ?: ""
         set(v) = p.edit().putString("profile_labels", v).apply()
+
+    /** Set once 0.5.0 gave the Today widgets placed before it a profile of their own (WidgetProfile.migrate). */
+    var todayWidgetsMigrated: Boolean
+        get() = p.getBoolean("today_widgets_migrated", false)
+        set(v) = p.edit().putBoolean("today_widgets_migrated", v).apply()
 
     /** The last status the server sent and when, so a widget can draw something while the server is slow or out of reach. */
     var cachedStatus: String
@@ -62,10 +67,7 @@ class Api(private val prefs: Prefs, private val fast: Boolean = false, private v
         c.requestMethod = method
         c.connectTimeout = if (fast) 4_000 else 10_000
         c.readTimeout = if (fast) 6_000 else 15_000
-        c.setRequestProperty("Authorization", "Bearer ${prefs.token}")
-        // The Today widget sends the profile open in this phone's app (TodayProfile); with none known, no X-Mode
-        // (the server's default profile). The Files and Single file widgets each have their own profile (`mode`).
-        if (!mode.isNullOrEmpty()) c.setRequestProperty("X-Mode", mode)
+        headers(prefs.token, mode).forEach { (k, v) -> c.setRequestProperty(k, v) }
         if (body != null) {
             c.doOutput = true
             c.setRequestProperty("Content-Type", "application/json")
@@ -81,6 +83,11 @@ class Api(private val prefs: Prefs, private val fast: Boolean = false, private v
     }
 
     companion object {
+        /** Every widget sends its own profile (WidgetProfile); quick add and notifications the app's (TodayProfile).
+         *  No profile: no X-Mode, so the server's default answers. */
+        fun headers(token: String, mode: String?): Map<String, String> =
+            mapOf("Authorization" to "Bearer $token") + (if (mode.isNullOrEmpty()) emptyMap() else mapOf("X-Mode" to mode))
+
         /**
          * Sign in with the owner's password, make an API token for this phone, and
          * return (token, session cookie). The cookie also signs the WebView in.

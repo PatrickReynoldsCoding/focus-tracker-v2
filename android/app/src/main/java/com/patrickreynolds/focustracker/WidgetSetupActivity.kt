@@ -27,13 +27,15 @@ import java.net.URLEncoder
 import kotlin.concurrent.thread
 
 /**
- * The settings of a Files or Single file widget: which profile, what it shows (a folder, a tag or
+ * The settings of a widget: which profile (every widget keeps its own, D51; the Today widget asks only this), and for a
+ * Files or Single file widget what it shows (a folder, a tag or
  * everything; or one file, found by search, folder or tag), how much of each file, and the order.
  * Android opens it when the widget is added; ⚙ on the widget (and a long press on Android 12+) opens it again.
  */
 class WidgetSetupActivity : Activity() {
     private var widgetId = AppWidgetManager.INVALID_APPWIDGET_ID
     private var single = false
+    private var today = false
     private lateinit var prefs: Prefs
     private var old: WidgetConfig? = null
 
@@ -71,6 +73,7 @@ class WidgetSetupActivity : Activity() {
         val info = AppWidgetManager.getInstance(this).getAppWidgetInfo(widgetId)
         if (info == null || info.provider.packageName != packageName) { finish(); return }
         single = info.provider.className == SingleFileWidget::class.java.name
+        today = info.provider.className == TodayWidget::class.java.name
         prefs = Prefs(this)
         old = WidgetStore(this).config(widgetId)
         old?.takeIf { it.fileId.isNotEmpty() }?.let { chosenFile = Triple(it.fileKind, it.fileId, it.fileTitle) }
@@ -109,12 +112,16 @@ class WidgetSetupActivity : Activity() {
         val c = old
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20), dp(16), dp(20), dp(24)) }
         col.addView(TextView(this).apply {
-            text = if (single) "File widget" else "Files widget"
+            text = if (today) "Today widget" else if (single) "File widget" else "Files widget"
             textSize = 22f
             setTextColor(getColor(R.color.fg))
             setTypeface(typeface, android.graphics.Typeface.BOLD)
         })
-        col.addView(label(if (single) "Shows one note, list or to-do. Tap a to-do's item on the widget to tick it." else "Shows the notes, lists and to-dos of a folder or a tag, newest first, with the start of each.", 4))
+        col.addView(label(when {
+            today -> "Shows today's focus, session and Today list of one profile. It keeps this profile whichever profile the app has open."
+            single -> "Shows one note, list or to-do. Tap a to-do's item on the widget to tick it."
+            else -> "Shows the notes, lists and to-dos of a folder or a tag, newest first, with the start of each. Tap a to-do's item to tick it."
+        }, 4))
 
         col.addView(label("Profile"))
         profile = spinner().also { col.addView(it) }
@@ -130,7 +137,9 @@ class WidgetSetupActivity : Activity() {
         results = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         chosen = TextView(this).apply { setTextColor(getColor(R.color.fg)); setPadding(0, dp(8), 0, 0) }
 
-        if (!single) {
+        if (today) {
+            // Only the profile.
+        } else if (!single) {
             col.addView(label("Show"))
             radio(source, ID_ALL, "Every file of the profile")
             radio(source, ID_FOLDER, "A folder")
@@ -162,16 +171,18 @@ class WidgetSetupActivity : Activity() {
             showChosen()
         }
 
-        col.addView(label(if (single) "Length" else "Length of each file"))
+        if (!today) col.addView(label(if (single) "Length" else "Length of each file"))
         unit = RadioGroup(this).apply { orientation = RadioGroup.HORIZONTAL }
         radio(unit, ID_CHARS, "Characters")
         radio(unit, ID_LINES, "Lines")
         unit.check(if (c?.unit == WidgetConfig.UNIT_LINES) ID_LINES else ID_CHARS)
-        col.addView(unit)
         lengthText = TextView(this).apply { setTextColor(getColor(R.color.fg)) }
         length = SeekBar(this).apply { minimumHeight = dp(48) }
-        col.addView(lengthText)
-        col.addView(length)
+        if (!today) {
+            col.addView(unit)
+            col.addView(lengthText)
+            col.addView(length)
+        }
         setLengthRange(c?.max ?: if (single) 1000 else 200)
         unit.setOnCheckedChangeListener { _, _ -> setLengthRange(null) }
         length.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -200,7 +211,7 @@ class WidgetSetupActivity : Activity() {
     }
 
     private fun showSource() {
-        if (single) return
+        if (single || today) return
         val by = source.checkedRadioButtonId
         folder.visibility = if (by == ID_FOLDER) View.VISIBLE else View.GONE
         deep.visibility = folder.visibility
@@ -239,8 +250,11 @@ class WidgetSetupActivity : Activity() {
                 r.onSuccess { o ->
                     val list = o.optJSONArray("profiles") ?: JSONArray()
                     profiles = (0 until list.length()).map { list.getJSONObject(it) }.map { Choice(it.getString("id"), it.optString("label", it.getString("id"))) }
-                    setChoices(profile, profiles, old?.mode ?: o.optString("default"))
-                    status.text = ""
+                    val oldMode = old?.mode?.ifEmpty { null }
+                    val ids = profiles.map { it.id }
+                    // A new widget starts on the profile open in the app; it keeps the one chosen here from then on.
+                    setChoices(profile, profiles, oldMode?.takeIf { it in ids } ?: prefs.appProfile.takeIf { it in ids } ?: o.optString("default"))
+                    status.text = if (oldMode != null && oldMode !in ids) "The profile this widget showed was removed: choose another." else ""
                     loadLists()
                 }
             }
@@ -249,6 +263,7 @@ class WidgetSetupActivity : Activity() {
 
     /** The profile's folders (with their paths) and tags. */
     private fun loadLists() {
+        if (today) return
         val mode = profile.chosenId(profiles) ?: return
         if (mode == listsFor) return // the spinner reports its first choice too
         listsFor = mode
@@ -347,7 +362,9 @@ class WidgetSetupActivity : Activity() {
     private fun finishSetup() {
         val mode = profile.chosenId(profiles) ?: return
         val by = source.checkedRadioButtonId
-        val cfg = if (single) {
+        val cfg = if (today) {
+            WidgetConfig(mode = mode)
+        } else if (single) {
             val f = chosenFile ?: run { status.text = "Choose a file first."; return }
             WidgetConfig(mode = mode, unit = if (lines()) WidgetConfig.UNIT_LINES else WidgetConfig.UNIT_CHARS, max = lengthValue(), fileKind = f.first, fileId = f.second, fileTitle = f.third)
         } else {
@@ -363,7 +380,13 @@ class WidgetSetupActivity : Activity() {
         WidgetStore(this).setConfig(widgetId, cfg)
         val app = applicationContext
         val id = widgetId
-        thread { if (single) SingleFileWidget.refresh(app, intArrayOf(id)) else FilesWidget.refresh(app, intArrayOf(id)) }
+        thread {
+            when {
+                today -> TodayWidget.refresh(app, intArrayOf(id))
+                single -> SingleFileWidget.refresh(app, intArrayOf(id))
+                else -> FilesWidget.refresh(app, intArrayOf(id))
+            }
+        }
         setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId))
         finish()
     }

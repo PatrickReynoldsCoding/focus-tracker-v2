@@ -8,7 +8,8 @@ import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** The 0.4.1 fix: "Nothing left today" with a full Today list in the app. */
+/** The 0.4.1 fix: "Nothing left today" with a full Today list in the app. Since 0.5.0 the widget has its own profile
+ *  (WidgetProfileTest); quick add and notifications still use the app's open profile (TodayProfile). */
 class TodayWidgetTest {
     // GET /api/status as production answered on 2026-11-22: the server's default profile (last opened on any
     // device) was an empty Work, while the phone's app showed Personal with 2 to-dos and 6 habits left.
@@ -25,7 +26,7 @@ class TodayWidgetTest {
         {"kind":"card","id":"c1","title":"Paint door","progress":null,"late":null,"can_skip":true}]},
       "notifications":[]}"""
 
-    @Test fun theWidgetAsksForTheProfileOpenInTheApp() {
+    @Test fun quickAddAsksForTheProfileOpenInTheApp() {
         // Before 0.4.1 no profile was sent, so the server's default (Work, empty) answered.
         assertEquals(0, Status.parse(JSONObject(workStatus)).items.size)
         val asked = mutableListOf<String?>()
@@ -43,7 +44,7 @@ class TodayWidgetTest {
         assertNull(TodayProfile.fromScript(null))
     }
 
-    @Test fun aDeletedProfileFallsBackToTheServersDefault() {
+    @Test fun quickAddInADeletedProfileFallsBackToTheServersDefault() {
         var forgot = false
         val asked = mutableListOf<String?>()
         val r = TodayProfile.runIn("gone", { forgot = true }) { mode ->

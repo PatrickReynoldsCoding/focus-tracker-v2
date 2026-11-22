@@ -101,24 +101,23 @@ class MainActivity : Activity() {
     override fun onPause() {
         super.onPause()
         // Changes made in the app show on the widget when you go back to the home screen.
+        // Each widget keeps its own profile (D51); the alarm follows the app's profile, as the notifications do.
+        val app = applicationContext
         thread {
-            TodayWidget.refresh(applicationContext)
-            FilesWidget.refresh(applicationContext)
-            SingleFileWidget.refresh(applicationContext)
+            TodayWidget.refresh(app)
+            FilesWidget.refresh(app)
+            SingleFileWidget.refresh(app)
         }
-        readProfile() // a profile switched in the app: the Today widget follows it
+        readProfile { thread { RefreshWorker.scheduleAlarm(app) } }
     }
 
-    /** Note the profile the web app has open (TodayProfile); when it changed, redraw the Today widget in it. */
-    private fun readProfile() {
-        if (!::web.isInitialized) return
+    /** Note the profile the web app has open (TodayProfile: quick add and notifications use it; no widget does), then `then`. */
+    private fun readProfile(then: () -> Unit = {}) {
+        if (!::web.isInitialized) { then(); return }
         val app = applicationContext
         web.evaluateJavascript(TodayProfile.SCRIPT) { result ->
-            val id = TodayProfile.fromScript(result) ?: return@evaluateJavascript
-            val prefs = Prefs(app)
-            if (id == prefs.appProfile) return@evaluateJavascript
-            prefs.appProfile = id
-            thread { TodayWidget.refresh(app) }
+            TodayProfile.fromScript(result)?.let { Prefs(app).appProfile = it }
+            then()
         }
     }
 
@@ -130,10 +129,11 @@ class MainActivity : Activity() {
         runCatching { startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
     }
 
-    /** Ask the launcher to add the Today widget (also reachable with: am start ... --ez ft.pinWidget true). */
+    /** Ask the launcher to add the Today widget (also reachable with: am start ... --ez ft.pinWidget true), in the app's open profile. */
     private fun pinWidget() {
         val m = getSystemService(android.appwidget.AppWidgetManager::class.java)
-        if (m.isRequestPinAppWidgetSupported) m.requestPinAppWidget(android.content.ComponentName(this, TodayWidget::class.java), null, null)
+        val profile = Prefs(this).appProfile.ifEmpty { "personal" }
+        if (m.isRequestPinAppWidgetSupported) m.requestPinAppWidget(android.content.ComponentName(this, TodayWidget::class.java), null, TodayWidget.pinnedCallback(this, profile))
     }
 
     private fun goBack() {
@@ -145,7 +145,7 @@ class MainActivity : Activity() {
 
     companion object {
         const val EXTRA_FRAGMENT = "ft.fragment"
-        /** The profile to open the page in (the Files widgets); the web app takes `?profile=` off the address (D44). */
+        /** The profile to open the page in (every widget opens the app in its own profile); the web app takes `?profile=` off the address (D44). */
         const val EXTRA_PROFILE = "ft.profile"
         /** A web address to open in the browser (a link in the Files widget). */
         const val EXTRA_OPEN_URL = "ft.openUrl"

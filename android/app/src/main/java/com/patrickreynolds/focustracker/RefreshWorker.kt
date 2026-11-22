@@ -10,13 +10,18 @@ import android.content.pm.PackageManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import java.util.concurrent.TimeUnit
 
-/** Every 15 minutes (session alerts have their own exact alarm, see AlarmScheduler): redraw the widgets (Today, Files, Single file) and show new reminders as notifications (each once). */
+/**
+ * Every 15 minutes (session alerts have their own exact alarm, see AlarmScheduler): redraw the widgets (Today, Files,
+ * Single file; each in its own profile) and show new reminders as notifications (each once), in the app's open profile.
+ */
 class RefreshWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
     override fun doWork(): Result {
         TodayWidget.refresh(applicationContext)
@@ -36,6 +41,19 @@ class RefreshWorker(context: Context, params: WorkerParameters) : Worker(context
             )
         }
 
+        /** Once, as soon as WorkManager can (a session started from a widget: its alarm, within a broadcast's few seconds). */
+        fun runSoon(context: Context) {
+            WorkManager.getInstance(context).enqueueUniqueWork("refresh-now", ExistingWorkPolicy.REPLACE, OneTimeWorkRequestBuilder<RefreshWorker>().build())
+        }
+
+        /** Set the next pomodoro / "Time is up" alarm from the app's open profile (the notifications' profile). Blocking. */
+        fun scheduleAlarm(context: Context) {
+            val prefs = Prefs(context)
+            if (!prefs.ready) return
+            runCatching { AlarmScheduler.schedule(context, TodayProfile.run(prefs) { mode -> Api(prefs, fast = true, mode = mode).status() }) }
+        }
+
+        /** New reminders and alerts as notifications, in the app's open profile (TodayProfile); also sets the next alarm. */
         fun notifyNew(context: Context) {
             val prefs = Prefs(context)
             if (!prefs.ready) return

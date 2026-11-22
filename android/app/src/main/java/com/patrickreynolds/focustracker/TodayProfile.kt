@@ -4,7 +4,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Which profile the Today widget, quick add and notifications use: the one open in this phone's app.
+ * Which profile quick add and notifications use: the one open in this phone's app. Since 0.5.0 the widgets do not
+ * use it: each has its own profile (WidgetProfile, D51). The Today widget followed it in 0.4.1 and 0.4.2.
  *
  * Until 0.4.0 they sent no profile, so the server used its default profile, which follows the profile last
  * opened on any device (`profiles.follow_open`). Opening Work on the computer then left the phone's widget on
@@ -21,7 +22,7 @@ object TodayProfile {
         return (v as? String)?.trim()?.takeIf { it.isNotEmpty() }
     }
 
-    /** The X-Mode to send: the app's profile, or null (the server's default) when the app has not told us yet. */
+    /** Quick add's and the notifications' X-Mode: the app's profile, or null (the server's default) when the app has not told us yet. */
     fun of(prefs: Prefs): String? = prefs.appProfile.ifEmpty { null }
 
     /** Run `call` in the app's profile; when the server says that profile is gone, forget it and use the server's default. */
