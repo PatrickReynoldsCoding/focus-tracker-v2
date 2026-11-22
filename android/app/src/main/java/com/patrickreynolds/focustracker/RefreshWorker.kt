@@ -39,8 +39,8 @@ class RefreshWorker(context: Context, params: WorkerParameters) : Worker(context
         fun notifyNew(context: Context) {
             val prefs = Prefs(context)
             if (!prefs.ready) return
-            val api = Api(prefs)
-            val status = runCatching { api.status() }.getOrNull() ?: return
+            val status = runCatching { TodayProfile.run(prefs) { mode -> Api(prefs, mode = mode).status() } }.getOrNull() ?: return
+            val api = Api(prefs, mode = status.mode)
             runCatching { AlarmScheduler.schedule(context, status) }
             if (context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED &&
                 android.os.Build.VERSION.SDK_INT >= 33) return

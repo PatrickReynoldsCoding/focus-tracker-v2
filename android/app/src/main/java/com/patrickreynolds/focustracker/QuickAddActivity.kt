@@ -26,7 +26,9 @@ class QuickAddActivity : Activity() {
             add.isEnabled = false
             thread {
                 val result = runCatching {
-                    Api(Prefs(this)).post("/api/todos", JSONObject().put("title", title).put("day", LocalDate.now().toString()))
+                    // The Today widget's profile (the one open in the app), not the server's default.
+                    val prefs = Prefs(this)
+                    TodayProfile.run(prefs) { mode -> Api(prefs, mode = mode).post("/api/todos", JSONObject().put("title", title).put("day", LocalDate.now().toString())) }
                 }
                 TodayWidget.refresh(this)
                 runOnUiThread {
