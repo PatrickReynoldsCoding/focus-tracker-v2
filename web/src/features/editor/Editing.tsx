@@ -23,6 +23,11 @@ export interface EditingProps {
   paperOn: boolean;
   /** Editing ended; the text now saved (or kept as a draft). */
   onDone: (text: string) => void;
+  /** D61: a note that is always the editor. Done saves and lets go (it does not end editing), nothing is
+   *  focused on load, a phone shows the toolbar in the page (full screen only from ⋯), a tap outside saves. */
+  always?: boolean;
+  /** The saved text now (always mode): shown when it changed elsewhere and nothing here is unsaved. */
+  incoming?: string;
 }
 
 type Status = 'idle' | 'saving' | 'saved' | 'error' | 'copied';
@@ -47,7 +52,7 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 
-export default function Editing({ start, target, placeholder, rows, phone, paperOn, onDone }: EditingProps) {
+export default function Editing({ start, target, placeholder, rows, phone, paperOn, onDone, always, incoming }: EditingProps) {
   const shell = useRef<HTMLDivElement>(null);
   const mount = useRef<HTMLDivElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -58,7 +63,9 @@ export default function Editing({ start, target, placeholder, rows, phone, paper
   const [conflict, setConflict] = useState<Conflict | null>(null);
   const [link, setLink] = useState<string | null>(null);
   const [source, setSource] = useState<string | null>(null);
-  const [full, setFull] = useState(phone);
+  const [full, setFull] = useState(phone && !always);
+  // The layout with the toolbar on top and Done below: a computer, or an always-on editor not in full screen.
+  const inline = !phone || (!!always && !full);
   const paperId = useSignal(paper);
 
   // Saving state lives in refs: it must survive renders and be read in event handlers.
@@ -85,7 +92,8 @@ export default function Editing({ start, target, placeholder, rows, phone, paper
     if (!target.key) return;
     // (A clash draft, left by an offline save that was refused while editing, stays until a choice is made.)
     if (!dirty()) return getDraft(target.key)?.clash ? undefined : setDraft(target.key, null);
-    setDraft(target.key, { text: text(), baseText: s.savedText, base: s.base ?? null, at: Date.now() });
+    // A conflict not yet decided stays a clash draft, so the choice comes back if the editor is made again (D63).
+    setDraft(target.key, { text: text(), baseText: s.conflict ? '\u0000' : s.savedText, base: s.base ?? null, at: Date.now(), ...(s.conflict ? { clash: true } : {}) });
   };
 
   const save = async (keepalive = false): Promise<void> => {
@@ -152,6 +160,13 @@ export default function Editing({ start, target, placeholder, rows, phone, paper
     if (s.done) return;
     await save();
     if (s.conflict) return; // the choice must be made first
+    if (always) {
+      (document.activeElement as HTMLElement | null)?.blur?.();
+      if (full) setFull(false);
+      setMenu(null);
+      onDone(dirty() ? text() : s.savedText);
+      return;
+    }
     s.done = true;
     onDone(dirty() ? text() : s.savedText);
   };
@@ -170,13 +185,13 @@ export default function Editing({ start, target, placeholder, rows, phone, paper
       },
     });
     ed.current = editor;
-    editor.view.focus();
+    if (!always) editor.view.focus();
     // put the cursor at the end
     editor.view.dispatch(editor.view.state.tr.setSelection(E.selectionAtEnd(editor.view.state.doc)));
     if (start.clash) {
       setDraft(target.key, null); // the choice is made here now
       save();
-    }
+    } else if (always && start.text !== start.baseText && start.base !== undefined) changed(); // a draft kept on this device: save it again (with the usual check)
     else if (start.base === undefined)
       target
         .read()
@@ -200,6 +215,19 @@ export default function Editing({ start, target, placeholder, rows, phone, paper
     };
   }, []);
 
+  // Always-on: the note was changed elsewhere and nothing here is unsaved: show the new text.
+  useEffect(() => {
+    if (!always || incoming === undefined || !ed.current) return;
+    if (incoming === s.savedText || dirty() || s.saving || s.conflict || s.source !== null) return;
+    if (incoming === ed.current.markdown()) {
+      s.savedText = incoming;
+      return;
+    }
+    ed.current.setMarkdown(incoming, { history: false });
+    s.savedText = incoming;
+    target.read().then((r) => r.text === incoming && !dirty() && (s.base = r.version), () => {});
+  }, [incoming]);
+
   // ---------- leaving, page hide, back online ----------
 
   useEffect(() => {
@@ -222,6 +250,10 @@ export default function Editing({ start, target, placeholder, rows, phone, paper
       const t = e.target as Node;
       if (!shell.current || shell.current.contains(t) || (t as HTMLElement).dataset?.edCopy) return;
       if (s.conflict) return;
+      if (always) {
+        if (dirty()) save();
+        return;
+      }
       finish();
     };
     document.addEventListener('pointerdown', outside, true);
@@ -260,7 +292,7 @@ export default function Editing({ start, target, placeholder, rows, phone, paper
     const pop = () => {
       if (history.state?.editor) return;
       popped = true;
-      if (phone) finish();
+      if (phone && !always) finish();
       else setFull(false);
     };
     history.pushState({ ...(history.state ?? {}), editor: true }, '');
@@ -343,7 +375,7 @@ export default function Editing({ start, target, placeholder, rows, phone, paper
 
   // ---------- desktop height ----------
 
-  const [height, setH] = useState<number | null>(() => (phone ? null : getHeight(target.place)));
+  const [height, setH] = useState<number | null>(() => (phone && !always ? null : getHeight(target.place)));
   const drag = useRef<{ y: number; h: number } | null>(null);
   const sizeBy = (dh: number) => {
     const h = Math.max(120, Math.min(window.innerHeight * 0.9, (scroller.current?.offsetHeight ?? 300) + dh));
@@ -393,7 +425,7 @@ export default function Editing({ start, target, placeholder, rows, phone, paper
     },
     { label: 'Edit Markdown source', kind: 'check', checked: source !== null, run: toggleSource },
     ...(paperOn ? (['sep', { heading: 'Paper' }, ...PAPERS.map((p) => ({ label: p.label, kind: 'radio' as const, checked: paperId === p.id, run: () => (setPaper(p.id), ed.current?.view.focus()) }))] as MenuEntry[]) : []),
-    ...(!phone ? (['sep', { label: 'Full screen', kind: 'check', checked: full, hint: full ? 'Esc' : undefined, run: () => setFull(!full) }] as MenuEntry[]) : []),
+    ...(!phone || always ? (['sep', { label: 'Full screen', kind: 'check', checked: full, hint: full ? 'Esc' : undefined, run: () => setFull(!full) }] as MenuEntry[]) : []),
   ];
 
   const blockLabel = { p: 'Text', h1: 'H1', h2: 'H2', h3: 'H3', h4: 'H4', quote: 'Quote', code: 'Code' }[block];
@@ -431,22 +463,22 @@ export default function Editing({ start, target, placeholder, rows, phone, paper
         btns[(i + (e.key === 'ArrowRight' ? 1 : -1) + btns.length) % btns.length].focus();
       }}
     >
-      <Menu id="ed-text" label={<span class="ed-block-label">{blockLabel}</span>} title="Text style" items={textItems} open={menu} setOpen={setMenu} up={phone} class={off ? 'off' : ''} />
+      <Menu id="ed-text" label={<span class="ed-block-label">{blockLabel}</span>} title="Text style" items={textItems} open={menu} setOpen={setMenu} up={!inline} class={off ? 'off' : ''} />
       {markBtn('strong', 'B', `Bold (${MOD}+B)`, 'ed-b')}
       {markBtn('em', 'I', `Italic (${MOD}+I)`, 'ed-i')}
       {markBtn('strike', 'S', `Strikethrough (${MOD}+⇧+X)`, 'ed-s')}
-      <Menu id="ed-lists" label="Lists" title="Lists" items={listItems} open={menu} setOpen={setMenu} up={phone} class={off ? 'off' : ''} />
-      <Menu id="ed-insert" label="Insert" title="Insert" items={insertItems} open={menu} setOpen={setMenu} up={phone} class={off ? 'off' : ''} />
+      <Menu id="ed-lists" label="Lists" title="Lists" items={listItems} open={menu} setOpen={setMenu} up={!inline} class={off ? 'off' : ''} />
+      <Menu id="ed-insert" label="Insert" title="Insert" items={insertItems} open={menu} setOpen={setMenu} up={!inline} class={off ? 'off' : ''} />
       <span class="ed-gap" />
-      {!phone && undoBtns}
-      <Menu id="ed-more" label="⋯" title="More" items={moreItems} open={menu} setOpen={setMenu} up={phone} align="end" class="ed-more" />
+      {inline && undoBtns}
+      <Menu id="ed-more" label="⋯" title="More" items={moreItems} open={menu} setOpen={setMenu} up={!inline} align="end" class="ed-more" />
     </div>
   );
 
   return (
     <div
       ref={shell}
-      class={`ed is-editing paper-${paperOn ? paperId : 'plain'} ${full ? 'is-full' : ''} ${phone ? 'is-phone' : ''}`}
+      class={`ed is-editing paper-${paperOn ? paperId : 'plain'} ${full ? 'is-full' : ''} ${!inline ? 'is-phone' : ''} ${always ? 'ed-always' : ''}`}
       onKeyDown={(e) => {
         // Escape that a menu or the link form did not take (they stop it): leave full screen on a
         // desktop, else stop editing. (ProseMirror always marks Escape as handled, so that is not checked.)
@@ -454,11 +486,11 @@ export default function Editing({ start, target, placeholder, rows, phone, paper
         e.preventDefault();
         e.stopPropagation();
         if (menu) return setMenu(null);
-        if (full && !phone) setFull(false);
+        if (full && (!phone || always)) setFull(false);
         else finish();
       }}
     >
-      {phone && (
+      {!inline && (
         <div class="ed-head">
           <button type="button" class="primary small" onClick={finish}>
             Done
@@ -469,13 +501,13 @@ export default function Editing({ start, target, placeholder, rows, phone, paper
           {undoBtns}
         </div>
       )}
-      {!phone && toolbar}
+      {inline && toolbar}
       {link !== null && <LinkForm href={link} onApply={applyLink} onCancel={() => (setLink(null), ed.current?.view.focus())} />}
       {conflict && <ConflictBox theirs={conflict.text} onPick={resolve} />}
       <div
         ref={scroller}
-        class={`ed-scroll ${height && !full && !phone ? 'has-height' : ''}`}
-        style={!full && !phone ? (height ? { height: `${height}px` } : { minHeight: `${rows * 1.75 + 1}rem` }) : undefined}
+        class={`ed-scroll ${height && !full && inline ? 'has-height' : ''}`}
+        style={!full && inline ? (height ? { height: `${height}px` } : { minHeight: `${rows * 1.75 + 1}rem` }) : undefined}
         onMouseDown={(e) => {
           // a click below the text puts the cursor at the end
           if (e.target === scroller.current && ed.current) {
@@ -501,8 +533,8 @@ export default function Editing({ start, target, placeholder, rows, phone, paper
           />
         )}
       </div>
-      {phone && toolbar}
-      {!phone && (
+      {!inline && toolbar}
+      {inline && (
         <div class="ed-foot">
           <span class="ed-status" role="status">
             {statusText}

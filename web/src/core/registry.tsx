@@ -248,6 +248,8 @@ export interface MarkdownEditorProps {
   draftKey?: string;
   /** Advanced: how to read and write the text (see features/editor/targets.ts). */
   target?: unknown;
+  /** D61: always the editor, with no read-only view first (notes on Today and on their own page). The plain box ignores it. */
+  always?: boolean;
 }
 /** The editor `MarkdownEditor` uses. The first registered one whose flag is on wins; none: the plain text box. */
 export interface EditorDef {

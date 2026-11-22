@@ -106,7 +106,7 @@ function ProjectNotePage({ id }: { id: string }) {
         </div>
       </div>
       <section class="card">
-        <MarkdownEditor value={note.body} note={{ kind: 'project', id }} rows={14} placeholder="Notes for this project…" onSave={(body) => change(() => put(`/notes/of/project/${id}`, { body }))} />
+        <MarkdownEditor value={note.body} note={{ kind: 'project', id }} always rows={14} placeholder="Notes for this project…" onSave={(body) => change(() => put(`/notes/of/project/${id}`, { body }))} />
       </section>
     </div>
   );

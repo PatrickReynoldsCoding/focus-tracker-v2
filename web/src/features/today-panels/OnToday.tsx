@@ -19,15 +19,33 @@ type Option = { key: string; list_id: string | null; project_id: string | null; 
 const target = (i: { key: string }) => (i.key.startsWith('project:') ? { project_id: i.key.slice(8) } : { list_id: i.key.slice(5) });
 const ICON: Record<string, string> = { note: '✎', project: '✎', todo: '☐', list: '≡' };
 
-/** The small note: its title and all of its text, with its line breaks and blank lines, in a box that scrolls. Open it for the editor. */
-function NoteSmall({ n, href }: { n: NoteItem; href: string }) {
+/** The small note: its title and its text as the editor (D61), in a box that scrolls with its line breaks (D39). */
+function NoteSmall({ n, href, setBody }: { n: NoteItem; href: string; setBody: (body: string) => void }) {
+  const rich = useFlag('rich-editor');
+  const owner = n.kind === 'project' ? `project/${n.project_id}` : `list/${n.key.slice(5)}`;
   return (
     <section class="card tp-note panel-small" data-pat-top={n.color || undefined} style={n.color ? { borderTop: `4px solid var(--c-${n.color})` } : undefined}>
       <h2>
         <a href={href}>✎ {n.name}</a>
         {n.kind === 'note' && <ProjectLabel projectId={n.project_id} />}
       </h2>
-      {n.body.trim() ? <Markdown text={n.body} blankLines class="tp-note-scroll" /> : <p class="muted">Empty. Open it to write.</p>}
+      {rich ? (
+        <MarkdownEditor
+          value={n.body}
+          note={n.kind === 'project' ? { kind: 'project', id: n.project_id! } : { kind: 'list', id: n.key.slice(5) }}
+          rows={3}
+          always
+          placeholder="Tap to write…"
+          onSave={(body) => {
+            setBody(body);
+            change(() => put(`/notes/of/${owner}`, { body }));
+          }}
+        />
+      ) : n.body.trim() ? (
+        <Markdown text={n.body} blankLines class="tp-note-scroll" />
+      ) : (
+        <p class="muted">Empty. Open it to write.</p>
+      )}
     </section>
   );
 }
@@ -36,7 +54,7 @@ function NoteSmall({ n, href }: { n: NoteItem; href: string }) {
 export function NotePanel({ n, setBody, onRemove, here }: { n: NoteItem; setBody: (body: string) => void; onRemove?: () => void; here?: boolean }) {
   const href = n.kind === 'project' ? `#/p/${n.project_id}` : `#/n/${n.key.slice(5)}`;
   return (
-    <Adaptive small={() => <NoteSmall n={n} href={href} />}>
+    <Adaptive small={() => <NoteSmall n={n} href={href} setBody={setBody} />}>
       <FullNotePanel n={n} href={href} setBody={setBody} onRemove={onRemove} here={here} />
     </Adaptive>
   );
@@ -68,6 +86,7 @@ function FullNotePanel({ n, href, setBody, onRemove, here }: { n: NoteItem; href
         value={n.body}
         note={n.kind === 'project' ? { kind: 'project', id: n.project_id! } : { kind: 'list', id: n.key.slice(5) }}
         rows={6}
+        always
         placeholder="Tap to write (Markdown)…"
         onSave={(body) => {
           setBody(body);

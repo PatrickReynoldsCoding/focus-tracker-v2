@@ -10,9 +10,11 @@ import { registerMarkdownEditor, registerPanel, type MarkdownEditorProps } from 
 import { useSignal } from '../../core/signal';
 import { Markdown, MarkdownEditor } from '../../core/ui';
 import { getDraft, paper, setDraft, type Draft } from './device';
+import { AlwaysEditor } from './Always';
 import type { EditingProps } from './Editing';
 import { cardTarget, noteTarget, plainTarget, type Target } from './targets';
 import './editor.css';
+import './editor-always.css';
 
 type EditingComp = (p: EditingProps) => any;
 let loaded: EditingComp | null = null;
@@ -191,7 +193,7 @@ function NoteEditor(props: MarkdownEditorProps) {
   );
 }
 
-registerMarkdownEditor({ id: 'rich', feature: 'rich-editor', component: NoteEditor });
+registerMarkdownEditor({ id: 'rich', feature: 'rich-editor', component: (p: MarkdownEditorProps) => (p.always ? <AlwaysEditor {...p} /> : <NoteEditor {...p} />) });
 
 // A note or card note saved offline and refused on sending (changed elsewhere since): keep it as a
 // draft that opens with the usual choice (Keep mine, Use theirs, Keep both).

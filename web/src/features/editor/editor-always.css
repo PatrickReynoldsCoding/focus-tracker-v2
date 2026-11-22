@@ -1,0 +1,22 @@
+/* An always-on note editor (D61). */
+.ed-always-wait { cursor: text; }
+.ed-always-wait .ed-doc { margin: 0; }
+.ed-wrap-always .ed.is-editing { min-width: 0; }
+/* Phone, not full screen: the toolbar sits on top (slimmed below so it fits; no scrolling, so menus are not clipped). */
+.ed.ed-always:not(.is-phone) .ed-bar { overflow: visible; flex-wrap: nowrap; }
+.ed.ed-always:not(.is-phone) .ed-bar .ed-more { margin-left: 0; }
+@media (max-width: 699px) {
+  .ed.ed-always:not(.is-phone) .ed-scroll { padding: 10px 12px; }
+}
+/* The small note panel (a phone, or a narrow panel): the editor scrolls inside a box about 14 lines high (D39);
+   a height set by the owner is filled instead. */
+.tp-note.panel-small .ed.ed-always .ed-scroll:not(.has-height) { max-height: 14em; overscroll-behavior: contain; }
+.lg-fixed-h .tp-note.panel-small .ed-wrap, .lg-fixed-h .tp-note.panel-small .ed.ed-always { flex: 1 1 0; min-height: 0; }
+.lg-fixed-h .tp-note.panel-small .ed.ed-always .ed-scroll { flex: 1 1 0; max-height: none; min-height: 0; height: auto; }
+.tp-note.panel-small .ed-always-wait { max-height: 14em; overflow: hidden; }
+/* A slimmer toolbar so a panel half a screen wide shows every button. */
+.ed.ed-always:not(.is-phone) .ed-bar { padding: 2px; gap: 0; }
+.ed.ed-always:not(.is-phone) .ed-bar .ed-tb { padding: 0 5px; min-width: 30px; gap: 2px; font-size: 0.88rem; }
+@media (max-width: 460px) {
+  .ed.ed-always:not(.is-phone) .ed-bar .ed-tb { padding: 0 3px; min-width: 26px; font-size: 0.84rem; }
+}
