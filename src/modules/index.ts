@@ -18,6 +18,7 @@ import { profilesModule } from './profiles';
 import { pomodoroModule } from './pomodoro';
 import { notificationsModule } from './notifications';
 import { notifyPrefsModule } from './notify-prefs';
+import { panelRestyleModule } from './panel-restyle';
 import { projectLabelsModule } from './project-labels';
 import { categoryButtonsModule } from './category-buttons';
 import { projectsModule } from './projects';
@@ -50,6 +51,7 @@ export const MODULES: Module[] = [
   notesModule,
   navigationModule,
   projectLabelsModule,
+  panelRestyleModule,
   categoryButtonsModule,
   habitsModule,
   planModule,
