@@ -1,14 +1,18 @@
-// Lists (plain lists, to-do lists, notes) and to-dos.
+// Lists, to-dos and notes: the `lists` table holds each one (D40). A list (kind 'list') and a to-do
+// (kind 'todo') are boards of the board engine (src/modules/boards.ts): a to-do has groups, a
+// fixed Done column and days; a plain list has columns only. A list can become a to-do (one way:
+// convertListToTodo). A note (kind 'note') is Markdown text. The old to-do API lives in todos.ts.
 
 import { z } from 'zod';
 import type { Ctx } from '../core/ctx';
-import type { Entity, Row } from '../core/entity';
+import type { Entity } from '../core/entity';
 import { bad } from '../core/errors';
+import { entity, type Module } from '../core/registry';
 import { type FileItem, type FileSource } from '../core/files';
-import type { Module } from '../core/registry';
-import { create, get, list, update } from '../core/store';
-import { board, columnsEntity, firstColumn, tasksEntity } from './projects';
+import { create, get, list, remove, update } from '../core/store';
+import { board, columnsEntity, makeColumns, tasksEntity, todoDoneColumn } from './boards';
 import { getNote, setNote } from './notes';
+import { createTodo, readTodos } from './todos';
 
 export const LIST_KINDS = ['list', 'todo', 'note'] as const;
 
@@ -16,7 +20,7 @@ export const listsEntity: Entity = {
   name: 'lists',
   table: 'lists',
   singular: 'list',
-  desc: 'What the Notes tab shows: plain lists (items are cards), to-do lists (items are to-dos) and notes (Markdown text).',
+  desc: 'What the Files tab shows besides whiteboards and links: plain lists and to-dos (boards whose items are cards; a to-do also has a Done column and days) and notes (Markdown text). A list can become a to-do (convert_list_to_todo), never the other way.',
   modeScoped: true,
   orderGroup: [],
   filters: ['kind', 'project_id', 'show_today', 'folder_id'],
@@ -36,83 +40,79 @@ export const listsEntity: Entity = {
     if (row.show_today) row.today_at = ctx.now();
   },
   beforeUpdate(ctx, before, patch) {
-    if (patch.kind && patch.kind !== before.kind) throw bad('A list cannot change kind');
+    if (patch.kind && patch.kind !== before.kind && !(converting.has(ctx) && before.kind === 'list' && patch.kind === 'todo'))
+      throw bad(before.kind === 'list' && patch.kind === 'todo' ? 'Use convert_list_to_todo (POST /api/lists/:id/convert) to make a list a to-do' : 'A list cannot change kind');
     checkSeconds(patch.seconds);
     if (patch.show_today && !before.show_today) patch.today_at = ctx.now();
   },
   async afterCreate(ctx, row) {
-    if (row.kind === 'todo') await create(ctx, columnsEntity, { list_id: row.id, name: 'General' });
-    if (row.kind === 'list') await create(ctx, columnsEntity, { list_id: row.id, name: 'Items' });
     if (row.kind === 'note') await setNote(ctx, { list_id: row.id }, '');
+    else await makeColumns(ctx, { list_id: row.id }, row.kind === 'todo' ? 'todo' : 'list');
   },
 };
+
+/** Requests converting a list to a to-do: the one time a list may change kind. */
+const converting = new WeakSet<Ctx>();
 
 function checkSeconds(v: unknown) {
   if (v != null && (!Number.isInteger(Number(v)) || Number(v) < 5 || Number(v) > 3600)) throw bad('seconds must be a whole number from 5 to 3600');
 }
 
-export const todosEntity: Entity = {
-  name: 'todos',
-  table: 'todos',
-  singular: 'to-do',
-  desc: 'One-off small tasks on a to-do list. day empty = anytime; done = the day it was done.',
-  modeScoped: true,
-  orderGroup: ['list_id', 'group_id'],
-  filters: ['list_id', 'group_id', 'day', 'project_id'],
-  fields: {
-    title: { type: 'text', required: true },
-    list_id: { type: 'text', ref: 'lists', cascade: true, desc: 'Defaults to the first to-do list (made if there is none)' },
-    group_id: { type: 'text', ref: 'columns', cascade: true, desc: 'A group (column) of the list; defaults to its first' },
-    day: { type: 'day' },
-    done: { type: 'day' },
-    project_id: { type: 'text', ref: 'projects' },
-    note: { type: 'markdown' },
-    color: { type: 'text' },
-  },
-  async beforeCreate(ctx, row) {
-    if (!row.list_id) row.list_id = (await defaultTodoList(ctx)).id;
-    const l = await get(ctx, listsEntity, String(row.list_id));
-    if (l.kind !== 'todo') throw bad(`${l.name} is not a to-do list`);
-    if (!row.group_id) row.group_id = (await firstColumn(ctx, null, l.id)).id;
-  },
-  async beforeUpdate(ctx, before, patch) {
-    const listId = String(patch.list_id ?? before.list_id);
-    if (patch.list_id && patch.list_id !== before.list_id) {
-      const l = await get(ctx, listsEntity, listId);
-      if (l.kind !== 'todo') throw bad(`${l.name} is not a to-do list`);
-      if (!patch.group_id) patch.group_id = (await firstColumn(ctx, null, listId)).id;
-    }
-    if (patch.group_id) {
-      const g = await get(ctx, columnsEntity, String(patch.group_id));
-      if (g.list_id !== listId) throw bad('That group is on another list');
-    }
-  },
-};
-
-export async function defaultTodoList(ctx: Ctx): Promise<Row> {
-  const lists = await list(ctx, listsEntity, { where: { kind: 'todo' }, limit: 1 });
-  return lists[0] ?? create(ctx, listsEntity, { name: 'To-dos', kind: 'todo', show_today: true });
-}
-
-/** A list with its contents: board (plain), groups with to-dos (todo) or the Markdown body (note). */
+/**
+ * A list with its contents: its board (plain list), its groups with their to-dos (to-do: the old
+ * shape; a done to-do shows in the group it was ticked in, and the Done column is not a group;
+ * get_board gives the board itself) or the Markdown body (note).
+ */
 export async function fullList(ctx: Ctx, id: string) {
   const l = await get(ctx, listsEntity, id);
   if (l.kind === 'note') return { ...l, body: (await getNote(ctx, { list_id: id }))?.body ?? '' };
   if (l.kind === 'list') return { ...l, columns: await board(ctx, { list_id: id }) };
   const [groups, todos] = await Promise.all([
     list(ctx, columnsEntity, { where: { list_id: id } }),
-    list(ctx, todosEntity, { where: { list_id: id }, limit: 2000 }),
+    readTodos(ctx, { where: { list_id: id }, limit: 2000 }),
   ]);
-  return { ...l, groups: groups.map((g) => ({ ...g, todos: todos.filter((t) => t.group_id === g.id) })) };
+  return { ...l, groups: groups.filter((g) => !g.is_done).map((g) => ({ ...g, todos: todos.filter((t) => t.group_id === g.id) })) };
 }
 
-export async function todosForDay(ctx: Ctx, day: string) {
-  // Open to-dos due today or earlier, plus those done today (so a tick does not make them vanish at once).
-  return list(ctx, todosEntity, {
-    sql: '(day IS NOT NULL AND day <= ? AND done IS NULL) OR done = ?',
-    params: [day, day],
-    order: 'done IS NOT NULL, day, ord',
-  });
+/**
+ * Make a plain list a to-do (one way): it gets a Done column and days, its items become the
+ * to-do's items in the same groups, an item ticked off earlier goes into Done, and links to its
+ * items become links to to-dos. Its id, folder, project, place on Today and panels stay.
+ */
+export async function convertListToTodo(ctx: Ctx, id: string) {
+  const l = await get(ctx, listsEntity, id);
+  if (l.kind === 'note') throw bad('A note cannot become a to-do');
+  if (l.kind === 'todo') return fullList(ctx, id);
+  converting.add(ctx);
+  try {
+    await update(ctx, listsEntity, id, { kind: 'todo' });
+  } finally {
+    converting.delete(ctx);
+  }
+  await todoDoneColumn(ctx, id);
+  const cards = await list(ctx, tasksEntity, { where: { list_id: id }, limit: 2000 });
+  for (const c of cards) if (c.done) await update(ctx, tasksEntity, c.id, { done: c.done });
+  await relinkAsTodos(ctx, cards.map((c) => c.id));
+  return fullList(ctx, id);
+}
+
+/** Links to cards that became to-dos: the same links (same ids), now to kind todos. */
+async function relinkAsTodos(ctx: Ctx, ids: string[]) {
+  const links = entity('links');
+  for (let i = 0; i < ids.length; i += 40) {
+    const part = ids.slice(i, i + 40);
+    const marks = part.map(() => '?').join(',');
+    const rows = await list(ctx, links, {
+      sql: `(from_kind = 'tasks' AND from_id IN (${marks})) OR (to_kind = 'tasks' AND to_id IN (${marks}))`,
+      params: [...part, ...part],
+      limit: 2000,
+    });
+    for (const r of rows) {
+      await remove(ctx, links, r.id);
+      const kind = (k: unknown, rid: unknown) => (k === 'tasks' && part.includes(String(rid)) ? 'todos' : k);
+      await create(ctx, links, { id: r.id, from_kind: kind(r.from_kind, r.from_id), from_id: r.from_id, type: r.type, to_kind: kind(r.to_kind, r.to_id), to_id: r.to_id, note: r.note });
+    }
+  }
 }
 
 /** Every list with a short preview, for the Notes tab's cards (one request, not one per card). */
@@ -124,7 +124,7 @@ export async function overview(ctx: Ctx) {
   const today = await ctx.today();
   const [cards, todos, notes] = await Promise.all([
     ctx.db.prepare(`SELECT list_id, title FROM tasks WHERE list_id IN (${marks}) ORDER BY ord`).bind(...ids).all<{ list_id: string; title: string }>(),
-    ctx.db.prepare(`SELECT id, list_id, title, done FROM todos WHERE list_id IN (${marks}) ORDER BY done IS NOT NULL, ord`).bind(...ids).all<{ id: string; list_id: string; title: string; done: string | null }>(),
+    ctx.db.prepare(`SELECT id, list_id, title, done FROM tasks WHERE list_id IN (${marks}) ORDER BY done IS NOT NULL, ord`).bind(...ids).all<{ id: string; list_id: string; title: string; done: string | null }>(),
     ctx.db.prepare(`SELECT list_id, substr(body, 1, 300) AS preview FROM notes WHERE list_id IN (${marks})`).bind(...ids).all<{ list_id: string; preview: string }>(),
   ]);
   return lists.map((l) => {
@@ -164,7 +164,7 @@ async function listFiles(ctx: Ctx, kind: (typeof LIST_KINDS)[number], like: stri
     kind === 'note'
       ? { join: 'LEFT JOIN notes x ON x.list_id = l.id', cols: 'x.updated_at AS inner_at, substr(x.body, 1, 240) AS preview, NULL AS count', search: ` OR x.body LIKE ?3 ESCAPE '\\'` }
       : kind === 'todo'
-        ? { join: 'LEFT JOIN (SELECT list_id, MAX(updated_at) AS u, SUM(done IS NULL) AS n FROM todos WHERE mode = ?1 GROUP BY list_id) x ON x.list_id = l.id', cols: 'x.u AS inner_at, NULL AS preview, x.n AS count', search: '' }
+        ? { join: 'LEFT JOIN (SELECT list_id, MAX(updated_at) AS u, SUM(done IS NULL) AS n FROM tasks WHERE mode = ?1 AND list_id IS NOT NULL GROUP BY list_id) x ON x.list_id = l.id', cols: 'x.u AS inner_at, NULL AS preview, x.n AS count', search: '' }
         : { join: 'LEFT JOIN (SELECT list_id, MAX(updated_at) AS u, COUNT(*) AS n FROM tasks WHERE mode = ?1 AND list_id IS NOT NULL GROUP BY list_id) x ON x.list_id = l.id', cols: 'x.u AS inner_at, NULL AS preview, x.n AS count', search: '' };
   const where = like ? ` AND (l.name LIKE ?3 ESCAPE '\\'${inner.search})` : '';
   const rows = await ctx.db
@@ -195,8 +195,8 @@ const listFileSources: FileSource[] = [
 
 export const listsModule: Module = {
   id: 'lists',
-  description: 'Plain lists, to-do lists, notes and to-dos.',
-  entities: [listsEntity, todosEntity],
+  description: 'Plain lists, to-dos and notes.',
+  entities: [listsEntity],
   files: listFileSources,
   routes(api) {
     api.get('/lists/overview', async (c) => c.json(await overview(c.get('ctx'))));
@@ -209,11 +209,10 @@ export const listsModule: Module = {
       return c.json(await projectNoteCards(ctx));
     });
     api.get('/lists/:id/full', async (c) => c.json(await fullList(c.get('ctx'), c.req.param('id'))));
-    api.post('/todos/:id/tick', async (c) => {
+    api.post('/lists/:id/convert', async (c) => {
       const ctx = c.get('ctx');
-      ctx.label = 'tick to-do';
-      const body = await c.req.json<{ done?: boolean }>().catch(() => ({ done: true }));
-      return c.json(await tick(ctx, c.req.param('id'), body.done !== false));
+      ctx.label = 'make list a to-do';
+      return c.json(await convertListToTodo(ctx, c.req.param('id')));
     });
   },
   tools: [
@@ -247,7 +246,7 @@ export const listsModule: Module = {
       run: async (ctx, { items, body, ...a }) => {
         const l = await create(ctx, listsEntity, a);
         for (const title of items ?? []) {
-          if (l.kind === 'todo') await create(ctx, todosEntity, { list_id: l.id, title });
+          if (l.kind === 'todo') await createTodo(ctx, { list_id: l.id, title });
           else if (l.kind === 'list') await create(ctx, tasksEntity, { list_id: l.id, title });
         }
         if (body != null && l.kind === 'note') await setNote(ctx, { list_id: l.id }, body);
@@ -255,27 +254,11 @@ export const listsModule: Module = {
       },
     },
     {
-      name: 'add_todo',
-      description: 'Add a to-do. Without list_id it goes on the first to-do list. day (YYYY-MM-DD) makes it due that day; empty means anytime.',
-      input: z.object({
-        title: z.string().min(1),
-        list_id: z.string().optional(),
-        group_id: z.string().optional(),
-        day: z.string().optional(),
-        project_id: z.string().optional(),
-        note: z.string().optional(),
-      }),
-      run: (ctx, a) => create(ctx, todosEntity, a),
-    },
-    {
-      name: 'tick_todo',
-      description: 'Mark a to-do done (today) or not done.',
-      input: z.object({ id: z.string(), done: z.boolean().default(true) }),
-      run: (ctx, a) => tick(ctx, a.id, a.done),
+      name: 'convert_list_to_todo',
+      description:
+        'Make a plain list a to-do: it gets a Done column and days (due dates); its items become to-dos in the same columns (groups). One way: a to-do cannot become a plain list. Its id, folder, project and place on Today stay.',
+      input: z.object({ id: z.string() }),
+      run: (ctx, a) => convertListToTodo(ctx, a.id),
     },
   ],
 };
-
-async function tick(ctx: Ctx, id: string, done: boolean) {
-  return update(ctx, todosEntity, id, { done: done ? await ctx.today() : null });
-}

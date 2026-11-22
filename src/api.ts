@@ -7,8 +7,8 @@ import { authorizePage } from './authorize';
 import { cookieHeader, makeSession, passwordOk, readCookie, SESSION_COOKIE, sessionOk, tokenOk } from './core/auth';
 import { Ctx, type Env } from './core/ctx';
 import { ApiError, bad } from './core/errors';
-import { allModules, entity, type AppEnv } from './core/registry';
-import { create, get, list, move, remove, update } from './core/store';
+import { alias, allModules, entity, type AppEnv } from './core/registry';
+import { kindOps } from './core/store';
 
 export async function resolveMode(env: Env, requested: string | null | undefined): Promise<string> {
   const mode = requested || (await env.DB.prepare("SELECT value FROM settings WHERE mode = '' AND key = 'default_mode'").first<{ value: string }>())?.value || 'personal';
@@ -78,37 +78,31 @@ export function buildApp() {
 
   for (const m of allModules()) m.routes?.(api);
 
-  // Generic routes for every kind of row, after the modules' own routes.
+  // Generic routes for every kind of row, after the modules' own routes. An old kind kept as an
+  // alias (todos, D40) answers through its module.
   api.get('/:kind', async (c) => {
-    const e = entity(c.req.param('kind'));
-    const q = c.req.queries();
+    const kind = c.req.param('kind');
+    const a = alias(kind);
+    const filters = a ? Object.keys(a.fields) : (entity(kind).filters ?? []);
     const where: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(q)) {
+    for (const [k, v] of Object.entries(c.req.queries())) {
       if (['limit', 'offset', 'mode'].includes(k)) continue;
-      if (!(e.filters ?? []).includes(k)) throw bad(`Cannot filter ${e.name} by ${k}. Filters: ${(e.filters ?? []).join(', ') || 'none'}`);
+      if (!filters.includes(k)) throw bad(`Cannot filter ${kind} by ${k}. Filters: ${filters.join(', ') || 'none'}`);
       where[k] = v[0] === '' || v[0] === 'null' ? null : v[0];
     }
-    return c.json(await list(c.get('ctx'), e, { where, limit: Number(c.req.query('limit') ?? 500), offset: Number(c.req.query('offset') ?? 0) }));
+    return c.json(await kindOps(kind).list(c.get('ctx'), { where, limit: Number(c.req.query('limit') ?? 500), offset: Number(c.req.query('offset') ?? 0) }));
   });
-  api.post('/:kind', async (c) => {
-    const e = writable(c.req.param('kind'));
-    return c.json(await create(c.get('ctx'), e, await c.req.json()), 201);
-  });
-  api.get('/:kind/:id', async (c) => c.json(await get(c.get('ctx'), entity(c.req.param('kind')), c.req.param('id'))));
-  api.patch('/:kind/:id', async (c) => c.json(await update(c.get('ctx'), writable(c.req.param('kind')), c.req.param('id'), await c.req.json())));
+  api.post('/:kind', async (c) => c.json(await kindOps(c.req.param('kind')).create(c.get('ctx'), await c.req.json()), 201));
+  api.get('/:kind/:id', async (c) => c.json(await kindOps(c.req.param('kind')).get(c.get('ctx'), c.req.param('id'))));
+  api.patch('/:kind/:id', async (c) => c.json(await kindOps(c.req.param('kind')).update(c.get('ctx'), c.req.param('id'), await c.req.json())));
   api.delete('/:kind/:id', async (c) => {
-    await remove(c.get('ctx'), writable(c.req.param('kind')), c.req.param('id'));
+    await kindOps(c.req.param('kind')).remove(c.get('ctx'), c.req.param('id'));
     return c.json({ deleted: c.req.param('id') });
   });
-  api.post('/:kind/:id/move', async (c) => c.json(await move(c.get('ctx'), writable(c.req.param('kind')), c.req.param('id'), await c.req.json())));
+  api.post('/:kind/:id/move', async (c) => c.json(await kindOps(c.req.param('kind')).move(c.get('ctx'), c.req.param('id'), await c.req.json())));
 
   app.route('/api', api);
   app.notFound((c) => c.json({ error: 'Not found', code: 'not_found' }, 404));
   return app;
 }
 
-function writable(kind: string) {
-  const e = entity(kind);
-  if (e.internal) throw bad(`${kind} cannot be changed directly`);
-  return e;
-}

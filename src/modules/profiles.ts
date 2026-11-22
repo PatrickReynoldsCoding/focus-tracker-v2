@@ -186,9 +186,21 @@ export async function setFollowOpen(ctx: Ctx, on: boolean) {
 
 /** How much a profile holds, by kind, for the warning before deleting it. */
 export async function profileUsage(ctx: Ctx, id: string): Promise<{ kind: string; singular: string; count: number }[]> {
-  const ents = allEntities().filter((e) => e.modeScoped && !e.internal);
-  const res = await ctx.db.batch(ents.map((e) => ctx.db.prepare(`SELECT COUNT(*) AS n FROM ${e.table} WHERE mode = ?`).bind(id)));
-  return ents.map((e, i) => ({ kind: e.name, singular: e.singular, count: (res[i].results[0] as { n: number } | undefined)?.n ?? 0 })).filter((x) => x.count > 0);
+  // In module order: each module's tables, then its old kinds kept as aliases (to-dos are cards, D40), counted apart as before.
+  const kinds = allModules().flatMap((m) => [
+    ...(m.entities ?? []).filter((e) => e.modeScoped && !e.internal).map((e) => ({ kind: e.name, singular: e.singular, count: () => countRows(ctx, e.table, id) })),
+    ...(m.aliases ?? []).map((a) => ({ kind: a.name, singular: a.singular, of: a.of, count: () => a.count(ctx, id) })),
+  ]);
+  const out = await Promise.all(kinds.map(async (k) => ({ kind: k.kind, singular: k.singular, count: await k.count() })));
+  for (const [i, k] of kinds.entries()) {
+    const of = 'of' in k ? out.find((x) => x.kind === k.of) : null;
+    if (of) of.count -= out[i].count;
+  }
+  return out.filter((x) => x.count > 0);
+}
+
+async function countRows(ctx: Ctx, table: string, mode: string): Promise<number> {
+  return (await ctx.db.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE mode = ?`).bind(mode).first<{ n: number }>())?.n ?? 0;
 }
 
 const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();

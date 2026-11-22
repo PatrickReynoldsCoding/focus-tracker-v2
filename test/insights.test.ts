@@ -32,8 +32,15 @@ async function session(mode: string, project_id: string | null, date: string, mi
     .bind(id(), mode, project_id, date, minutes, where, `${date}T10:00:00.000Z`, T)
     .run();
 }
+/** A to-do: a card on the mode's to-do list, in its Done column when done (D40). */
 async function todo(mode: string, day: string | null, done: string | null) {
-  await env.DB.prepare('INSERT INTO todos (id, mode, list_id, title, day, done, ord, created, updated_at) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)').bind(id(), mode, 'l', 'x', day, done, T, T).run();
+  await env.DB.prepare("INSERT OR IGNORE INTO lists (id, mode, name, kind, ord, created, updated_at) VALUES (?, ?, 'To-dos', 'todo', 0, ?, ?)").bind(`l-${mode}`, mode, T, T).run();
+  await env.DB.prepare("INSERT OR IGNORE INTO columns (id, mode, list_id, name, ord, is_done, created, updated_at) VALUES (?, ?, ?, 'General', 1, 0, ?, ?), (?, ?, ?, 'Done', 2, 1, ?, ?)")
+    .bind(`g-${mode}`, mode, `l-${mode}`, T, T, `d-${mode}`, mode, `l-${mode}`, T, T)
+    .run();
+  await env.DB.prepare('INSERT INTO tasks (id, mode, list_id, column_id, title, day, done, ord, created, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?)')
+    .bind(id(), mode, `l-${mode}`, done ? `d-${mode}` : `g-${mode}`, 'x', day, done, T, T)
+    .run();
 }
 async function skip(mode: string, project_id: string, date: string) {
   await env.DB.prepare('INSERT INTO skips (id, mode, project_id, date, created, updated_at) VALUES (?, ?, ?, ?, ?, ?)').bind(id(), mode, project_id, date, T, T).run();

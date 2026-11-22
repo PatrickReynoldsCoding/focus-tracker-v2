@@ -2,6 +2,7 @@
 import type { Module } from '../core/registry';
 import { addPanelModule } from './add-panel';
 import { basicsModule } from './basics';
+import { boardsModule } from './boards';
 import { doneColumnModule } from './done-column';
 import { filesModule } from './files';
 import { habitsModule } from './habits';
@@ -27,16 +28,19 @@ import { systemModule } from './system';
 import { todayModule } from './today';
 import { todayListModule } from './today-list';
 import { todayPanelsModule } from './today-panels';
+import { todosModule } from './todos';
 import { whiteboardsModule } from './whiteboards';
 
 export const MODULES: Module[] = [
   projectsModule,
+  boardsModule,
   doneColumnModule,
   basicsModule,
   profilesModule,
   resourcesModule,
   relationsModule,
   listsModule,
+  todosModule,
   notesModule,
   navigationModule,
   projectLabelsModule,

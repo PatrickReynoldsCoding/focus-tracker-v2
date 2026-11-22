@@ -135,8 +135,8 @@ export async function swiftbarAction(ctx: Ctx, form: Record<string, string>) {
     case 'stop':
       return stopSession(ctx, { where_stopped: form.where_stopped || undefined });
     case 'tick': {
-      const { todosEntity } = await import('./lists');
-      return update(ctx, todosEntity, id, { done: await ctx.today() });
+      const { tickTodo } = await import('./todos');
+      return tickTodo(ctx, id, true);
     }
     case 'card':
       return tickCard(ctx, id, true);

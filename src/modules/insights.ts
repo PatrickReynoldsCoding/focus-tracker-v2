@@ -191,11 +191,13 @@ export async function weekSummary(ctx: Ctx): Promise<{ today: string; weeks: Wee
       .bind(ctx.mode, lastWeek, to)
       .all<{ day: string; sessions: number; minutes: number }>(),
     ctx.db
-      .prepare('SELECT done AS day, COUNT(*) AS n FROM todos WHERE mode = ? AND done >= ? AND done <= ? GROUP BY done')
+      .prepare(`SELECT t.done AS day, COUNT(*) AS n FROM tasks t JOIN lists l ON l.id = t.list_id AND l.kind = 'todo'
+                WHERE t.mode = ? AND t.done >= ? AND t.done <= ? GROUP BY t.done`)
       .bind(ctx.mode, lastWeek, to)
       .all<{ day: string; n: number }>(),
     ctx.db
-      .prepare('SELECT day, COUNT(*) AS n FROM todos WHERE mode = ? AND done IS NULL AND day >= ? AND day <= ? GROUP BY day')
+      .prepare(`SELECT t.day, COUNT(*) AS n FROM tasks t JOIN lists l ON l.id = t.list_id AND l.kind = 'todo'
+                WHERE t.mode = ? AND t.done IS NULL AND t.day >= ? AND t.day <= ? GROUP BY t.day`)
       .bind(ctx.mode, lastWeek, to)
       .all<{ day: string; n: number }>(),
     ctx.db

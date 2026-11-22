@@ -4,8 +4,8 @@ import { z } from 'zod';
 import type { Ctx } from '../core/ctx';
 import { bad } from '../core/errors';
 import { newId, randomToken, sha256Hex } from '../core/ids';
-import { allEntities, entity, type Module } from '../core/registry';
-import { create, get, list, move, redoLast, remove, undoLast, update } from '../core/store';
+import { alias, allAliases, allEntities, entity, type Module } from '../core/registry';
+import { create, kindOps, redoLast, undoLast } from '../core/store';
 import { allFeatures, featureStates, setFeature } from '../core/features';
 import { PER_PROFILE_SETTINGS } from './profiles';
 
@@ -51,12 +51,6 @@ export async function createToken(ctx: Ctx, name: string) {
 const kinds = () => allEntities().filter((e) => !e.internal);
 const kindNames = () => kinds().map((e) => e.name);
 
-function writable(name: string) {
-  const e = entity(name);
-  if (e.internal) throw bad(`${name} cannot be changed directly`);
-  return e;
-}
-
 export const systemModule: Module = {
   id: 'system',
   description: 'Settings, undo, API tokens and generic access to every kind of row.',
@@ -100,7 +94,8 @@ export const systemModule: Module = {
     // so an import can be run again. Not recorded for undo.
     api.post('/import/:kind', async (c) => {
       const ctx = c.get('ctx');
-      const e = entity(c.req.param('kind'));
+      const a = alias(c.req.param('kind'));
+      const e = entity(a ? a.of : c.req.param('kind'));
       if (e.name === 'modes') throw bad(`${e.name} cannot be imported`);
       const { rows } = await c.req.json<{ rows: Record<string, unknown>[] }>();
       if (!Array.isArray(rows) || rows.length > 500) throw bad('Send rows as an array of at most 500');
@@ -111,7 +106,8 @@ export const systemModule: Module = {
             out.skipped++;
             continue;
           }
-          await create(ctx, e, row, { raw: true });
+          if (a) await a.create(ctx, row, { raw: true });
+          else await create(ctx, e, row, { raw: true });
           out.created++;
         } catch (err) {
           out.errors.push({ id: row.id ?? null, error: (err as Error).message });
@@ -150,7 +146,7 @@ export const systemModule: Module = {
       readOnly: true,
       input: z.object({}),
       run: async () =>
-        kinds().map((e) => ({
+        [...kinds(), ...allAliases().map((a) => ({ name: a.name, desc: a.desc, orderGroup: ['list_id', 'group_id'], fields: a.fields }))].map((e) => ({
           kind: e.name,
           what: e.desc,
           ordered: !!e.orderGroup,
@@ -171,33 +167,33 @@ export const systemModule: Module = {
         limit: z.number().int().max(500).optional(),
         offset: z.number().int().optional(),
       }),
-      run: (ctx, a) => list(ctx, entity(a.kind), { where: a.filters, limit: a.limit ?? 100, offset: a.offset }),
+      run: (ctx, a) => kindOps(a.kind).list(ctx, { where: a.filters, limit: a.limit ?? 100, offset: a.offset }),
     },
     {
       name: 'get_item',
       description: 'Get one row of any kind by id.',
       readOnly: true,
       input: z.object({ kind: z.string(), id: z.string() }),
-      run: (ctx, a) => get(ctx, entity(a.kind), a.id),
+      run: (ctx, a) => kindOps(a.kind).get(ctx, a.id),
     },
     {
       name: 'create_item',
       description: 'Create a row of any kind (see describe_kinds for fields). Prefer the specific tools (create_project, add_card, add_todo ...) when one fits.',
       input: z.object({ kind: z.string(), fields: z.record(z.string(), z.unknown()) }),
-      run: (ctx, a) => create(ctx, writable(a.kind), a.fields),
+      run: (ctx, a) => kindOps(a.kind).create(ctx, a.fields),
     },
     {
       name: 'update_item',
       description: 'Change fields of a row of any kind. Only the fields given change.',
       input: z.object({ kind: z.string(), id: z.string(), fields: z.record(z.string(), z.unknown()) }),
-      run: (ctx, a) => update(ctx, writable(a.kind), a.id, a.fields),
+      run: (ctx, a) => kindOps(a.kind).update(ctx, a.id, a.fields),
     },
     {
       name: 'delete_item',
       description: 'Delete a row of any kind, with what belongs to it (a project’s cards, a list’s items ...). Can be undone with undo.',
       input: z.object({ kind: z.string(), id: z.string() }),
       run: async (ctx, a) => {
-        await remove(ctx, writable(a.kind), a.id);
+        await kindOps(a.kind).remove(ctx, a.id);
         return { deleted: a.id };
       },
     },
@@ -212,7 +208,7 @@ export const systemModule: Module = {
         index: z.number().int().optional(),
         group: z.record(z.string(), z.string().nullable()).optional(),
       }),
-      run: (ctx, { kind, id, group, ...t }) => move(ctx, writable(kind), id, { ...group, ...t }),
+      run: (ctx, { kind, id, group, ...t }) => kindOps(kind).move(ctx, id, { ...group, ...t }),
     },
     {
       name: 'undo',

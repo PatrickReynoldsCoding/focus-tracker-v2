@@ -15,7 +15,8 @@ import { leadOn, loadRotation, setWeekChanges, weekdayOf, type Rotation } from '
 import { create, get, list, remove, update } from '../core/store';
 import { categoriesEntity } from './basics';
 import { AWAY_FLAG, habitLogEntity, habitsEntity, levelForDay, levelHistory } from './habits';
-import { listsEntity, todosEntity } from './lists';
+import { listsEntity } from './lists';
+import { readTodos, updateTodo } from './todos';
 
 export const PLAN_FLAG = 'plan-week';
 /** A day holds at most this many planned sessions of one habit. */
@@ -53,8 +54,8 @@ export async function weekPlan(ctx: Ctx, which: Which = 'this') {
     list(ctx, habitsEntity, { where: { status: 'active' } }),
     list(ctx, habitLogEntity, { sql: "day >= ? AND day <= ? AND kind IN ('done', 'plan', 'skip')", params: [monday, sunday], limit: 2000 }),
     list(ctx, habitLogEntity, { where: { kind: 'level' }, order: 'day', limit: 2000 }),
-    list(ctx, todosEntity, { sql: 'day >= ? AND day <= ?', params: [monday, sunday], order: 'day, done IS NOT NULL, ord', limit: 500 }),
-    list(ctx, todosEntity, { sql: 'done IS NULL AND (day IS NULL OR day < ?)', params: [earlierThan], order: 'day IS NOT NULL, day, ord', limit: 200 }),
+    readTodos(ctx, { sql: 'day >= ? AND day <= ?', params: [monday, sunday], order: 'day, done IS NOT NULL, ord', limit: 500 }),
+    readTodos(ctx, { sql: 'done IS NULL AND (day IS NULL OR day < ?)', params: [earlierThan], order: 'day IS NOT NULL, day, ord', limit: 200 }),
     ctx.feature(AWAY_FLAG),
     list(ctx, listsEntity, { where: { kind: 'todo' } }),
   ]);
@@ -155,7 +156,7 @@ export async function setLead(ctx: Ctx, day: string, value: string | null) {
 /** Put a to-do on a day, or take it off (null = anytime). The same as changing todos.day. */
 export async function scheduleTodo(ctx: Ctx, id: string, day: string | null) {
   if (day != null) checkDay(day);
-  return update(ctx, todosEntity, id, { day });
+  return updateTodo(ctx, id, { day });
 }
 
 const which = (v: unknown): Which => (v === 'next' ? 'next' : 'this');

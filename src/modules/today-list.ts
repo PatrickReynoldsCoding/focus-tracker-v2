@@ -5,19 +5,17 @@
 
 import { z } from 'zod';
 import type { Ctx } from '../core/ctx';
-import { bad } from '../core/errors';
 import { requireFeature } from '../core/features';
 import type { Module } from '../core/registry';
-import { get, move, update } from '../core/store';
 import type { Row } from '../core/entity';
 import { buildTodayList, type TodayCardIn, type TodayList, type TodayTodoIn } from '../core/today-list';
 import { checkHabit, habitProgress, skipHabit } from './habits';
-import { todosEntity, todosForDay } from './lists';
-import { DONE_FLAG, doneColumn, firstColumn, tasksEntity } from './projects';
+import { DONE_FLAG, tickCard } from './boards';
+import { tickTodo, todosForDay } from './todos';
 
 export const TODAY_LIST_FLAG = 'today-panel';
 
-/** Cards for today or earlier that are not done, and those ticked today, with where they live. */
+/** Cards for today or earlier that are not done, and those ticked today, with where they live (a to-do's cards are its to-dos, not cards here). */
 export async function cardsForDay(ctx: Ctx, day: string): Promise<TodayCardIn[]> {
   // In the Done column (D34), or with the flag done-column off, in the last of two or more columns (D30).
   const inDone = (await ctx.feature(DONE_FLAG))
@@ -30,7 +28,7 @@ export async function cardsForDay(ctx: Ctx, day: string): Promise<TodayCardIn[]>
       `SELECT t.id, t.title, t.day, t.done, t.project_id, t.list_id, COALESCE(p.name, l.name) AS owner, ${inDone} AS in_last
        FROM tasks t JOIN columns c ON c.id = t.column_id
        LEFT JOIN projects p ON p.id = t.project_id LEFT JOIN lists l ON l.id = t.list_id
-       WHERE t.mode = ? AND t.day IS NOT NULL AND t.day <= ? AND (t.done IS NULL OR t.done = ?)
+       WHERE t.mode = ? AND t.day IS NOT NULL AND t.day <= ? AND (t.done IS NULL OR t.done = ?) AND (l.kind IS NULL OR l.kind != 'todo')
        ORDER BY t.day, c.ord, t.ord LIMIT 500`,
     )
     .bind(ctx.mode, day, day)
@@ -89,23 +87,7 @@ export async function todayList(ctx: Ctx): Promise<TodayList> {
   return buildTodayList(day, { habits, todos: withListNames(todos, names), cards, hide });
 }
 
-/**
- * Tick a card off (or back on). A project card moves to its board's Done column or, ticked back
- * on, to the first column (D34; flag off: the last of two or more columns); a plain list's item
- * only records the day.
- */
-export async function tickCard(ctx: Ctx, id: string, done: boolean) {
-  const card = await get(ctx, tasksEntity, id);
-  const today = await ctx.today();
-  if (card.project_id) {
-    const last = await doneColumn(ctx, String(card.project_id));
-    if (last) {
-      const to = done ? last : await firstColumn(ctx, String(card.project_id), null);
-      if (card.column_id !== to.id) await move(ctx, tasksEntity, id, { column_id: to.id });
-    }
-  }
-  return update(ctx, tasksEntity, id, { done: done ? today : null });
-}
+export { tickCard };
 
 const KINDS = ['habit', 'todo', 'card'] as const;
 
@@ -118,7 +100,7 @@ async function tickItem(ctx: Ctx, a: { kind: (typeof KINDS)[number]; id: string;
   } else if (a.not_today !== undefined) {
     await setNotToday(ctx, a.kind, a.id, a.not_today);
   } else if (a.kind === 'todo') {
-    await update(ctx, todosEntity, a.id, { done: done ? await ctx.today() : null });
+    await tickTodo(ctx, a.id, done);
   } else {
     await tickCard(ctx, a.id, done);
   }
@@ -143,12 +125,6 @@ export const todayListModule: Module = {
       await requireFeature(ctx, TODAY_LIST_FLAG);
       return c.json(await todayList(ctx));
     });
-    api.post('/tasks/:id/tick', async (c) => {
-      const ctx = c.get('ctx');
-      const b = await c.req.json<{ done?: unknown }>().catch(() => ({}) as { done?: unknown });
-      ctx.label = b.done === false ? 'untick card' : 'tick card';
-      return c.json(await tickCard(ctx, c.req.param('id'), b.done !== false));
-    });
   },
   tools: [
     {
@@ -168,12 +144,6 @@ export const todayListModule: Module = {
       feature: TODAY_LIST_FLAG,
       input: z.object({ kind: z.enum(KINDS), id: z.string(), done: z.boolean().optional(), not_today: z.boolean().optional() }),
       run: (ctx, a) => tickItem(ctx, a),
-    },
-    {
-      name: 'set_card_day',
-      description: 'Put a card (a project board card or a plain list item) in the Today list from a day (YYYY-MM-DD), or take it out (day null). It stays until ticked. Clears an earlier tick.',
-      input: z.object({ id: z.string(), day: z.string().nullable() }),
-      run: (ctx, a) => update(ctx, tasksEntity, a.id, { day: a.day, done: null }),
     },
   ],
 };

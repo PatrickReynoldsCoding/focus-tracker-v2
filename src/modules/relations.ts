@@ -96,13 +96,14 @@ export const LINKABLE: Record<string, { label: string; select: string }> = {
     select: `SELECT t.id, t.title, CASE WHEN col.is_done = 1 THEN 'done' ELSE 'open' END AS status,
       COALESCE(p.name, l.name) AS context, t.project_id, t.list_id, NULL AS sub, t.updated_at
       FROM tasks t LEFT JOIN columns col ON col.id = t.column_id LEFT JOIN projects p ON p.id = t.project_id
-      LEFT JOIN lists l ON l.id = t.list_id WHERE t.mode = ?`,
+      LEFT JOIN lists l ON l.id = t.list_id WHERE t.mode = ? AND (l.kind IS NULL OR l.kind != 'todo')`,
   },
+  // A to-do's items are cards too (D40); links name them as to-dos, as before.
   todos: {
     label: 'to-do',
     select: `SELECT t.id, t.title, CASE WHEN t.done IS NOT NULL THEN 'done' ELSE 'open' END AS status,
-      l.name AS context, t.project_id, t.list_id, NULL AS sub, t.updated_at
-      FROM todos t LEFT JOIN lists l ON l.id = t.list_id WHERE t.mode = ?`,
+      l.name AS context, t.about_project_id AS project_id, t.list_id, NULL AS sub, t.updated_at
+      FROM tasks t JOIN lists l ON l.id = t.list_id WHERE t.mode = ? AND l.kind = 'todo'`,
   },
   backlog: {
     label: 'backlog item',
@@ -137,6 +138,17 @@ export function kindOf(k: unknown): string {
 }
 
 type Ref = { kind: string; id: string };
+
+/** A card on a to-do is linked as a to-do, any other card as a card, whichever kind was given (D40). */
+async function cardKind(ctx: Ctx, r: Ref): Promise<Ref> {
+  if (r.kind !== 'tasks' && r.kind !== 'todos') return r;
+  const row = await ctx.db
+    .prepare('SELECT l.kind FROM tasks t LEFT JOIN lists l ON l.id = t.list_id WHERE t.id = ? AND t.mode = ?')
+    .bind(r.id, ctx.mode)
+    .first<{ kind: string | null }>();
+  if (!row) return r;
+  return { kind: row.kind === 'todo' ? 'todos' : 'tasks', id: r.id };
+}
 const key = (r: Ref) => `${r.kind}:${r.id}`;
 
 /** Items by "kind:id", in this mode. Missing ones are left out. */
@@ -180,8 +192,8 @@ export const linksEntity: Entity = {
   async beforeCreate(ctx, row) {
     const types = await linkTypes(ctx);
     const { type, reversed } = resolveType(types, String(row.type || 'relates'));
-    let from: Ref = { kind: kindOf(row.from_kind || 'projects'), id: String(row.from_id ?? '') };
-    let to: Ref = { kind: kindOf(row.to_kind || 'projects'), id: String(row.to_id ?? '') };
+    let from: Ref = await cardKind(ctx, { kind: kindOf(row.from_kind || 'projects'), id: String(row.from_id ?? '') });
+    let to: Ref = await cardKind(ctx, { kind: kindOf(row.to_kind || 'projects'), id: String(row.to_id ?? '') });
     if (reversed) [from, to] = [to, from];
     if (!from.id || !to.id) throw bad('A link needs both items');
     if (key(from) === key(to)) throw bad('An item cannot link to itself');
@@ -271,7 +283,7 @@ async function rowsOf(ctx: Ctx, r: Ref): Promise<LinkRow[]> {
 
 /** An item's links, each read from the item ("blocks", "is blocked by" …), and what blocks it now. */
 export async function relationsOf(ctx: Ctx, kind: string, id: string) {
-  const me: Ref = { kind: kindOf(kind), id };
+  const me: Ref = await cardKind(ctx, { kind: kindOf(kind), id });
   const [rows, types] = await Promise.all([rowsOf(ctx, me), linkTypes(ctx)]);
   const isOut = (r: LinkRow) => r.from_kind === me.kind && r.from_id === me.id;
   const other = (r: LinkRow): Ref => (isOut(r) ? { kind: r.to_kind, id: r.to_id } : { kind: r.from_kind, id: r.from_id });
@@ -374,8 +386,8 @@ export async function unlinkItems(ctx: Ctx, input: { id?: string; from_kind?: st
     return { removed: 1 };
   }
   if (!input.from_id || !input.to_id) throw bad('Give the link id, or both items');
-  const a: Ref = { kind: kindOf(input.from_kind ?? 'projects'), id: input.from_id };
-  const b: Ref = { kind: kindOf(input.to_kind ?? 'projects'), id: input.to_id };
+  const a: Ref = await cardKind(ctx, { kind: kindOf(input.from_kind ?? 'projects'), id: input.from_id });
+  const b: Ref = await cardKind(ctx, { kind: kindOf(input.to_kind ?? 'projects'), id: input.to_id });
   const typeId = input.type ? resolveType(await linkTypes(ctx), input.type).type.id : null;
   const rows = (await rowsOf(ctx, a)).filter(
     (r) =>
@@ -449,7 +461,9 @@ export const relationsModule: Module = {
   ],
   async beforeDelete(ctx, e, row) {
     if (!LINKABLE[e.name]) return;
-    for (const r of await rowsOf(ctx, { kind: e.name, id: row.id })) if (await getRaw(ctx, linksEntity, r.id)) await remove(ctx, linksEntity, r.id);
+    // A card may be linked as a card or as a to-do (a to-do's items are cards).
+    const kinds = e.name === 'tasks' ? ['tasks', 'todos'] : [e.name];
+    for (const kind of kinds) for (const r of await rowsOf(ctx, { kind, id: row.id })) if (await getRaw(ctx, linksEntity, r.id)) await remove(ctx, linksEntity, r.id);
   },
   routes(api) {
     api.get('/links/types', async (c) => {

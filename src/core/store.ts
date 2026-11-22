@@ -5,7 +5,7 @@ import type { Ctx } from './ctx';
 import { columnsOf, type Entity, type Field, type Row } from './entity';
 import { ApiError, bad, notFound } from './errors';
 import { CLIENT_ID, newId } from './ids';
-import { allEntities, allModules, entity as getEntity } from './registry';
+import { alias, allEntities, allModules, entity as getEntity, type KindAlias } from './registry';
 
 type Input = Record<string, unknown>;
 
@@ -382,6 +382,31 @@ export async function move(ctx: Ctx, e: Entity, id: string, target: MoveTarget):
     ord = pos + 1;
   }
   return update(ctx, e, id, { ...groupPatch, ord });
+}
+
+// ---------- any kind, by name ----------
+
+/**
+ * Reads and writes for a kind given by name (the generic REST routes, Claude's *_item tools,
+ * imports): an old kind kept as an alias (todos, D40) goes through its module, any other through
+ * the store. Writes refuse internal kinds.
+ */
+export function kindOps(kind: string): Omit<KindAlias, 'name' | 'singular' | 'desc' | 'of' | 'fields' | 'count'> {
+  const a = alias(kind);
+  if (a) return a;
+  const e = getEntity(kind);
+  const writable = () => {
+    if (e.internal) throw bad(`${kind} cannot be changed directly`);
+    return e;
+  };
+  return {
+    list: (ctx, opts) => list(ctx, e, opts),
+    get: (ctx, id) => get(ctx, e, id),
+    create: (ctx, input, opts) => create(ctx, writable(), input, opts),
+    update: (ctx, id, input) => update(ctx, writable(), id, input),
+    remove: (ctx, id) => remove(ctx, writable(), id),
+    move: (ctx, id, target) => move(ctx, writable(), id, target),
+  };
 }
 
 // ---------- undo ----------

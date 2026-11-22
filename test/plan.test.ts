@@ -195,9 +195,13 @@ describe('planned sessions', () => {
     const ctx = at(WED, M);
     await env.DB.prepare("INSERT INTO lists (id, mode, name, kind, ord, created, updated_at) VALUES ('tl1', ?, 'To-dos', 'todo', 0, ?, ?)").bind(M, T, T).run();
     await env.DB.prepare("INSERT INTO columns (id, mode, list_id, name, ord, created, updated_at) VALUES ('tg1', ?, 'tl1', 'General', 0, ?, ?)").bind(M, T, T).run();
+    await env.DB.prepare("INSERT INTO columns (id, mode, list_id, name, ord, is_done, created, updated_at) VALUES ('td1', ?, 'tl1', 'Done', 1, 1, ?, ?)").bind(M, T, T).run();
+    // A to-do is a card of the to-do list, in its Done column when done (D40).
     const todo = async (title: string, day: string | null, done: string | null = null) => {
       const tid = id();
-      await env.DB.prepare('INSERT INTO todos (id, mode, list_id, group_id, title, day, done, ord, created, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?)').bind(tid, M, 'tl1', 'tg1', title, day, done, T, T).run();
+      await env.DB.prepare('INSERT INTO tasks (id, mode, list_id, column_id, from_column_id, title, day, done, ord, created, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)')
+        .bind(tid, M, 'tl1', done ? 'td1' : 'tg1', done ? 'tg1' : null, title, day, done, T, T)
+        .run();
       return tid;
     };
     const any = await todo('Buy stamps', null);
