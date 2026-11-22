@@ -7,7 +7,12 @@ import Sortable from 'sortablejs';
 import { useEffect, useRef } from 'preact/hooks';
 import type { RefObject } from 'preact';
 
-export function useCardDrag(list: RefObject<HTMLElement | null>, group: string, onDrop: (cardId: string, toCol: string, index: number) => void, on = true) {
+let lastDrop = 0;
+/** True just after a drag ended, so the click a finger's drop can make is not taken as a tap. */
+export const justDragged = () => Date.now() - lastDrop < 400;
+
+/** `filter`: what never starts a drag (a tick; in a panel also its checkboxes and buttons). */
+export function useCardDrag(list: RefObject<HTMLElement | null>, group: string, onDrop: (cardId: string, toCol: string, index: number) => void, on = true, filter = '.ub-tick') {
   const drop = useRef(onDrop);
   drop.current = onDrop;
   useEffect(() => {
@@ -20,11 +25,12 @@ export function useCardDrag(list: RefObject<HTMLElement | null>, group: string, 
       ghostClass: 'drag-ghost',
       dataIdAttr: 'data-id',
       // A tick is a tap, never the start of a drag.
-      filter: '.ub-tick',
+      filter,
       preventOnFilter: false,
       // An empty group, or the folded Done, takes a card dropped near it.
       emptyInsertThreshold: 28,
       onEnd: (evt) => {
+        lastDrop = Date.now();
         const cardId = evt.item.dataset.id!;
         const toCol = (evt.to as HTMLElement).dataset.col!;
         const index = evt.newIndex ?? 0;
@@ -35,5 +41,5 @@ export function useCardDrag(list: RefObject<HTMLElement | null>, group: string, 
       },
     });
     return () => s.destroy();
-  }, [on, group]);
+  }, [on, group, filter]);
 }

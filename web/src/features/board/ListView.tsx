@@ -51,7 +51,7 @@ function Group({ b, cols, col, group, onOpen }: { b: BoardCtx; cols: Column[]; c
           <Row key={c.id} b={b} c={c} done={false} onOpen={onOpen} />
         ))}
       </ul>
-      <AddInput placeholder={`Add a ${noun(b)}`} onAdd={(title) => addCard(b, col.id, title)} />
+      <AddInput placeholder={`Add ${b.kind === 'list' ? 'an' : 'a'} ${noun(b)}`} onAdd={(title) => addCard(b, col.id, title)} />
     </section>
   );
 }

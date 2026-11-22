@@ -1,11 +1,14 @@
 // A to-do or a plain list inside a panel (Today, a project's linked lists, a window): the same
 // board, drawn small. A to-do shows its open items under their group's name (when it has more than
 // one group) with a tick, then those done today, struck through, so a tick does not make an item
-// vanish at once; a plain list its items. No dragging here: a long press arranges the panel, and
-// the list's page has the full screen.
+// vanish at once. With the flag panel-restyle (D49) a plain list's panel is the same, without
+// ticks, and items can be dragged (PanelItems.tsx); off, a plain list shows its items and nothing
+// drags (a long press arranges the panel).
 
 import { change, post } from '../../core/api';
+import { useFlag } from '../../core/features';
 import { AddInput, todayLocal } from '../../core/ui';
+import { PanelItems, SmallPanelItems } from './PanelItems';
 import { addCard, deleteCard, tickCard, type BoardCtx } from './actions';
 import { allCards, doneColumnOf, openColumns, openCount, type Card, type Column, type SetColumns } from './model';
 
@@ -34,6 +37,11 @@ function CheckRow({ b, c, done }: { b: BoardCtx; c: Card; done: boolean }) {
 }
 
 export function CompactItems(p: CompactProps) {
+  const restyle = useFlag('panel-restyle');
+  return restyle ? <PanelItems {...p} /> : <OldCompactItems {...p} />;
+}
+
+function OldCompactItems(p: CompactProps) {
   const b = ctxOf(p);
   const open = openColumns(p.cols, b.done);
   const first = open[0];
@@ -91,6 +99,11 @@ const SMALL_ITEMS = 4;
 
 /** The small version: the first few items (a to-do's tick), and how many more. */
 export function SmallItems(p: CompactProps) {
+  const restyle = useFlag('panel-restyle');
+  return restyle ? <SmallPanelItems {...p} /> : <OldSmallItems {...p} />;
+}
+
+function OldSmallItems(p: CompactProps) {
   const b = ctxOf(p);
   const items = pickable(p.kind, p.cols);
   return (

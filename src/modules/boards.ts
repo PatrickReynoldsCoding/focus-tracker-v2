@@ -294,7 +294,7 @@ export const boardsModule: Module = {
       id: UNIFIED_FLAG,
       label: 'One to-do screen',
       description:
-        'To-dos, lists and project boards share one screen with a Board view (columns side by side) and a List view (groups with tick circles, done items folded into Done), and a plain list can be made a to-do. Off: no view switch; a project and a plain list show as a board and a to-do as a list, as before.',
+        'To-dos, lists and project boards share one screen with a Board view (columns side by side) and a List view (groups one under the other; a to-do’s and a project’s items have tick circles, done items folded into Done; a plain list’s have no ticks and it opens in List view), and a plain list can be made a to-do. Off: no view switch; a project and a plain list show as a board and a to-do as a list, as before.',
       default: true,
     },
   ],

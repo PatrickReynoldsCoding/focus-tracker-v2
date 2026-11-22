@@ -48,3 +48,14 @@ html[data-theme='eink'] .ub-seg button.on { background: #fff; color: #000; box-s
 html[data-theme='eink'] .ub-seg button.on::before { content: '✓ '; font-weight: 800; }
 html[data-theme='eink'] .ub-done-head { min-height: 44px; }
 .tp-items label { flex-direction: row; align-items: center; gap: 10px; color: var(--fg); font-size: 1rem; min-height: 36px; cursor: pointer; }
+
+/* A to-do's or plain list's panel (D49): the same rows for both, a checkbox only on a to-do; drag to reorder. */
+ul.checks.pi-items li { gap: 10px; min-height: 44px; touch-action: manipulation; user-select: none; -webkit-user-select: none; border-radius: 6px; }
+ul.pi-items li.drag-ghost { background: var(--accent-soft); }
+ul.pi-items.ub-drag li { cursor: grab; }
+.pi-title { flex: 1; min-width: 0; padding: 8px 0; cursor: pointer; overflow-wrap: anywhere; color: var(--fg); }
+.pi-title:hover { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line); }
+ul.pi-items li.done .pi-title { text-decoration: line-through; color: var(--muted); }
+ul.pi-items li .tp-note-hint { text-decoration: none; }
+ul.pi-items.ub-drag:empty { min-height: 8px; }
+html[data-theme='eink'] ul.pi-items li { min-height: 44px; }

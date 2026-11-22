@@ -1,7 +1,8 @@
-// The to-do screen (D41): one component for a to-do, a plain list and a project's board. A to-do
-// and a project switch between Board view (columns side by side) and List view (groups with tick
-// circles, Done folded at the bottom); the view is remembered on this device for each board. A
-// plain list keeps its board look, has no ticks or days, and can be made a to-do (one way).
+// The to-do screen (D41): one component for a to-do, a plain list and a project's board. Each
+// switches between Board view (columns side by side) and List view (groups one under the other;
+// a to-do's and a project's items have tick circles, Done folded at the bottom); the view is
+// remembered on this device for each board. A plain list is a to-do without the Done column, the
+// ticks and days (D49: it opens in List view), and can be made a to-do (one way).
 // Flag `unified-board` off: no switch; a project and a plain list show as a board, a to-do as a list.
 
 import { useEffect, useRef, useState } from 'preact/hooks';
@@ -58,7 +59,7 @@ export function TodoBoard({
   colsRef.current = cols;
   const [open, setOpen] = useState<string | null>(null);
   const boardId = owner.project_id ? `p:${owner.project_id}` : `l:${owner.list_id}`;
-  const [saved, setView] = useView(boardId, kind === 'todo' ? 'list' : 'board');
+  const [saved, setView] = useView(boardId, kind === 'project' ? 'board' : 'list');
   const [localHide, setLocalHide] = useLocalHideDone(owner.list_id ?? '');
   useEffect(() => setColsState(columns), [columns]);
   useEffect(() => {
@@ -67,7 +68,7 @@ export function TodoBoard({
 
   const done = doneColumnOf(cols, kind, doneFlag);
   const b: BoardCtx = { get: () => colsRef.current, set: (fn) => setColsState(fn), kind, owner, done };
-  const view: View = kind === 'list' ? 'board' : unified ? saved : kind === 'todo' ? 'list' : 'board';
+  const view: View = unified ? saved : kind === 'todo' ? 'list' : 'board';
   const folded = !!done && (kind === 'project' ? !!hideDone : localHide);
   const fold = (hide: boolean) => {
     if (kind !== 'project') return setLocalHide(hide);
@@ -79,10 +80,11 @@ export function TodoBoard({
   };
   const card = open ? findCard(cols, open) : undefined;
   const group = `board-${boardId}`;
+  // A plain list is `ub-plain`: `ub-list` is List view's own box.
   return (
-    <div class={`board-wrap ub ub-${kind} ub-view-${view}`}>
+    <div class={`board-wrap ub ub-${kind === 'list' ? 'plain' : kind} ub-view-${view}`}>
       <div class="board-tools ub-tools">
-        {unified && kind !== 'list' && <ViewSwitch view={view} onView={setView} />}
+        {unified && <ViewSwitch view={view} onView={setView} />}
         {canFold && <HideDoneButton hidden={folded} count={done!.cards.length} onToggle={() => fold(!folded)} />}
         {unified && kind === 'list' && onConvert && (
           <button class="ghost small" onClick={convert}>
