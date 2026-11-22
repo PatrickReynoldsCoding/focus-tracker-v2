@@ -219,6 +219,18 @@ My suggestion: 2 (switches that do nothing are confusing).
 
 My suggestion: 1 (it matches the web).
 
+**[Android 0.5.0 Q1] Opening the app from the Today widget (the focus project, Stop…, Choose) switches the app to the widget's profile, like opening a file. Keep?**
+1. As now (the project is in that profile).
+2. Only files switch; the Today widget opens the app in its open profile.
+
+My suggestion: 1.
+
+**[Android 0.5.0 Q2] A tick on the Files widget only ticks (the widget lists open items); untick in the app. Keep?**
+1. As now.
+2. Keep a ticked item for a while with ☑, tap again to untick.
+
+My suggestion: 1 (Undo in the app covers a mis-tap).
+
 ### Other
 
 (Nothing else open.)

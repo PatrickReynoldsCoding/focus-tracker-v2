@@ -34,6 +34,7 @@ Updated 2026-11-22. Phases from the spec (`SPEC.md` §7).
 | Owner's question, 22 Nov | v0.41.0: Manage categories on the Projects tab: rename, colour (palette or #rrggbb), reorder, delete with what uses it, new; Claude's category tools (D48). |
 | Owner's item, 22 Nov (8) | v0.42.0: slim panels: the Habits panel is one slim row per habit like the Today list (computer and phone), a plain list's panel is the to-do panel without checkboxes, a list's title opens the list (⚙ for settings, "Display"), a plain list has the List view (groups stacked, no ticks, opens in List), and items drag in to-do and list panels (mouse, and press and hold on a phone); flag `panel-restyle` (D49). |
 | Owner's item, 22 Nov (9) | v0.42.1 / Android 0.4.2: "Not today" on every Today row, daily habits too (web, widget, menu bar); a put-off habit does not prompt today (D50). |
+| Owner's item, 22 Nov (10) | Android 0.5.0: every widget (Today, Files, Single file) keeps the profile chosen in its settings (the Today widget has settings and ⚙ now), says "Profile removed: tap to choose" when it is gone, and older Today widgets keep the profile they used; the Files widget ticks a to-do's items (D51). Built and unit-checked; not tried on a phone. |
 | 9 Stretch | Parked: **export all data** button (wanted later), Work-mode PRs tab, fitness view. |
 
 ## Waiting for the owner
