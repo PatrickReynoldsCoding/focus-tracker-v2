@@ -3,7 +3,7 @@
 // as its board with Convert to to-do.
 import { change, del, patch, post, put } from '../../core/api';
 import { useFlag } from '../../core/features';
-import { Panels, ProjectLabel } from '../../core/registry';
+import { FileHeaderAddons, Panels, ProjectLabel } from '../../core/registry';
 import { columnsOfList, TodoBoard } from '../board';
 import { useEffect } from 'preact/hooks';
 import { ColorPicker, go, InlineEdit, Loading, MarkdownEditor, replaceRoute, useData } from '../../core/ui';
@@ -32,6 +32,7 @@ export function ListPage({ id }: { id: string }) {
         <div class="meta">
           <span class="tag">{KIND_LABEL[l.kind]}</span>
           <ProjectLabel projectId={l.project_id} />
+          <FileHeaderAddons file={{ type: l.kind, id: l.id, name: l.name }} />
           <ColorPicker value={l.color} onPick={(color) => save({ color })} />
         </div>
       </div>

@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { get } from '../../core/api';
-import { ProjectLabel, useFileTypes, type FileItem, type FileTypeDef, type PanelAdderTarget } from '../../core/registry';
+import { FileChips, ProjectLabel, useFileTypes, type FileItem, type FileTypeDef, type PanelAdderTarget } from '../../core/registry';
 import { Loading } from '../../core/ui';
 import { FolderIcon } from '../files/icons';
 
@@ -127,6 +127,7 @@ export function FilePicker({ files, onBack, onClose }: { place: string; files: F
             <span class="muted small">{sub}</span>
           </span>
           {f.project_id && f.project_id !== inProject && f.type !== 'project-note' && <ProjectLabel projectId={f.project_id} link={false} />}
+          <FileChips file={f} link={false} />
           <span class="ap-go small">{here ? '✓ Here' : 'Add'}</span>
         </button>
       </li>

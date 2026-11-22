@@ -3,7 +3,7 @@
 // project page uses (MarkdownEditor with the project's note).
 import { change, del, patch, post, put } from '../../core/api';
 import { useFlag } from '../../core/features';
-import { registerFileType, registerRoute, type FileItem } from '../../core/registry';
+import { FileHeaderAddons, registerFileType, registerRoute, type FileItem } from '../../core/registry';
 import { FileGlyph, Loading, MarkdownEditor, useData } from '../../core/ui';
 import { KIND_ICON } from './model';
 import { NewDialog } from './NewDialog';
@@ -101,6 +101,7 @@ function ProjectNotePage({ id }: { id: string }) {
         <h1>{p.name} notes</h1>
         <div class="meta">
           <a href={`#/p/${id}`}>Open the project</a>
+          <FileHeaderAddons file={{ type: 'project-note', id, name: `${p.name} notes` }} />
         </div>
       </div>
       <section class="card">

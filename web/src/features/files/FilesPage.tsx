@@ -5,7 +5,7 @@
 import type { VNode } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { del, get, newId, optimistic, patch, post, say } from '../../core/api';
-import { ProjectLabel, useFileTypes, type FileItem, type FileTypeDef } from '../../core/registry';
+import { FileChips, ProjectLabel, useFileAddons, useFileTypes, type FileAddonDef, type FileItem, type FileTypeDef } from '../../core/registry';
 import { go, Loading, Markdown, useData } from '../../core/ui';
 import { DeleteFolderDialog, MoveDialog, NameDialog, type Count } from './dialogs';
 import { FolderIcon } from './icons';
@@ -18,7 +18,8 @@ type Dlg =
   | { kind: 'create'; id: string }
   | { kind: 'rename'; entry: Entry }
   | { kind: 'move'; entry: Entry }
-  | { kind: 'delete-folder'; folder: Folder; count: Count };
+  | { kind: 'delete-folder'; folder: Folder; count: Count }
+  | { kind: 'addon'; id: string; file: FileItem };
 
 function useDebounced<T>(v: T, ms: number): T {
   const [d, setD] = useState(v);
@@ -30,17 +31,25 @@ function useDebounced<T>(v: T, ms: number): T {
 }
 
 export function FilesPage({ route, params }: { route: string; params: string[] }) {
-  const typeInUrl = new URLSearchParams(route.split('?')[1] ?? '').get('type') ?? '';
+  const query = new URLSearchParams(route.split('?')[1] ?? '');
+  const typeInUrl = query.get('type') ?? '';
+  // Filters other features add (tags): each is a query parameter of GET /api/files.
+  const addons = useFileAddons();
+  const filterAddons = addons.filter((a) => a.filter);
+  const extraInUrl = () => Object.fromEntries(filterAddons.map((a) => [a.filter!.param, query.get(a.filter!.param) ?? '']));
+  const extraKey = filterAddons.map((a) => query.get(a.filter!.param) ?? '').join('|');
   const folderParam = params[0] && params[0] !== 'p' ? params[0] : null;
   const projectParam = params[0] === 'p' ? (params[1] ?? null) : null;
   const types = useFileTypes();
   const [group, setGroup] = useState(typeInUrl);
   const [q, setQ] = useState('');
-  // A new folder (or an old address with ?type=) starts with its own filter and no search.
+  const [extra, setExtra] = useState<Record<string, string>>(extraInUrl);
+  // A new folder (or an address with ?type= or ?tag=) starts with its own filters and no search.
   useEffect(() => {
     setGroup(typeInUrl);
+    setExtra(extraInUrl());
     setQ('');
-  }, [folderParam, projectParam, typeInUrl]);
+  }, [folderParam, projectParam, typeInUrl, extraKey]);
   const dq = useDebounced(q.trim(), 250);
   const [sort, setSort] = usePref<'name' | 'changed'>('ft.files.sort', 'name');
   const [view, setView] = usePref<'grid' | 'list'>('ft.files.view', isPhone() ? 'list' : 'grid');
@@ -61,6 +70,8 @@ export function FilesPage({ route, params }: { route: string; params: string[] }
   if (projectParam) qs.set('project', projectParam);
   if (group) qs.set('type', group);
   if (dq) qs.set('q', dq);
+  const extraOn = filterAddons.filter((a) => extra[a.filter!.param]);
+  for (const a of extraOn) qs.set(a.filter!.param, extra[a.filter!.param]);
   qs.set('sort', sort);
   const { data, error, setData } = useData<Listing>(`/files?${qs}`);
 
@@ -71,7 +82,7 @@ export function FilesPage({ route, params }: { route: string; params: string[] }
   // Inside a project's folder its files need no label saying so.
   const inProject = data.path.find((c) => c.project_id)?.project_id ?? null;
   const label = (f: FileItem) => (f.project_id && f.project_id !== inProject && f.type !== 'project-note' ? <ProjectLabel projectId={f.project_id} /> : null);
-  const deep = !!dq || !!group;
+  const deep = !!dq || !!group || extraOn.length > 0;
   const known = data.files.filter((f) => typeOf(f));
   const hiddenFinished = !deep && !hereId && finished !== '1' ? data.folders.filter((f) => f.status && FINISHED.includes(f.status)) : [];
   const folders = data.folders.filter((f) => !hiddenFinished.includes(f));
@@ -273,7 +284,10 @@ export function FilesPage({ route, params }: { route: string; params: string[] }
             </span>
           </span>
         </a>
-        {label(f)}
+        <span class="file-labels">
+          {label(f)}
+          <FileChips file={f} />
+        </span>
         {more(e)}
       </li>
     );
@@ -290,7 +304,10 @@ export function FilesPage({ route, params }: { route: string; params: string[] }
             <span class="files-sub">{sub(f)}</span>
           </span>
         </a>
-        {label(f)}
+        <span class="file-labels">
+          {label(f)}
+          <FileChips file={f} />
+        </span>
         {more(e)}
       </li>
     );
@@ -374,6 +391,11 @@ export function FilesPage({ route, params }: { route: string; params: string[] }
           </button>
         </div>
       </div>
+      {filterAddons.map((a) => {
+        const F = a.filter!.component;
+        const param = a.filter!.param;
+        return <F key={a.id} value={extra[param] ?? ''} onChange={(v) => setExtra((x) => ({ ...x, [param]: v }))} />;
+      })}
 
       {view === 'grid' ? (
         <>
@@ -408,7 +430,7 @@ export function FilesPage({ route, params }: { route: string; params: string[] }
           Hide finished projects
         </button>
       )}
-      {empty && <p class="empty">{dq ? `Nothing matches “${dq}”.` : group ? 'Nothing of this type here.' : hereId ? 'This folder is empty. Use New to add something.' : 'Nothing here yet. Use New to make a folder, note, list or whiteboard.'}</p>}
+      {empty && <p class="empty">{dq ? `Nothing matches “${dq}”.` : extraOn.length ? 'No files with these tags here.' : group ? 'Nothing of this type here.' : hereId ? 'This folder is empty. Use New to add something.' : 'Nothing here yet. Use New to make a folder, note, list or whiteboard.'}</p>}
 
       {menu && !menu.entry && (
         <Menu anchor={menu.anchor} label="New" onClose={() => setMenu(null)}>
@@ -432,9 +454,17 @@ export function FilesPage({ route, params }: { route: string; params: string[] }
           onRename={(e) => setDlg({ kind: 'rename', entry: e })}
           onMove={(e) => setDlg({ kind: 'move', entry: e })}
           onDelete={(e) => (e.kind === 'folder' ? askDeleteFolder(e.folder) : removeFile(e.file))}
+          addons={addons}
+          onAddon={(id, file) => setDlg({ kind: 'addon', id, file })}
         />
       )}
 
+      {dlg?.kind === 'addon' &&
+        (() => {
+          const D = addons.find((a) => a.id === dlg.id)?.menu?.dialog;
+          const { file } = dlg;
+          return D ? <D file={file} onClose={() => setDlg(null)} onSaved={(p) => setData((d) => ({ ...d, files: d.files.map((f) => (f.type === file.type && f.id === file.id ? { ...f, ...p } : f)) }))} /> : null;
+        })()}
       {dlg?.kind === 'new-folder' && <NameDialog title={`New folder in ${where}`} action="Make folder" onSave={newFolder} onClose={() => setDlg(null)} />}
       {making && <making.dialog folderId={hereId} onClose={() => setDlg(null)} />}
       {dlg?.kind === 'rename' && (
@@ -504,6 +534,8 @@ function ItemMenu({
   onRename,
   onMove,
   onDelete,
+  addons,
+  onAddon,
 }: {
   entry: Entry;
   anchor: HTMLElement;
@@ -512,6 +544,8 @@ function ItemMenu({
   onRename: (e: Entry) => void;
   onMove: (e: Entry) => void;
   onDelete: (e: Entry) => void;
+  addons: FileAddonDef[];
+  onAddon: (id: string, file: FileItem) => void;
 }) {
   if (entry.kind === 'folder') {
     const f = entry.folder;
@@ -566,6 +600,13 @@ function ItemMenu({
           Move…
         </MenuItem>
       )}
+      {addons
+        .filter((a) => a.menu)
+        .map((a) => (
+          <MenuItem key={a.id} icon={a.menu!.icon} onClick={() => onAddon(a.id, f)}>
+            {a.menu!.label}
+          </MenuItem>
+        ))}
       {type?.remove && (
         <MenuItem icon="✕" danger onClick={() => onDelete(entry)}>
           Delete

@@ -216,6 +216,8 @@ const QUEUE_RULES: [method: string, path: RegExp][] = [
   ['POST', /^\/habits\/[\w-]+\/(check|not-today)$/],
   // moving files between folders (Files tab)
   ['POST', /^\/files\/move$/],
+  // a file's tags (Tags…: one tag added or taken off each time)
+  ['POST', /^\/tags\/set$/],
   // note saves (the editor sends its base)
   ['PUT', /^\/notes\/of\/(project|list)\/[\w-]+$/],
   // page layouts (the whole layout each time, so the last one wins)

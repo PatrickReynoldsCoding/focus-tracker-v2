@@ -1,0 +1,83 @@
+/* Tags: small "#name" chips with an outline and a tint from the shared tokens. Colours from tokens
+   only; E-ink: white with a black outline, a coloured tag adds its pattern in a dot. */
+.tag-chip {
+  display: inline-flex; align-items: center; gap: 2px; min-width: 0; max-width: 9em; flex: 0 1 auto;
+  font-size: 0.7rem; font-weight: 500; line-height: 1.5; padding: 0 6px; border-radius: 6px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--fg); text-decoration: none;
+  white-space: nowrap; vertical-align: middle;
+}
+.tag-chip:not(.tag-more) { min-width: 3em; }
+.tag-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+a.tag-chip:hover { border-color: var(--fg); text-decoration: none; }
+a.tag-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.tag-more { color: var(--muted); flex: none; }
+:is(.tag-chip, .tag-suggestion, .tag-filter-chip)[data-tint='red'] { background: var(--c-red); }
+:is(.tag-chip, .tag-suggestion, .tag-filter-chip)[data-tint='orange'] { background: var(--c-orange); }
+:is(.tag-chip, .tag-suggestion, .tag-filter-chip)[data-tint='yellow'] { background: var(--c-yellow); }
+:is(.tag-chip, .tag-suggestion, .tag-filter-chip)[data-tint='green'] { background: var(--c-green); }
+:is(.tag-chip, .tag-suggestion, .tag-filter-chip)[data-tint='teal'] { background: var(--c-teal); }
+:is(.tag-chip, .tag-suggestion, .tag-filter-chip)[data-tint='blue'] { background: var(--c-blue); }
+:is(.tag-chip, .tag-suggestion, .tag-filter-chip)[data-tint='purple'] { background: var(--c-purple); }
+:is(.tag-chip, .tag-suggestion, .tag-filter-chip)[data-tint='pink'] { background: var(--c-pink); }
+:is(.tag-chip, .tag-suggestion, .tag-filter-chip)[data-tint='grey'] { background: var(--c-grey); }
+.tag-chips { display: inline-flex; align-items: center; gap: 3px; min-width: 0; flex: 0 1 auto; overflow: hidden; }
+
+/* on a Files card the tags get a footer line of their own under the project label */
+.file-card > .file-labels > .project-label + .tag-chips { flex-basis: 100%; }
+.file-card:has(> .file-labels > .project-label + .tag-chips) .file-meta { padding-bottom: 56px; }
+.file-card > .file-labels:has(> .project-label + .tag-chips) { flex-wrap: wrap; row-gap: 4px; right: 10px; }
+.file-card > .file-labels > .project-label:has(+ .tag-chips) { max-width: calc(100% - 34px); }
+/* the ⋯ moves up beside the project label, so the tags have the whole width */
+.file-card:has(> .file-labels > .project-label + .tag-chips) > .files-more { bottom: 30px; }
+
+/* a row of Add file */
+.ap-row .tag-chips { max-width: 32%; flex-shrink: 1; }
+@media (max-width: 480px) { .ap-row .tag-chips .tag-chip { max-width: 5.5em; } }
+
+/* the editor */
+.tag-chip-x { border: 0; background: transparent; color: var(--muted); padding: 0 0 0 2px; min-height: 0; min-width: 0; font-size: 0.75rem; line-height: 1; cursor: pointer; }
+.tag-chip-x:hover { color: var(--fg); }
+.tag-editor-on { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-editor-on .tag-chip { font-size: 0.85rem; max-width: 100%; padding: 2px 8px; }
+.tag-editor-on .tag-chip-x { min-width: 28px; min-height: 28px; font-size: 0.85rem; }
+.tag-editor-add { display: flex; gap: 8px; }
+.tag-editor-add > :is(input, select) { flex: 1; min-width: 0; }
+.tag-suggest { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-suggest .chip { min-height: 32px; padding: 4px 10px; font-size: 0.85rem; }
+.tag-make { border-style: dashed; }
+.tag-editor-foot { justify-content: space-between; }
+
+/* Manage tags */
+.manage-tags-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 10px; max-height: 60vh; overflow-y: auto; }
+.manage-tag + .manage-tag { border-top: 1px solid var(--line); }
+.manage-tag-head { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; border-radius: 0; background: transparent; text-align: left; min-height: 48px; padding: 6px 12px; }
+.manage-tag-head .tag-chip { font-size: 0.85rem; max-width: 60%; }
+.manage-tag-head .muted { margin-left: auto; }
+.manage-tag-head:hover { background: var(--surface-2); }
+.manage-tag-caret { color: var(--muted); }
+.manage-tag-body { padding: 4px 12px 12px; gap: 10px; }
+.manage-tag-delete { align-self: flex-start; }
+
+/* the Tags row of Files: scrolls sideways on a phone, like the type chips */
+.tag-filter { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.tag-filter .tag-filter-chips { flex: 1; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; min-width: 0; padding: 2px 0; align-items: center; }
+.tag-filter-chips::-webkit-scrollbar { display: none; }
+.tag-filter-chips .chip { flex: none; min-height: 32px; padding: 3px 10px; font-size: 0.82rem; }
+.tag-filter-label { flex: none; font-size: 0.8rem; font-weight: 600; color: var(--muted); padding-right: 2px; }
+.tag-filter-chip.on { outline: 2px solid var(--accent); outline-offset: -1px; font-weight: 600; }
+.tag-filter-manage { flex: none; }
+
+/* in a page's header */
+.tags-header { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; min-width: 0; }
+.tags-header .tag-chip { font-size: 0.75rem; max-width: 12em; }
+.tags-header-edit { min-height: 28px; padding: 2px 8px; font-size: 0.8rem; }
+
+/* E-ink */
+html[data-theme='eink'] :is(.tag-chip, .tag-suggestion, .tag-filter-chip) { background: #fff !important; border: 2px solid #000; color: #000; }
+html[data-theme='eink'] :is(.tag-chip, .tag-suggestion, .tag-filter-chip)[data-pat]::before {
+  content: ''; flex: none; width: 9px; height: 9px; border-radius: 50%; border: 1px solid #000; margin-right: 3px;
+  background-image: var(--pat); background-size: 4px 4px;
+}
+html[data-theme='eink'] .tag-filter-chip.on { outline: 3px solid #000; text-decoration: underline; }
+html[data-theme='eink'] .manage-tags-list { border: 2px solid #000; }
+html[data-theme='eink'] .manage-tag + .manage-tag { border-top: 2px solid #000; }
