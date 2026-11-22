@@ -48,3 +48,10 @@ ol.steps li:not(:last-child)::after { content: '→'; margin: 0 4px 0 8px; color
 ol.steps .step { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); font-size: 0.88rem; }
 ol.steps .step.first { border-color: var(--accent); }
 ol.steps .step.last { background: var(--accent-soft); border-color: var(--accent); font-weight: 600; }
+
+/* The slim Habits panel (D49, flag panel-restyle): the Today list's rows (today-list.css). */
+.habits-slim { gap: 6px; }
+.habits-slim .notice { margin-bottom: 4px; }
+.hr-row.done .tl-title { text-decoration: line-through; color: var(--muted); }
+html[data-theme='eink'] .habits-slim .tl-row .tl-tick { width: 30px; height: 30px; min-height: 0; min-width: 0; border-width: 3px; }
+.habits-slim .card-head .row { gap: 10px; align-items: baseline; }

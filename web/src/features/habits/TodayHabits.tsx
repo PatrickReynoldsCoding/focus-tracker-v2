@@ -1,15 +1,35 @@
 import { registerPanel } from '../../core/registry';
 import { record } from './actions';
 import { HabitCards, HabitLine } from './HabitRow';
+import { HabitRows, useRestyle } from './HabitRows';
 import type { Progress } from './types';
 import './habits.css';
 
 type TodayData = { habits: Progress[] };
 
-/** The habits on Today: waiting cards first (Accept a new level, step-up prompt), then each habit with its dots. */
+const metCount = (habits: Progress[]) => `${habits.filter((h) => h.left === 0).length}/${habits.length}`;
+
+/** The habits on Today: waiting cards first (Accept a new level, step-up prompt), then one slim row
+ *  per habit (flag panel-restyle; off: each habit with its dots and day strip). */
 export function HabitPanel({ data, setData }: { data: TodayData; setData: (fn: (d: TodayData) => TodayData) => void }) {
+  const restyle = useRestyle();
   if (!data.habits.length) return null;
   const set = (fn: (l: Progress[]) => Progress[]) => setData((d) => ({ ...d, habits: fn(d.habits) }));
+  if (restyle)
+    return (
+      <section class="card habits-panel habits-slim">
+        <div class="card-head">
+          <h2>Habits</h2>
+          <span class="row tight">
+            <span class="muted small">{metCount(data.habits)}</span>
+            <a href="#/habits" class="muted small">
+              All
+            </a>
+          </span>
+        </div>
+        <HabitRows habits={data.habits} set={set} />
+      </section>
+    );
   return (
     <section class="card habits-panel">
       <div class="card-head">
@@ -34,15 +54,24 @@ export function HabitPanel({ data, setData }: { data: TodayData; setData: (fn: (
 
 /** The small Habits: each open habit with how many sessions are left, and a + to check in. */
 function HabitsSmall({ data, setData }: { data: TodayData; setData: (fn: (d: TodayData) => TodayData) => void }) {
+  const restyle = useRestyle();
   const set = (fn: (l: Progress[]) => Progress[]) => setData((d) => ({ ...d, habits: fn(d.habits) }));
   if (!data.habits.length) return null;
+  if (restyle)
+    return (
+      <section class="card panel-small habits-slim">
+        <div class="card-head">
+          <h2>Habits</h2>
+          <span class="muted">{metCount(data.habits)}</span>
+        </div>
+        <HabitRows habits={data.habits} set={set} />
+      </section>
+    );
   return (
     <section class="card panel-small">
       <div class="card-head">
         <h2>Habits</h2>
-        <span class="muted">
-          {data.habits.filter((h) => h.left === 0).length}/{data.habits.length}
-        </span>
+        <span class="muted">{metCount(data.habits)}</span>
       </div>
       <ul class="plain">
         {data.habits.map((h) => (
@@ -65,8 +94,8 @@ registerPanel('today', {
   feature: 'habits',
   icon: '◎',
   title: 'Habits',
-  description: 'Each habit with its sessions this week; tap to check in.',
-  count: ({ today }) => (today.habits.length ? `${today.habits.filter((h: Progress) => h.left === 0).length}/${today.habits.length}` : null),
+  description: 'One line per habit with how far it is; tap the circle to check in.',
+  count: ({ today }) => (today.habits.length ? metCount(today.habits) : null),
   order: 30,
   render: ({ today, setToday }) => <HabitPanel data={today} setData={setToday} />,
   small: ({ today, setToday }) => <HabitsSmall data={today} setData={setToday} />,
