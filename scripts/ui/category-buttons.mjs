@@ -1,4 +1,4 @@
-// Browser check for the category buttons (v0.36.0, flag category-buttons, off by default): the
+// Browser check for the category buttons (v0.36.0, flag category-buttons, on by default): the
 // row above the Projects list, counts, All, filter and clear, remembered per device, categories
 // with no projects hidden, No category only when needed, the drop-down back when the flag is off,
 // keyboard and aria-pressed, E-ink outlines. Light, dark and E-ink at 1280 and 390 px.

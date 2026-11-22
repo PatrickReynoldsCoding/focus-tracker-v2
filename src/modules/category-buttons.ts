@@ -12,7 +12,7 @@ export const categoryButtonsModule: Module = {
       label: 'Category buttons',
       description:
         'On the Projects tab, a row of big coloured buttons above the list, one per category with its number of projects, plus All. Tap one to show only that category, tap it again to clear. Off: the Category drop-down.',
-      default: false,
+      default: true,
     },
   ],
 };
