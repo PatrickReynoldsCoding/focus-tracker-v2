@@ -146,3 +146,4 @@ Questions the owner could not be asked while an item was built. Each gives the d
 31. The small (phone) version of a list panel drags among the four items it shows (a drop next to an item of another group moves it into that group); groups are named only in the full panel. Default: as said.
 32. In a panel, tapping an item's name opens its dialog (it used to tick a to-do; the checkbox ticks). Default: opens the dialog.
 33. One flag, `panel-restyle` (on, per profile), covers the slim Habits panels, a plain list's panel, the list title opening the list and dragging in panels; the plain list's List view follows `unified-board`. Default: as said.
+34. Not today on a daily habit takes that day out of its weekly target (no penalty, no credit), the same as before for the Insights and Plan. Default: as said; say if skipped days should count as missed instead.
