@@ -131,3 +131,5 @@ Questions the owner could not be asked while an item was built. Each gives the d
 19. A whiteboard or link in a widget shows its title only (and a link its address). Default: off unless "Also show whiteboards and links" is ticked.
 20. Opening a file from a widget switches the app (and, with "follow the open profile" on, the Today widget and menu bar) to that widget's profile. Default: yes.
 21. The narrow layout starts below 200 dp wide (2 cells on most launchers). Default: 200 dp. Say if a 2-cell widget on your phone still looks cramped or a 3-cell one too small.
+22. With Habits off, the two other habit switches (step-up prompts, away days) stay listed in Features but do nothing. Default: left listed.
+23. With Insights off the plain Log tab comes back (as before). Default: yes.
