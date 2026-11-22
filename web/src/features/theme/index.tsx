@@ -32,4 +32,13 @@ function Appearance() {
   );
 }
 
-registerPanel('settings', { id: 'appearance', order: 12, scope: 'device', render: () => <Appearance /> });
+registerPanel('settings', {
+  id: 'appearance',
+  order: 12,
+  scope: 'device',
+  icon: '🎨',
+  summary: () => {
+    const choice = useSignal(themeChoice);
+    return THEMES.find((t) => t.id === choice)?.label ?? null;
+  },
+  render: () => <Appearance /> });

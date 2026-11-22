@@ -118,4 +118,4 @@ registerPanel('card', {
   render: ({ card, close }) => <LinkedItems kind="tasks" id={card.id} heading="h3" close={close} />,
 });
 registerPanel('card-tile', { id: 'blocked', order: 10, feature: FLAG, render: ({ card }) => <BlockedMark card={card} /> });
-registerPanel('settings', { id: 'link-types', order: 35, scope: 'profile', feature: 'custom-link-types', render: () => <LinkTypes /> });
+registerPanel('settings', { id: 'link-types', order: 35, scope: 'profile', feature: 'custom-link-types', icon: '🔗', summary: () => 'Your own kinds of link', render: () => <LinkTypes /> });

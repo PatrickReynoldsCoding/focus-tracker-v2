@@ -89,6 +89,9 @@ export interface PanelDef<P> {
    *  'profile' = the profile that is open (kept on the server per profile), 'all' = every profile
    *  (the time zone, devices, Claude), 'device' = this device only (kept in the browser). */
   scope?: SettingsScope;
+  /** For a Settings section: the one line under its name on a phone's list of sections (D60). Called
+   *  while the list draws, so it may use hooks (signals, useData); work it out from the current settings. */
+  summary?: () => string | null | undefined;
 }
 
 export type SettingsScope = 'profile' | 'all' | 'device';

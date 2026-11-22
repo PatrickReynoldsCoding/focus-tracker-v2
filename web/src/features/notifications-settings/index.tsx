@@ -169,4 +169,4 @@ function Notifications() {
   );
 }
 
-registerPanel('settings', { id: 'notifications', order: 15, scope: 'profile', render: () => <Notifications /> });
+registerPanel('settings', { id: 'notifications', order: 15, scope: 'profile', icon: '🔔', summary: () => { const { data } = useData<Prefs>('/notification-settings'); return data ? (data.enabled ? (data.quiet.enabled ? `On · quiet ${data.quiet.from}–${data.quiet.to}` : 'On') : 'Off') : null; }, render: () => <Notifications /> });

@@ -89,4 +89,4 @@ function SessionSettings() {
 registerOverlay({ id: 'session-runtime', order: 0, render: () => <Runtime /> });
 registerOverlay({ id: 'corner-timer', order: 10, feature: 'corner-timer', render: ({ route }) => <CornerTimer route={route} /> });
 registerPanel('project', { id: 'session', icon: '▶', title: 'Session', description: 'Start a session on this project, or the one running.', order: 1, wide: true, render: ({ project }) => <ProjectSession projectId={project.id} /> });
-registerPanel('settings', { id: 'sessions', order: 15, scope: 'device', render: () => <SessionSettings /> });
+registerPanel('settings', { id: 'sessions', order: 15, scope: 'device', icon: '⏱', summary: () => 'Sounds and the corner timer', render: () => <SessionSettings /> });

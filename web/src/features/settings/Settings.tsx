@@ -3,9 +3,11 @@ import { change, del, logout, mode, patch, post, put, say } from '../../core/api
 import { featureList, loadFeatures, setFeature } from '../../core/features';
 import { OwnValue, scopedChange, ScopeChoice, useScopeStates } from '../../core/scope';
 import { profileOf, profiles } from '../../core/profiles';
-import { Panels, registerPanel, registerTab, type SettingsScope } from '../../core/registry';
+import { Panels, registerPanel, registerTab, usePanels, type PanelDef, type SettingsScope, type SettingsSectionProps } from '../../core/registry';
 import { useSignal } from '../../core/signal';
-import { AddInput, ColorPicker, InlineEdit, Loading, useData } from '../../core/ui';
+import { AddInput, ColorPicker, go, InlineEdit, Loading, useData } from '../../core/ui';
+import { countLine, plural } from './summaries';
+import './settings.css';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
@@ -216,7 +218,7 @@ function useSections(root: { current: HTMLElement | null }): SectionLink[] {
     if (!el) return;
     let frame = 0;
     const read = () => {
-      const found = [...el.querySelectorAll<HTMLElement>('.settings-section')].map((s) => ({ id: s.id, title: s.querySelector('h2')?.textContent?.trim() || humanise(s.dataset.panel ?? '') }));
+      const found = [...el.querySelectorAll<HTMLElement>('.settings-section')].filter((s) => [...s.children].some((c) => !c.classList.contains('scope-tag'))).map((s) => ({ id: s.id, title: s.querySelector('h2')?.textContent?.trim() || humanise(s.dataset.panel ?? '') }));
       setSections((old) => (JSON.stringify(old) === JSON.stringify(found) ? old : found));
     };
     const soon = () => {
@@ -246,74 +248,181 @@ function ScopeTag({ scope, profile }: { scope: SettingsScope; profile: string })
   );
 }
 
-export function Settings() {
+const PHONE = '(max-width: 899.98px)';
+
+/** True on a phone-sized screen, where Settings is a list of sections and one section at a time (D60). */
+function usePhone(): boolean {
+  const q = typeof matchMedia === 'function' ? matchMedia(PHONE) : null;
+  const [phone, setPhone] = useState(!!q?.matches);
+  useEffect(() => {
+    if (!q) return;
+    const on = () => setPhone(q.matches);
+    on();
+    q.addEventListener('change', on);
+    return () => q.removeEventListener('change', on);
+  }, []);
+  return phone;
+}
+
+/** The line under a section's name on the phone's list: its own summary, else its description, else whom it is for. */
+function SectionRow({ def, title, onOpen }: { def: PanelDef<SettingsSectionProps>; title: string; onOpen: () => void }) {
+  const line = def.summary?.() || def.description || (def.scope ? SCOPES[def.scope].text : '');
+  return (
+    <li>
+      <button class="settings-row" onClick={onOpen}>
+        <span class="ic" aria-hidden="true">{def.icon ?? '⚙'}</span>
+        <span class="tx">
+          <span class="nm">{title}</span>
+          {line && <span class="sm">{line}</span>}
+        </span>
+        <span class="go" aria-hidden="true">›</span>
+      </button>
+    </li>
+  );
+}
+
+/** True once the person opened a section from the list in this visit, so ‹ can use the browser's Back. */
+let fromList = false;
+
+export function Settings({ section }: { section?: string }) {
   const m = useSignal(mode);
   const name = profileOf(useSignal(profiles), m)?.label ?? m;
   const body = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState('');
+  const phone = usePhone();
+  const defs = usePanels<SettingsSectionProps>('settings');
   const sections = useSections(body);
   const [hiddenIds, setHiddenIds] = useState<string[]>([]);
+  const every = section === 'all'; // #/settings/all: every section on one page, also on a phone
+  const opened = phone && !query && !every ? sections.find((s) => s.id === `set-${section}`) : undefined;
+  const listScreen = phone && !query && !every && !opened;
   // Search hides the sections whose text (headings, labels, descriptions) does not contain the words typed.
+  // On a phone with no search, only the open section shows (none on the list).
   useEffect(() => {
     const words = query.toLowerCase().split(/\s+/).filter(Boolean);
     const hidden: string[] = [];
     body.current?.querySelectorAll<HTMLElement>('.settings-section').forEach((s) => {
       const text = (s.textContent ?? '').toLowerCase();
-      s.hidden = !words.every((w) => text.includes(w));
+      s.hidden = phone && !query && !every ? s.id !== opened?.id : !words.every((w) => text.includes(w));
       if (s.hidden) hidden.push(s.id);
     });
     setHiddenIds((old) => (old.join() === hidden.join() ? old : hidden));
-  }, [query, sections]);
+  }, [query, sections, phone, opened?.id, every]);
+  // A wide screen with an address for a section (#/settings/<id>) scrolls to it.
+  useEffect(() => {
+    if (!phone && section && sections.some((s) => s.id === `set-${section}`)) document.getElementById(`set-${section}`)?.scrollIntoView({ block: 'start' });
+  }, [phone, section, sections.length > 0]);
   const shown = (id: string) => !hiddenIds.includes(id);
+  const openSection = (id: string) => {
+    fromList = true;
+    go(`/settings/${id.replace(/^set-/, '')}`);
+  };
+  const back = () => {
+    if (fromList && history.length > 1) history.back();
+    else go('/settings');
+  };
+  useEffect(() => {
+    if (!opened && !listScreen) return;
+    window.scrollTo(0, 0);
+  }, [opened?.id, listScreen]);
+  const openDef = opened ? defs.find((d) => `set-${d.id}` === opened.id) : undefined;
   return (
-    <div class="stack">
-      <div class="page-head">
-        <div class="row">
-          <h1>Settings</h1>
-          <span class="tag">{name}</span>
+    <div class={`stack settings-page ${phone ? 'is-phone' : ''} ${opened ? 'is-open' : ''}`}>
+      {opened ? (
+        <div class="page-head settings-open-head">
+          <div class="row">
+            <button class="ghost settings-back" aria-label="Back to Settings" onClick={back}>
+              ‹
+            </button>
+            <h1>{opened.title}</h1>
+            {openDef?.scope && <ScopeTag scope={openDef.scope} profile={name} />}
+          </div>
         </div>
-        <p class="muted small">Each section says whom it is for: this profile ({name}; other profiles have their own), every profile, or this device only. In a section with “{name} only | All profiles”, choose where your next changes go.</p>
-      </div>
+      ) : (
+        <div class="page-head">
+          <div class="row">
+            <h1>Settings</h1>
+            <span class="tag">{name}</span>
+          </div>
+          <p class="muted small settings-intro">Each section says whom it is for: this profile ({name}; other profiles have their own), every profile, or this device only. In a section with “{name} only | All profiles”, choose where your next changes go.</p>
+        </div>
+      )}
       <div class="settings-layout">
-        <nav class="settings-nav" aria-label="Settings sections">
-          <input type="search" placeholder="Search settings" aria-label="Search settings" value={query} onInput={(e) => setQuery((e.target as HTMLInputElement).value)} />
-          <ul>
-            {sections
-              .filter((s) => shown(s.id))
-              .map((s) => (
-                <li key={s.id}>
-                  <button onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{s.title}</button>
-                </li>
-              ))}
-          </ul>
-          {query && sections.every((s) => !shown(s.id)) && <p class="muted small">Nothing matches “{query}”.</p>}
-        </nav>
+        {!opened && (
+          <nav class="settings-nav" aria-label="Settings sections">
+            <input type="search" placeholder="Search settings" aria-label="Search settings" value={query} onInput={(e) => setQuery((e.target as HTMLInputElement).value)} />
+            {listScreen ? (
+              <ul class="settings-rows">
+                {sections.map((s) => {
+                  const def = defs.find((d) => `set-${d.id}` === s.id);
+                  return def ? <SectionRow key={s.id} def={def} title={s.title} onOpen={() => openSection(s.id)} /> : null;
+                })}
+              </ul>
+            ) : (
+              <ul>
+                {sections
+                  .filter((s) => shown(s.id))
+                  .map((s) => (
+                    <li key={s.id}>
+                      <button onClick={() => (phone ? openSection(s.id) : document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }))}>{s.title}</button>
+                    </li>
+                  ))}
+              </ul>
+            )}
+            {query && sections.every((s) => !shown(s.id)) && <p class="muted small">Nothing matches “{query}”.</p>}
+          </nav>
+        )}
         <div class="settings-sections" ref={body}>
           <Panels
             place="settings"
             props={{}}
             wrap={(p, node) => (
               <div class="settings-section" id={`set-${p.id}`} data-panel={p.id} data-scope={p.scope} key={p.id}>
-                {p.scope && <ScopeTag scope={p.scope} profile={name} />}
+                {p.scope && !opened && <ScopeTag scope={p.scope} profile={name} />}
                 {node}
               </div>
             )}
           />
         </div>
       </div>
-      <div class="row">
-        <button class="ghost" onClick={logout}>
-          Sign out
-        </button>
-      </div>
+      {!opened && (
+        <div class="row">
+          <button class="ghost" onClick={logout}>
+            Sign out
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
-registerTab({ id: 'settings', path: '/settings', label: 'Settings', icon: '⚙', order: 90, phone: true, render: () => <Settings /> });
-registerPanel('settings', { id: 'general', order: 10, scope: 'all', render: () => <General /> });
-registerPanel('settings', { id: 'rotation', order: 20, scope: 'profile', render: () => <Rotation /> });
-registerPanel('settings', { id: 'categories', order: 30, scope: 'profile', render: () => <Categories /> });
-registerPanel('settings', { id: 'features', order: 40, scope: 'profile', render: () => <Features /> });
-registerPanel('settings', { id: 'tokens', order: 50, scope: 'all', render: () => <Tokens /> });
-registerPanel('settings', { id: 'connections', order: 60, scope: 'all', render: () => <Connections /> });
+registerTab({ id: 'settings', path: '/settings', label: 'Settings', icon: '⚙', order: 90, phone: true, render: ({ params }) => <Settings section={params[0]} /> });
+const Cats = () => {
+  const { data } = useData<unknown[]>('/categories');
+  return data ? plural(data.length, 'category', 'categories') : null;
+};
+const TokensLine = () => {
+  const { data } = useData<unknown[]>('/tokens');
+  return data ? plural(data.length, 'device or token') : null;
+};
+const ConnectionsLine = () => {
+  const { data } = useData<unknown[]>('/connections');
+  return data ? (data.length ? `${data.length} connected` : 'Nothing connected yet') : null;
+};
+
+registerPanel('settings', { id: 'general', order: 10, scope: 'all', icon: '⚙', summary: () => `Time zone ${useData<{ global: Record<string, string> }>('/settings').data?.global.timezone ?? 'Europe/London'}`, render: () => <General /> });
+registerPanel('settings', { id: 'rotation', order: 20, scope: 'profile', icon: '📅', summary: () => 'Which kind of project each day is for', render: () => <Rotation /> });
+registerPanel('settings', { id: 'categories', order: 30, scope: 'profile', icon: '🏷', summary: () => Cats(), render: () => <Categories /> });
+registerPanel('settings', {
+  id: 'features',
+  order: 40,
+  scope: 'profile',
+  icon: '🎛',
+  summary: () => {
+    const list = useSignal(featureList);
+    return list.length ? countLine(list.filter((f) => f.enabled).length, list.length) : null;
+  },
+  render: () => <Features />,
+});
+registerPanel('settings', { id: 'tokens', order: 50, scope: 'all', icon: '🔑', summary: () => TokensLine(), render: () => <Tokens /> });
+registerPanel('settings', { id: 'connections', order: 60, scope: 'all', icon: '🤖', summary: () => ConnectionsLine(), render: () => <Connections /> });

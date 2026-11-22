@@ -41,4 +41,4 @@ function TagsSettings() {
   );
 }
 
-registerPanel('settings', { id: 'tags', order: 36, scope: 'profile', feature: FLAG, render: () => <TagsSettings /> });
+registerPanel('settings', { id: 'tags', order: 36, scope: 'profile', feature: FLAG, icon: '🔖', summary: () => 'Tags on your files', render: () => <TagsSettings /> });

@@ -98,6 +98,8 @@ registerPanel('settings', {
   id: 'android-app',
   order: 55,
   scope: 'device',
+  icon: '📱',
+  summary: () => 'Widgets, updates and this app',
   render: () => {
     const b = bridge();
     return b ? <AndroidApp b={b} /> : null;

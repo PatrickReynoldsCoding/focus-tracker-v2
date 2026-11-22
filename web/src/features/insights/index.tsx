@@ -22,6 +22,8 @@ registerRoute({ id: 'insights-log', prefix: '/log', tab: 'insights', feature: FL
 registerPanel('settings', {
   id: 'insights-link',
   order: 35,
+  icon: '📊',
+  summary: () => 'How your weeks went',
   feature: FLAG,
   render: () => (
     <section class="card">
