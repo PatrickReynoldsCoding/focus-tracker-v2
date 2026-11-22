@@ -287,3 +287,9 @@ My suggestion: 1.
 1. Should the Android Today and Files widgets show subtasks? Options: (a) no, the to-do only (now); (b) a `1/3` count after the title; (c) the open subtasks under it with ticks. My suggestion: (b) later, if you miss it; the widgets are small.
 2. Should a subtask be able to carry a day, note or colour? Options: (a) no, title and tick only (now); (b) a note. My suggestion: (a), a subtask is one line; make it a to-do if it needs more.
 3. Should a to-do with every subtask ticked ask "Tick the to-do too?" Options: (a) never (now, as you chose); (b) a small hint on the chip. My suggestion: (a).
+
+**Plain list look (0.46.0, D58)**
+1. Should a to-do get the same look (group boxes, chips, ⋯ menu)? Options: (a) no, lists only (now); (b) yes, keeping its tick circles and Done. My suggestion: (b) later, if the chips and two-line text help there too.
+2. Group colours follow the group's place (first green, second amber...). Should a group choose its own colour? Options: (a) by place (now); (b) a colour picker in the group's header. My suggestion: (a) until you want to match colours to meaning.
+3. Chips show the site's host (`docs.google.com`). Should they show the Markdown link's name instead when there is one? Options: (a) host chip, name as text (now, as in the mockup); (b) name in the chip. My suggestion: (a).
+4. Groups fold per device. Should they fold for all devices? Options: (a) per device (now); (b) saved on the list. My suggestion: (a).

@@ -6,7 +6,7 @@
 // the phone's small version) and a long press on the panel's head still arranges; a tap on an
 // item opens its dialog; the list's title opens the list and ⚙ its settings, which say "Display";
 // a plain list's page opens in List view (groups, no ticks, no Done), drags between groups and
-// switches to Board. Light and E-ink at 390 and 1280 px; the flag off brings the older panels.
+// has no Board switch (D58). Light and E-ink at 390 and 1280 px; the flag off brings the older panels.
 // Needs a seeded server (seed.mjs); makes its own to-do and list and deletes them, and puts the
 // desktop-pills switch back.
 // Usage: FT_URL=http://localhost:8787 node scripts/ui/panel-restyle.mjs
@@ -189,11 +189,11 @@ async function todoPanelDesk(name, page) {
   await today(page, false);
   const q = panel(page, `list-${books.id}`);
   await q.scrollIntoViewIfNeeded();
-  ok((await q.locator('.ub-compact-name').allTextContents()).join() === 'Items,Later' && (await q.locator('input[type=checkbox]').count()) === 0 && (await q.locator('ul.pi-items.ub-drag').count()) === 2, `${name}: the plain list's panel is the to-do panel without checkboxes`);
-  await mouseDrag(page, q.locator('li:has-text("Emma") .pi-title'), q.locator('li:has-text("Ulysses")'), 0.15);
+  ok((await q.locator('.ll-name').allTextContents()).join() === 'Items,Later' && (await q.locator('input[type=checkbox]').count()) === 0 && (await q.locator('ul.ll-items.ub-drag').count()) === 2, `${name}: the plain list's panel is the to-do panel without checkboxes`);
+  await mouseDrag(page, q.locator('li:has-text("Emma") .ll-body'), q.locator('li:has-text("Ulysses")'), 0.15);
   await settle(page, 800);
   ok((await titlesIn(books.id, 'Later'))[0] === 'Emma', `${name}: a plain list's item drags to another group (${await titlesIn(books.id, 'Later')})`);
-  await q.locator('li:has-text("Dune") .pi-title').click();
+  await q.locator('li:has-text("Dune") .ll-body').click();
   await page.waitForSelector('dialog[open]');
   ok((await page.locator('dialog[open] .card-day').count()) === 0, `${name}: a plain list's item opens with no day`);
   await page.keyboard.press('Escape');
@@ -217,22 +217,17 @@ async function plainPage(name, vp, page, phone) {
   await page.goto(`${B}/#/n/${books.id}`);
   await page.waitForSelector('.ub');
   await settle(page);
-  ok((await page.locator('.ub-seg button.on').textContent()).includes('List') && (await page.locator('.ub-list').count()) === 1, `${name}: a plain list opens in List view, with the switch`);
-  const groups = await page.$$eval('.ub-list > .ub-group:not(.ub-done) .column-name', (els) => els.map((e) => e.textContent.trim()));
+  ok((await page.locator('.ub-seg').count()) === 0 && (await page.locator('.ub-list').count()) === 1, `${name}: a plain list opens in List view, with no switch (D58)`);
+  const groups = await page.$$eval('.ub-list > .ll-group .column-name', (els) => els.map((e) => e.textContent.trim()));
   ok(groups.join() === 'Items,Later' && (await page.locator('.ub-tick').count()) === 0 && (await page.locator('.ub-done').count()) === 0, `${name}: its groups stacked, no ticks, no Done`);
   await sideways(page, vp.width, `${name} plain list`);
   await shot(page, `${name}-plain-list`);
-  const row = (t) => page.locator(`.ub-item:has(.ub-text:text-is("${t}"))`);
-  const laterList = page.locator('.ub-list > .ub-group:has(.column-name:text-is("Later")) ul.ub-items');
+  const row = (t) => page.locator(`.ll-item:has(.ll-title:text-is("${t}"))`);
+  const laterList = page.locator('.ub-list > .ll-group:has(.column-name:text-is("Later")) ul.ll-items');
   if (phone) await touchDrag(page, row('Dune'), laterList);
   else await mouseDrag(page, row('Dune'), laterList, 0.2);
   await settle(page, 900);
   ok((await titlesIn(books.id, 'Later')).includes('Dune'), `${name}: an item drags to another group on the list's page (${await titlesIn(books.id, 'Later')})`);
-  await page.click('.ub-seg button:has-text("Board")');
-  await settle(page);
-  ok((await page.locator('.board.horizontal').count()) === 1, `${name}: Board view shows its columns side by side`);
-  await page.click('.ub-seg button:has-text("List")');
-  await settle(page);
 }
 
 async function phoneToday(name, page) {
@@ -247,7 +242,7 @@ async function phoneToday(name, page) {
   ok((await titlesIn(todo.id, 'General'))[0] === 'Buy bulbs', `${name}: a press and hold then drag reorders in the small version (${await titlesIn(todo.id, 'General')})`);
   ok(!(await page.$('.lg-arranging')) && !(await page.$('dialog[open]')), `${name}: dragging an item does not arrange the panels or open the item`);
   const q = panel(page, `list-${books.id}`);
-  ok((await q.locator('input[type=checkbox]').count()) === 0 && (await q.locator('.pi-title').count()) === 3, `${name}: the small plain list has no checkboxes`);
+  ok((await q.locator('input[type=checkbox]').count()) === 0 && (await q.locator('.ll-body').count()) === 3, `${name}: the small plain list has no checkboxes`);
   // A long press on the panel's head (not an item) still arranges.
   const head = await p.locator('.card-head > .muted').first().boundingBox();
   await hold(page, head.x + head.width / 2, head.y + head.height / 2);

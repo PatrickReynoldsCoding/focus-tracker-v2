@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>List panel mockups</title>
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--ink:#1d2330;--mute:#6b7385;--line:#e2e5ec;--acc:#3b6ff5;--g1:#3b6ff5;--g2:#e0883b;--g3:#2e9e5b}
+@media(prefers-color-scheme:dark){:root{--bg:#14171d;--card:#1d222b;--ink:#e8ebf2;--mute:#8d96a8;--line:#2b323f;--acc:#6b93ff;--g1:#6b93ff;--g2:#f0a05a;--g3:#4cc582}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,sans-serif;padding:16px;max-width:760px;margin-inline:auto}
+h1{font-size:20px}h2{font-size:17px;margin:30px 0 4px}p.n{color:var(--mute);margin:0 0 10px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
+.ph{display:flex;justify-content:space-between;font-weight:700;margin-bottom:10px}.ph span{color:var(--mute);font-weight:400}
+.it{display:flex;gap:10px;align-items:flex-start;padding:8px 4px;border-bottom:1px solid var(--line)}
+.it:last-child{border:0}
+.t{flex:1;min-width:0}
+.t b{font-weight:600}
+.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:var(--mute);font-size:13.5px}
+.lnk{display:inline-flex;gap:6px;align-items:center;font-size:12.5px;color:var(--acc);background:color-mix(in srgb,var(--acc) 12%,transparent);border-radius:99px;padding:2px 9px;margin-top:4px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.x{color:var(--mute);padding:0 4px}
+.more{color:var(--acc);font-size:12.5px}
+.hint{color:var(--mute);font-size:13px;margin-top:8px}
+/* A: coloured group bars */
+.gA{display:flex;align-items:center;gap:8px;margin:12px -12px 4px;padding:6px 12px;font-weight:700;font-size:13px;color:#fff;text-transform:uppercase;letter-spacing:.04em}
+.gA:first-of-type{margin-top:0}.gA span{margin-left:auto;opacity:.85;font-weight:500}
+/* B: group cards */
+.gB{border:1px solid var(--line);border-left:5px solid var(--c);border-radius:10px;margin-bottom:10px;overflow:hidden}
+.gB>h4{margin:0;padding:8px 12px;background:color-mix(in srgb,var(--c) 14%,transparent);font-size:14px;display:flex;gap:8px}
+.gB>h4 span{margin-left:auto;color:var(--mute);font-weight:400}
+.gB .it{padding:8px 12px}
+/* C: tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.tile{border:1px solid var(--line);border-top:4px solid var(--c);border-radius:10px;padding:10px;background:var(--card)}
+.tile h4{margin:0 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--c)}
+.tile .it{padding:6px 0}
+</style></head><body>
+<h1>List panel — mockups</h1>
+<p class="n">Same list in each, using your "Read and Watch" example. Reply with a letter, e.g. "B".</p>
+<p class="n"><b>Fixes in all of them:</b> long text stops at 2 lines (tap to see more). Web addresses become one short chip (the site name) instead of the whole address.</p>
+
+<h2>A · Coloured group bars</h2>
+<div class="panel"><div class="ph">≡ Read and Watch <span>20</span></div>
+<div class="gA" style="background:var(--g1)">imanage <span>8</span></div>
+<div class="it"><div class="t"><b>Read and Watch doc</b><br><span class="lnk">🔗 docs.google.com</span></div><span class="x">✕</span></div>
+<div class="it"><div class="t"><b>Watch eval discussion</b><div class="clamp">Sharing Link Validation — a very long note that carries on and on across several lines until it is cut off here so the row stays tidy and easy to scan</div><span class="more">more</span><br><span class="lnk">🔗 microsoft-my.sharepoint.com</span></div><span class="x">✕</span></div>
+<div class="it"><div class="t"><b>Watch AI workshops</b><br><span class="lnk">🔗 imanage-wiki.atlassian.net</span></div><span class="x">✕</span></div>
+<div class="gA" style="background:var(--g2)">Blogs <span>5</span></div>
+<div class="it"><div class="t"><b>Hamel eval blog</b><br><span class="lnk">🔗 hamel.dev</span></div><span class="x">✕</span></div>
+<div class="it"><div class="t"><b>Hamel multi turn evals</b><br><span class="lnk">🔗 hamel.dev</span></div><span class="x">✕</span></div>
+<div class="hint">Full-width colour bar per group. Very easy to see where a group starts.</div></div>
+
+<h2>B · Group cards (box + coloured edge)</h2>
+<div class="panel"><div class="ph">≡ Read and Watch <span>20</span></div>
+<div class="gB" style="--c:var(--g1)"><h4>imanage <span>8</span></h4>
+<div class="it"><div class="t"><b>Read and Watch doc</b><br><span class="lnk">🔗 docs.google.com</span></div><span class="x">✕</span></div>
+<div class="it"><div class="t"><b>Watch eval discussion</b><div class="clamp">Sharing Link Validation — a very long note that carries on and on across several lines until it is cut off here so the row stays tidy and easy to scan</div><span class="more">more</span><br><span class="lnk">🔗 microsoft-my.sharepoint.com</span></div><span class="x">✕</span></div></div>
+<div class="gB" style="--c:var(--g2)"><h4>Blogs <span>5</span></h4>
+<div class="it"><div class="t"><b>Hamel eval blog</b><br><span class="lnk">🔗 hamel.dev</span></div><span class="x">✕</span></div>
+<div class="it"><div class="t"><b>Hamel multi turn evals</b><br><span class="lnk">🔗 hamel.dev</span></div><span class="x">✕</span></div></div>
+<div class="hint">Each group is its own box. Groups can fold. Clearest separation, uses a bit more space.</div></div>
+
+<h2>C · Group tiles side by side (wide panels)</h2>
+<div class="panel"><div class="ph">≡ Read and Watch <span>20</span></div>
+<div class="tiles">
+<div class="tile" style="--c:var(--g1)"><h4>imanage · 8</h4>
+<div class="it"><div class="t"><b>Read and Watch doc</b><br><span class="lnk">🔗 docs.google.com</span></div></div>
+<div class="it"><div class="t"><b>Watch eval discussion</b><div class="clamp">Sharing Link Validation — a very long note that carries on and on until it is cut off</div><span class="lnk">🔗 microsoft-my…</span></div></div></div>
+<div class="tile" style="--c:var(--g2)"><h4>Blogs · 5</h4>
+<div class="it"><div class="t"><b>Hamel eval blog</b><br><span class="lnk">🔗 hamel.dev</span></div></div>
+<div class="it"><div class="t"><b>Hamel multi turn evals</b><br><span class="lnk">🔗 hamel.dev</span></div></div></div>
+<div class="tile" style="--c:var(--g3)"><h4>Videos · 7</h4>
+<div class="it"><div class="t"><b>Zoltan Hamel Hussein</b><br><span class="lnk">🔗 youtube.com</span></div></div></div>
+</div>
+<div class="hint">Groups sit side by side on desktop, stack on phone. Good for many small groups.</div></div>
+
+<h2>Other rules I would use</h2>
+<div class="panel">
+<div class="it"><div class="t">Tap an item to open it (edit text, change group). Tap a chip to open the link.</div></div>
+<div class="it"><div class="t">The ✕ becomes a ⋯ menu so you do not delete by accident.</div></div>
+<div class="it"><div class="t">Pasted markdown links like [name](address) are tidied into the chip automatically.</div></div>
+</div>
+</body></html>

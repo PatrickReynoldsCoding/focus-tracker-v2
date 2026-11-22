@@ -206,18 +206,14 @@ async function plainPage(name, vp, page) {
   await page.goto(`${B}/#/n/${plain.id}`);
   await page.waitForSelector('.ub-list, .board');
   await settle(page);
-  ok((await page.locator('.ub-seg button.on').textContent()).includes('List') && (await page.locator('.ub-list .ub-item').count()) === 2 && (await page.locator('.ub-tick, .ub-done').count()) === 0, `${name}: a plain list opens in List view: the switch, no ticks, no Done`);
-  await page.click('.ub-seg button:has-text("Board")');
-  await settle(page);
-  ok((await page.locator('.board .kcard').count()) === 2 && (await page.locator('.ub-tick').count()) === 0, `${name}: and Board view: its columns, no ticks`);
-  await page.locator('.kcard:has-text("Dune")').click();
+  ok((await page.locator('.ub-list .ll-item').count()) === 2 && (await page.locator('.ub-tick, .ub-done').count()) === 0, `${name}: a plain list opens in List view: no ticks, no Done`);
+  ok((await page.locator('.ub-seg').count()) === 0 && (await page.locator('.board.horizontal').count()) === 0, `${name}: a plain list is list-only: no Board / List switch (D58)`);
+  await page.locator('.ll-item:has-text("Dune") .ll-body').click();
   await page.waitForSelector('dialog[open] label.inline:has(select)');
   ok((await page.locator('dialog[open] .card-day').count()) === 0 && (await page.locator('dialog[open] label.inline:has-text("Column")').count()) === 1, `${name}: a plain list's item has no day picker`);
   await page.keyboard.press('Escape');
   await sideways(page, vp.width, `${name} plain`);
   await shot(page, `${name}-plain`);
-  await page.click('.ub-seg button:has-text("List")');
-  await settle(page);
   // Convert, with a confirmation; turning it down changes nothing.
   page.once('dialog', (d) => d.dismiss());
   await page.click('button:has-text("Convert to to-do")');
@@ -335,7 +331,7 @@ for (const theme of ['dark', 'eink']) for (const [v, vp] of [['phone', PHONE], [
   await ctx.close();
 }
 
-// The flag off: no switch; a to-do as a list, a project and a plain list as a board; no Convert.
+// The flag off: no switch; a to-do and a plain list as a list, a project as a board; no Convert.
 {
   await api.put('/features/unified-board', { enabled: false });
   try {
@@ -353,7 +349,7 @@ for (const theme of ['dark', 'eink']) for (const [v, vp] of [['phone', PHONE], [
     await page.goto(`${B}/#/n/${plain.id}`);
     await page.waitForSelector('.ub');
     await settle(page);
-    ok((await page.locator('button:has-text("Convert to to-do")').count()) === 0 && (await page.locator('.ub-seg').count()) === 0 && (await page.locator('.ub-plain .board').count()) === 1, 'flag off: a plain list is a board, with no switch and no Convert to to-do');
+    ok((await page.locator('button:has-text("Convert to to-do")').count()) === 0 && (await page.locator('.ub-seg').count()) === 0 && (await page.locator('.ub-plain .ll-page').count()) === 1, 'flag off: a plain list is a list, with no switch and no Convert to to-do');
     await shot(page, 'flag-off');
     await ctx.close();
   } finally {

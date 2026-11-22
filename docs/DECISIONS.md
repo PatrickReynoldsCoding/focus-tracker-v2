@@ -586,3 +586,16 @@ Code: server migration `0027_subtasks.sql`, `src/modules/subtasks.ts` (entity, f
 - **Android widgets**: unchanged (they only show the to-do).
 - **Migration 0027** is additive (a new table). Production was backed up first and the migration was run on a copy of it.
 
+
+## D58. A plain list is list-only, with group boxes and link chips (owner, 2026-11-22: mockup B in docs/mockups/list-panel.html)
+
+Code: web `features/board/ListItems.tsx` (`ListItem`, `GroupBox`), `list-look.css`, `memory.ts` (`useGroupFold`), `core/links.ts` (`tidyLinks`); `ListView.tsx`, `PanelItems.tsx` and `TodoBoard.tsx` use them. No server change, no migration, no new flag.
+
+- **No Board / List switch on a plain list**: it always shows as a list (also with `unified-board` off). A to-do and a project keep the switch. Convert to to-do stays (one way). A list opened before in Board view simply shows as a list now; its saved view is ignored.
+- **Group boxes**: each group is its own box with a coloured left edge and a tinted header (fold button, name, count). Colours come from the theme tokens in turn (accent, warm, ok, danger, muted) by the group's place, so Light, Dark and E-ink follow; E-ink uses a thick black edge and a rule under the header. A group folds with its ▾; the fold is remembered on this device (`ft.gfold.<column id>`), open until folded. In a panel the box and header show only when more than one group has items (as the group names did); a single group is plain rows.
+- **Items**: text stops at two lines with a "more" / "less" toggle that shows only when the text is cut. A web address, bare or in a pasted `[name](https://…)`, shows as one chip with the site's name (host without `www.`); a Markdown link keeps its name as the text. Tidying is at display time only: the stored text is never rewritten. A tap on a chip opens the link and not the item; a tap on the item opens it for edit.
+- **⋯ instead of ✕**: Edit, Move to <each other group>, Delete (with Undo). The small panel version (four items) has no menu. Dragging still works (a finger presses and holds).
+- **Subtasks**: not for plain lists (D57 says so), so none here.
+- **Group header** on the list's page keeps its rename, ↑ ↓ and ✕ (delete group), as before.
+
+Why: long pasted addresses made rows hard to scan and the ✕ was easy to hit by accident.
