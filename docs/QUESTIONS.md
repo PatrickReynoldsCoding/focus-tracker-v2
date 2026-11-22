@@ -283,4 +283,7 @@ My suggestion: 1.
 
 ### Other
 
-(Nothing else open.)
+**Subtasks (0.45.0, D57)**
+1. Should the Android Today and Files widgets show subtasks? Options: (a) no, the to-do only (now); (b) a `1/3` count after the title; (c) the open subtasks under it with ticks. My suggestion: (b) later, if you miss it; the widgets are small.
+2. Should a subtask be able to carry a day, note or colour? Options: (a) no, title and tick only (now); (b) a note. My suggestion: (a), a subtask is one line; make it a to-do if it needs more.
+3. Should a to-do with every subtask ticked ask "Tick the to-do too?" Options: (a) never (now, as you chose); (b) a small hint on the chip. My suggestion: (a).

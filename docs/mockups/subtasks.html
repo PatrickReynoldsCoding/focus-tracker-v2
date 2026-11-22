@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Subtasks mockups</title>
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--ink:#1d2330;--mute:#6b7385;--line:#e2e5ec;--acc:#3b6ff5;--ok:#2e9e5b}
+@media(prefers-color-scheme:dark){:root{--bg:#14171d;--card:#1d222b;--ink:#e8ebf2;--mute:#8d96a8;--line:#2b323f;--acc:#6b93ff;--ok:#4cc582}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,sans-serif;padding:16px;max-width:980px;margin-inline:auto}
+h1{font-size:20px}h2{font-size:17px;margin:32px 0 4px}p.n{color:var(--mute);margin:0 0 12px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:16px}
+.tag{font-size:12px;font-weight:700;color:var(--acc);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.row{display:flex;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px solid var(--line)}
+.row:last-child{border:0}
+.sub{margin-left:30px;border-left:2px solid var(--line);padding-left:8px}
+.sub .row{padding:5px 4px;font-size:14px}
+.cb{width:20px;height:20px;border:2px solid var(--mute);border-radius:6px;flex:none;display:grid;place-items:center;font-size:13px;color:#fff}
+.cb.on{background:var(--ok);border-color:var(--ok)}
+.sub .cb{width:17px;height:17px;border-radius:5px}
+.done .t{text-decoration:line-through;color:var(--mute)}
+.chev{width:18px;color:var(--mute);flex:none;text-align:center;font-size:12px}
+.chip{font-size:12px;color:var(--mute);border:1px solid var(--line);border-radius:99px;padding:1px 8px;margin-left:auto;white-space:nowrap}
+.add{color:var(--acc);font-size:13px;padding:5px 4px 5px 30px}
+.hint{color:var(--mute);font-size:13px;margin-top:8px}
+.board{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:start}
+@media(max-width:700px){.board{grid-template-columns:1fr}}
+.col{background:var(--bg);border-radius:10px;padding:8px}
+.col h3{font-size:13px;margin:2px 4px 8px;color:var(--mute)}
+.k{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px}
+.k b{display:block;margin-bottom:6px}
+.bar{height:5px;background:var(--line);border-radius:9px;overflow:hidden;margin:6px 0}
+.bar i{display:block;height:100%;background:var(--ok)}
+.ck{display:flex;gap:8px;align-items:center;font-size:13.5px;padding:3px 0}
+.ck .cb{width:16px;height:16px;border-radius:4px}
+.ck.done{color:var(--mute);text-decoration:line-through}
+.foot{font-size:12px;color:var(--mute);display:flex;gap:10px;margin-top:4px}
+</style></head><body>
+<h1>Subtasks — mockups</h1>
+<p class="n">Reply with a letter for each: <b>1</b> (list) and <b>2</b> (kanban). Example: "1A, 2B".</p>
+
+<h2>1. List view — subtasks indented</h2>
+
+<div class="panel"><div class="tag">1A · Always open</div>
+<div class="row"><span class="chev">▾</span><span class="cb"></span><span class="t">Plan the launch</span><span class="chip">1/3</span></div>
+<div class="sub">
+<div class="row done"><span class="cb on">✓</span><span class="t">Write announcement</span></div>
+<div class="row"><span class="cb"></span><span class="t">Book the venue</span></div>
+<div class="row"><span class="cb"></span><span class="t">Send invites</span></div>
+<div class="add">+ Add subtask</div></div>
+<div class="row"><span class="chev"></span><span class="cb"></span><span class="t">Buy milk</span></div>
+<div class="hint">Simple. Everything visible. Long lists get tall.</div></div>
+
+<div class="panel"><div class="tag">1B · Folded by default, tap ▸ to open (count shows progress)</div>
+<div class="row"><span class="chev">▸</span><span class="cb"></span><span class="t">Plan the launch</span><span class="chip">1/3</span></div>
+<div class="row"><span class="chev">▾</span><span class="cb"></span><span class="t">Fix the garden</span><span class="chip">2/3</span></div>
+<div class="sub">
+<div class="row done"><span class="cb on">✓</span><span class="t">Mow lawn</span></div>
+<div class="row done"><span class="cb on">✓</span><span class="t">Trim hedge</span></div>
+<div class="row"><span class="cb"></span><span class="t">Paint fence</span></div></div>
+<div class="row"><span class="chev"></span><span class="cb"></span><span class="t">Buy milk</span></div>
+<div class="hint">Compact. Open state remembered per device (like the Done fold).</div></div>
+
+<h2>2. Kanban card — checkable subtasks</h2>
+
+<div class="panel"><div class="tag">2A · Checklist always on the card</div>
+<div class="board">
+<div class="col"><h3>To do</h3>
+<div class="k"><b>Plan the launch</b>
+<div class="bar"><i style="width:33%"></i></div>
+<div class="ck done"><span class="cb on">✓</span>Write announcement</div>
+<div class="ck"><span class="cb"></span>Book the venue</div>
+<div class="ck"><span class="cb"></span>Send invites</div>
+<div class="foot">1/3</div></div>
+<div class="k"><b>Buy milk</b></div></div>
+<div class="col"><h3>Doing</h3>
+<div class="k"><b>Fix the garden</b>
+<div class="bar"><i style="width:66%"></i></div>
+<div class="ck done"><span class="cb on">✓</span>Mow lawn</div>
+<div class="ck done"><span class="cb on">✓</span>Trim hedge</div>
+<div class="ck"><span class="cb"></span>Paint fence</div>
+<div class="foot">2/3</div></div></div>
+<div class="col"><h3>Done</h3></div></div>
+<div class="hint">Tick without opening the card. Cards grow taller.</div></div>
+
+<div class="panel"><div class="tag">2B · Progress bar on card, checklist opens on tap</div>
+<div class="board">
+<div class="col"><h3>To do</h3>
+<div class="k"><b>Plan the launch</b>
+<div class="bar"><i style="width:33%"></i></div>
+<div class="foot"><span>☑ 1/3</span><span>▸ show</span></div></div>
+<div class="k"><b>Buy milk</b></div></div>
+<div class="col"><h3>Doing</h3>
+<div class="k"><b>Fix the garden</b>
+<div class="bar"><i style="width:66%"></i></div>
+<div class="ck done"><span class="cb on">✓</span>Mow lawn</div>
+<div class="ck done"><span class="cb on">✓</span>Trim hedge</div>
+<div class="ck"><span class="cb"></span>Paint fence</div>
+<div class="foot"><span>☑ 2/3</span><span>▾ hide</span></div></div></div>
+<div class="col"><h3>Done</h3></div></div>
+<div class="hint">Compact board. One extra tap to tick. Open state per device.</div></div>
+
+<h2>Rules I would use (change any)</h2>
+<div class="panel">
+<div class="ck"><span class="cb on">✓</span>Ticking every subtask does not tick the parent. You tick it yourself.</div>
+<div class="ck"><span class="cb on">✓</span>Ticking the parent leaves subtasks as they are.</div>
+<div class="ck"><span class="cb on">✓</span>One level of subtasks only (no subtasks of subtasks).</div>
+<div class="ck"><span class="cb on">✓</span>Subtasks follow the parent to Today, Done and "Not today". They do not show on Today alone.</div>
+<div class="ck"><span class="cb on">✓</span>Claude can add and tick subtasks.</div>
+</div>
+</body></html>
