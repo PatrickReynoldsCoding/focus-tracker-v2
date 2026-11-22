@@ -6,7 +6,7 @@ Updated 2026-11-22. Phases from the spec (`SPEC.md` §7).
 |---|---|
 | 0 Decisions and setup | **Done**. Decisions in [DECISIONS.md](DECISIONS.md). Deployed at `https://focus-tracker.focus-tracker.workers.dev`. |
 | 1 Backend API and data model | **Done.** Every entity in spec §4 has a table and REST endpoints; moves, cascading deletes, server-side undo, `/api/status`. Tests. |
-| 2 MCP connector | **Done.** 78 tools, OAuth for Claude's custom connectors, API tokens for Claude Code. Tested end to end (register → consent → token → tool call). Not yet tried from the real Claude app. |
+| 2 MCP connector | **Done.** 90 tools, OAuth for Claude's custom connectors, API tokens for Claude Code. Tested end to end (register → consent → token → tool call). Not yet tried from the real Claude app. |
 | 3 Web app | **Done.** Today, Projects, project page (Kanban, notes, criteria, resources, sessions, issue links), Files (notes, lists, whiteboards, links in folders), Habits, Insights, Settings; PWA, offline, movable panels, Today pills (tabs on every screen), pop-out windows. |
 | 4 Google Drive sync | **Dropped** by the owner (2026-11-18): notes stay in the tracker; Google Docs are linked as resources. See [DECISIONS.md D11](DECISIONS.md). |
 | 5 Migration from v1 | **Done** (2026-11-18): Personal and Work imported into the live deployment, notes from the .docx exports, whiteboard drawings stored. |
@@ -26,6 +26,7 @@ Updated 2026-11-22. Phases from the spec (`SPEC.md` §7).
 | Owner's item, 22 Nov | v0.34.0: lists, to-dos and projects are one board engine, stage 1 (data and server): to-dos are cards with a fixed Done column, a list can become a to-do (one way, `convert_list_to_todo`), the old to-do API and every screen unchanged (D40). Stage 2 (one screen with Board and List views, dragging between groups, Convert) is next. |
 | Owner's item, 22 Nov (2) | v0.35.0: stage 2: one to-do screen for to-dos, plain lists and project boards, with Board and List views (remembered per device), tick into Done, drag between groups, Convert to to-do on a plain list, no days on plain lists; flag `unified-board` (D41). |
 | Owner's item, 22 Nov (3) | v0.36.0: category buttons on the Projects tab (design B), flag `category-buttons`, off by default, per profile (D42). |
+| Owner's item, 22 Nov (4) | v0.37.0: tags on any file (note, list, to-do, whiteboard, link, a project's notes): chips on Files and Add file, a Tags filter (several, No tag), a tag editor in ⋯ and on a file's page, Manage tags, Claude's tag tools; flag `tags`, migration 0023 (D43). Next: Android widgets showing every file with a tag. |
 | 9 Stretch | Parked: **export all data** button (wanted later), Work-mode PRs tab, fitness view. |
 
 ## Waiting for the owner

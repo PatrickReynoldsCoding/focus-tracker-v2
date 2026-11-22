@@ -116,4 +116,7 @@ Questions the owner could not be asked while an item was built. Each gives the d
 7. The old to-do page's date box on each row is gone: a to-do's day is set in its dialog (Today, Tomorrow or a date) and shows as a tag. Default: as now.
 8. Category buttons (D42): a category with no projects in the current status view is hidden, and counts follow the status chips and search. Default: as described. Should hidden categories always show, or counts ignore the status chips?
 9. Category buttons replace the Category drop-down while the flag is on. Default: replace. Keep both?
-
+10. Tags (D43): a project's notes file and the project share one set of tags (the tag is on the project). Default: shared. Should a project's notes have tags of their own?
+11. Tags (D43): a whiteboard's full-screen editor has no tag editor (its bar is full on a phone); tag it from Files' ⋯ → Tags…. Default: as now.
+12. Tags (D43): Files' tag filter is cleared when you open another folder, like the type chips. Default: cleared. Keep it while moving between folders?
+13. Tags (D43): cards and rows show two tags then "+n". Default: two. More?
