@@ -108,10 +108,11 @@ class TodayWidget : AppWidgetProvider() {
         }
 
         private fun views(context: Context, widgetId: Int, result: Result<Status>, note: String?): RemoteViews {
-            val v = RemoteViews(context.packageName, R.layout.widget_today)
-            val width = AppWidgetManager.getInstance(context).getAppWidgetOptions(widgetId).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 250)
-            val compact = width < 230 // about 3 cells wide
-            if (compact) {
+            val width = WidgetSizes.widthOf(AppWidgetManager.getInstance(context).getAppWidgetOptions(widgetId).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0))
+            val narrow = width == WidgetSizes.Width.NARROW // 2 cells: its own layout, the session row stacked
+            val compact = width != WidgetSizes.Width.WIDE
+            val v = RemoteViews(context.packageName, if (narrow) R.layout.widget_today_narrow else R.layout.widget_today)
+            if (width == WidgetSizes.Width.COMPACT) {
                 val pad = (10 * context.resources.displayMetrics.density).toInt()
                 v.setViewPadding(android.R.id.background, pad, pad, pad, pad)
                 v.setTextViewTextSize(R.id.focus, android.util.TypedValue.COMPLEX_UNIT_SP, 16f)
@@ -148,9 +149,9 @@ class TodayWidget : AppWidgetProvider() {
                     R.id.pomodoro,
                     when {
                         session.paused -> "Paused"
-                        session.waitingFor == "break" -> if (compact) "Break time · open" else "Time for a break · open to start it"
-                        session.waitingFor != null -> if (compact) "Break over · open" else "Break over · open to start work"
-                        p != null && left != null -> "${if (p == "break") "Break" else "Work"} · ${left / 60} min left"
+                        session.waitingFor == "break" -> if (narrow) "Break time" else if (compact) "Break time · open" else "Time for a break · open to start it"
+                        session.waitingFor != null -> if (narrow) "Break over" else if (compact) "Break over · open" else "Break over · open to start work"
+                        p != null && left != null -> "${if (p == "break") "Break" else "Work"} · ${left / 60} min${if (narrow) "" else " left"}"
                         else -> ""
                     },
                 )
@@ -169,7 +170,7 @@ class TodayWidget : AppWidgetProvider() {
             val items = RemoteViewsCompat.RemoteCollectionItems.Builder().setHasStableIds(true).setViewTypeCount(1)
             var n = 0L
             fun add(kind: String, item: Status.Item, mark: String) {
-                val row = RemoteViews(context.packageName, R.layout.widget_item)
+                val row = RemoteViews(context.packageName, if (narrow) R.layout.widget_item_narrow else R.layout.widget_item)
                 row.setTextViewText(R.id.mark, mark)
                 row.setTextViewText(R.id.title, item.title)
                 row.setTextViewText(R.id.detail, item.detail ?: "")
