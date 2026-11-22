@@ -10,4 +10,7 @@
         <TextView android:id="@+id/detail" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:textColor="@color/muted" android:textSize="12sp" />
     </LinearLayout>
+    <!-- Not today: puts the item off for today (TodayWidget, EXTRA_ACTION "nottoday"). -->
+    <TextView android:id="@+id/skip" android:layout_width="36dp" android:layout_height="36dp" android:gravity="center"
+        android:text="✕" android:textColor="@color/muted" android:textSize="16sp" android:contentDescription="Not today" android:visibility="gone" />
 </LinearLayout>

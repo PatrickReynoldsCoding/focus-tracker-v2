@@ -75,7 +75,9 @@ class WidgetFeedTest {
         val layouts = File(dir.parentFile, "layout")
         val narrow = File(layouts, "widget_today_narrow.xml").readText()
         for (id in listOf("background", "header", "focus", "next", "add", "session_row", "timer", "pomodoro", "action", "list", "empty")) assertTrue(id, narrow.contains("id/$id\""))
-        val item = File(layouts, "widget_item_narrow.xml").readText()
-        for (id in listOf("row", "mark", "title", "detail")) assertTrue(id, item.contains("id/$id\""))
+        for (name in listOf("widget_item.xml", "widget_item_narrow.xml")) {
+            val item = File(layouts, name).readText()
+            for (id in listOf("row", "mark", "title", "detail", "skip")) assertTrue("$name $id", item.contains("id/$id\""))
+        }
     }
 }

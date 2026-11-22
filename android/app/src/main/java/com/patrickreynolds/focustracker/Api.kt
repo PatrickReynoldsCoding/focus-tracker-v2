@@ -19,6 +19,16 @@ class Prefs(context: Context) {
         set(v) = p.edit().putString("mode", v).apply()
     val ready get() = url.isNotEmpty() && token.isNotEmpty()
 
+    /** The profile open in this phone's app ("" = not known yet): the Today widget, quick add and notifications use it (TodayProfile). */
+    var appProfile: String
+        get() = p.getString("app_profile", "") ?: ""
+        set(v) = p.edit().putString("app_profile", v).apply()
+
+    /** Profile labels (id → label as JSON) from GET /api/profiles, for the widget's "Nothing left today in Work". */
+    var profileLabels: String
+        get() = p.getString("profile_labels", "") ?: ""
+        set(v) = p.edit().putString("profile_labels", v).apply()
+
     /** The last status the server sent and when, so a widget can draw something while the server is slow or out of reach. */
     var cachedStatus: String
         get() = p.getString("status", "") ?: ""
@@ -28,7 +38,8 @@ class Prefs(context: Context) {
         set(v) = p.edit().putLong("status_at", v).apply()
 }
 
-class ApiException(val status: Int, message: String) : Exception(message)
+/** `code`: the server's error code (`unknown_mode`, `forbidden` ...), when it sent one. */
+class ApiException(val status: Int, message: String, val code: String? = null) : Exception(message)
 
 /**
  * Blocking HTTP calls: run them off the main thread. A widget's broadcast may run for about 10 seconds, so
@@ -52,8 +63,8 @@ class Api(private val prefs: Prefs, private val fast: Boolean = false, private v
         c.connectTimeout = if (fast) 4_000 else 10_000
         c.readTimeout = if (fast) 6_000 else 15_000
         c.setRequestProperty("Authorization", "Bearer ${prefs.token}")
-        // No X-Mode: the Today widget follows the profile that is open in the web app (the server remembers it).
-        // The Files and Single file widgets each have their own profile (`mode`).
+        // The Today widget sends the profile open in this phone's app (TodayProfile); with none known, no X-Mode
+        // (the server's default profile). The Files and Single file widgets each have their own profile (`mode`).
         if (!mode.isNullOrEmpty()) c.setRequestProperty("X-Mode", mode)
         if (body != null) {
             c.doOutput = true
@@ -62,7 +73,10 @@ class Api(private val prefs: Prefs, private val fast: Boolean = false, private v
         }
         val code = c.responseCode
         val text = (if (code < 400) c.inputStream else c.errorStream)?.bufferedReader()?.use { it.readText() } ?: ""
-        if (code >= 400) throw ApiException(code, runCatching { JSONObject(text).getString("error") }.getOrDefault("HTTP $code"))
+        if (code >= 400) {
+            val err = runCatching { JSONObject(text) }.getOrNull()
+            throw ApiException(code, err?.optString("error")?.ifEmpty { null } ?: "HTTP $code", err?.optString("code")?.ifEmpty { null })
+        }
         return text
     }
 

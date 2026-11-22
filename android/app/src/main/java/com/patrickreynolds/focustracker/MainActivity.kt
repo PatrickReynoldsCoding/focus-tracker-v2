@@ -40,6 +40,10 @@ class MainActivity : Activity() {
                 startActivity(Intent(Intent.ACTION_VIEW, request.url))
                 return true
             }
+
+            override fun onPageFinished(view: WebView, url: String?) {
+                if (Uri.parse(url ?: "").host == Uri.parse(prefs.url).host) readProfile()
+            }
         }
         // Android 15 draws behind the status and navigation bars: keep the page clear of them.
         // (A WebView ignores its own padding, so a frame around it takes the insets.)
@@ -101,6 +105,20 @@ class MainActivity : Activity() {
             TodayWidget.refresh(applicationContext)
             FilesWidget.refresh(applicationContext)
             SingleFileWidget.refresh(applicationContext)
+        }
+        readProfile() // a profile switched in the app: the Today widget follows it
+    }
+
+    /** Note the profile the web app has open (TodayProfile); when it changed, redraw the Today widget in it. */
+    private fun readProfile() {
+        if (!::web.isInitialized) return
+        val app = applicationContext
+        web.evaluateJavascript(TodayProfile.SCRIPT) { result ->
+            val id = TodayProfile.fromScript(result) ?: return@evaluateJavascript
+            val prefs = Prefs(app)
+            if (id == prefs.appProfile) return@evaluateJavascript
+            prefs.appProfile = id
+            thread { TodayWidget.refresh(app) }
         }
     }
 

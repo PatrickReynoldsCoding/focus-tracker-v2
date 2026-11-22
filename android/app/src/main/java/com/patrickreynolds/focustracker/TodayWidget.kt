@@ -15,8 +15,9 @@ import org.json.JSONObject
 import kotlin.concurrent.thread
 
 /**
- * The Today widget: focus project, session timer, and the to-dos
- * and habits left today. Tap a to-do to tick it, a habit to count a session.
+ * The Today widget: focus project, session timer, and the Today list (the to-dos, cards and habits left today),
+ * in the profile open in this phone's app (TodayProfile). Tap a to-do or card to tick it, a habit to count a
+ * session, ✕ to put it off for today (Not today).
  */
 class TodayWidget : AppWidgetProvider() {
 
@@ -45,10 +46,17 @@ class TodayWidget : AppWidgetProvider() {
         val pending = goAsync()
         thread {
             try {
-                val api = Api(Prefs(context), fast = true)
+                // The profile the widget was drawn in, so a tap never lands in another profile.
+                val prefs = Prefs(context)
+                val api = Api(prefs, fast = true, mode = intent.getStringExtra(EXTRA_MODE) ?: TodayProfile.of(prefs))
                 when (action) {
                     "todo" -> api.post("/api/todos/$id/tick", JSONObject().put("done", true))
+                    "card" -> api.post("/api/tasks/$id/tick", JSONObject().put("done", true))
                     "habit" -> api.post("/api/habits/$id/check", JSONObject().put("add", 1))
+                    "nottoday" -> when (val kind = intent.getStringExtra(EXTRA_KIND) ?: "todo") {
+                        "habit" -> api.post("/api/habits/$id/not-today", JSONObject().put("on", true))
+                        else -> api.post("/api/today/not-today", JSONObject().put("kind", kind).put("id", id).put("on", true))
+                    }
                     "start" -> api.post("/api/session/start")
                     "refresh" -> Unit
                 }
@@ -64,11 +72,13 @@ class TodayWidget : AppWidgetProvider() {
     companion object {
         const val EXTRA_ACTION = "ft.action"
         const val EXTRA_ID = "ft.id"
+        const val EXTRA_KIND = "ft.kind"
+        const val EXTRA_MODE = "ft.mode"
 
-        private fun broadcast(context: Context, action: String, code: Int): PendingIntent =
+        private fun broadcast(context: Context, action: String, code: Int, mode: String? = null): PendingIntent =
             PendingIntent.getBroadcast(
                 context, code,
-                Intent(context, TodayWidget::class.java).putExtra(EXTRA_ACTION, action),
+                Intent(context, TodayWidget::class.java).putExtra(EXTRA_ACTION, action).apply { if (mode != null) putExtra(EXTRA_MODE, mode) },
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
 
@@ -80,13 +90,23 @@ class TodayWidget : AppWidgetProvider() {
             )
 
         /** Fetch the status and redraw every Today widget. Blocking: call off the main thread. When the server
-         *  does not answer in time, the last saved status is drawn with a note, so the widget never just times out. */
+         *  does not answer in time (or answers something unreadable), the last saved status is drawn with a note
+         *  saying why and when it was saved, so the widget never just times out or shows an empty list. */
         fun refresh(context: Context) {
             val prefs = Prefs(context)
-            val fresh = if (prefs.ready) runCatching { Api(prefs, fast = true).status() } else Result.failure(IllegalStateException("Open the app to connect"))
+            val fresh = if (prefs.ready) runCatching { TodayProfile.run(prefs) { mode -> Api(prefs, fast = true, mode = mode).status() } }
+                else Result.failure(IllegalStateException("Open the app to connect"))
             fresh.getOrNull()?.let { runCatching { AlarmScheduler.schedule(context, it) } } // also when no widget is placed
+            fresh.getOrNull()?.let { s -> runCatching { learnLabels(prefs, s.mode) } }
             val saved = if (fresh.isFailure) savedStatus(prefs) else null
-            draw(context, saved?.let { Result.success(it) } ?: fresh, if (saved != null) "Offline · saved ${savedTime(prefs)}" else null)
+            val error = fresh.exceptionOrNull()
+            draw(context, saved?.let { Result.success(it) } ?: fresh, if (saved != null && error != null) TodayText.failure(error, savedTime(prefs)) else null)
+        }
+
+        /** Keep the profiles' labels (for "Nothing left today in Work"); asked only for a profile not seen before. */
+        private fun learnLabels(prefs: Prefs, mode: String?) {
+            if (mode == null || TodayProfile.labels(prefs.profileLabels).containsKey(mode)) return
+            prefs.profileLabels = Api(prefs, fast = true).get("/api/profiles")
         }
 
         /** Redraw from the saved status, without the network. */
@@ -125,7 +145,8 @@ class TodayWidget : AppWidgetProvider() {
             ))
             val s = result.getOrElse { e ->
                 v.setTextViewText(R.id.focus, "Focus Tracker")
-                v.setTextViewText(R.id.next, e.message ?: "Cannot reach the tracker")
+                v.setTextViewText(R.id.next, TodayText.noList(e))
+                v.setTextViewText(R.id.empty, "Today’s list did not load")
                 v.setViewVisibility(R.id.next, View.VISIBLE)
                 v.setViewVisibility(R.id.session_row, View.GONE)
                 v.setOnClickPendingIntent(R.id.header, openApp(context, "/today", 1))
@@ -161,7 +182,7 @@ class TodayWidget : AppWidgetProvider() {
                 v.setViewVisibility(R.id.session_row, View.GONE)
                 if (s.focusId != null) {
                     v.setTextViewText(R.id.action, "Start")
-                    v.setOnClickPendingIntent(R.id.action, broadcast(context, "start", 5))
+                    v.setOnClickPendingIntent(R.id.action, broadcast(context, "start", 5, s.mode))
                 } else {
                     v.setTextViewText(R.id.action, "Choose")
                     v.setOnClickPendingIntent(R.id.action, openApp(context, "/today", 6))
@@ -169,18 +190,21 @@ class TodayWidget : AppWidgetProvider() {
             }
             val items = RemoteViewsCompat.RemoteCollectionItems.Builder().setHasStableIds(true).setViewTypeCount(1)
             var n = 0L
-            fun add(kind: String, item: Status.Item, mark: String) {
+            for (item in s.items) {
                 val row = RemoteViews(context.packageName, if (narrow) R.layout.widget_item_narrow else R.layout.widget_item)
-                row.setTextViewText(R.id.mark, mark)
+                row.setTextViewText(R.id.mark, TodayText.mark(item.kind))
                 row.setTextViewText(R.id.title, item.title)
                 row.setTextViewText(R.id.detail, item.detail ?: "")
-                row.setViewVisibility(R.id.detail, if (item.detail.isNullOrEmpty() || kind == "todo") View.GONE else View.VISIBLE)
-                row.setOnClickFillInIntent(R.id.row, Intent().putExtra(EXTRA_ACTION, kind).putExtra(EXTRA_ID, item.id))
+                row.setViewVisibility(R.id.detail, if (item.detail.isNullOrEmpty()) View.GONE else View.VISIBLE)
+                val base = Intent().putExtra(EXTRA_ID, item.id).putExtra(EXTRA_KIND, item.kind).apply { if (s.mode != null) putExtra(EXTRA_MODE, s.mode) }
+                row.setOnClickFillInIntent(R.id.row, Intent(base).putExtra(EXTRA_ACTION, TodayText.tickAction(item.kind)))
+                // ✕ = Not today (its own fill-in intent: a tap on it does not tick the row).
+                row.setViewVisibility(R.id.skip, if (item.canSkip) View.VISIBLE else View.GONE)
+                row.setOnClickFillInIntent(R.id.skip, Intent(base).putExtra(EXTRA_ACTION, "nottoday"))
                 items.addItem(n++, row)
             }
-            s.todos.forEach { add("todo", it, "☐") }
-            s.habits.forEach { add("habit", it, "+") }
             RemoteViewsCompat.setRemoteAdapter(context, v, widgetId, R.id.list, items.build())
+            v.setTextViewText(R.id.empty, TodayProfile.emptyText(s.mode, TodayProfile.labels(Prefs(context).profileLabels)))
             v.setEmptyView(R.id.list, R.id.empty)
             v.setPendingIntentTemplate(
                 R.id.list,
