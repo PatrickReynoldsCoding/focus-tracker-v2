@@ -329,6 +329,8 @@ export interface FileItem {
   thumbnail?: boolean;
   /** Where it is (folder names), in a search or a type filter. */
   location?: string | null;
+  /** Its tags (features/tags, while the tags flag is on). */
+  tags?: { id: string; name: string; color: string | null }[];
 }
 /** One entry of the Files tab's New menu: its dialog makes the file in the folder on screen. */
 export interface FileCreateDef {
@@ -402,6 +404,67 @@ export function ProjectLabel(props: ProjectLabelProps) {
   const def = visible(projectLabels, useFlags()).sort((a, b) => a.order - b.order)[0];
   if (!def || !props.projectId) return null;
   return <def.component {...props} />;
+}
+
+// ---------- file addons (things attached to every file, such as tags) ----------
+
+/** A file as a page knows it: its type (as GET /api/files gives it), id and name. */
+export interface FileRef {
+  type: string;
+  id: string;
+  name: string;
+}
+/** Something attached to every file (features/tags): small marks on its card and row, a line in
+ *  its ⋯ menu on the Files tab, a piece of its own page's header and a filter of the Files tab. The
+ *  server side is `Module.fileAddons` (src/core/files.ts). */
+export interface FileAddonDef {
+  id: string;
+  order: number;
+  feature?: string;
+  /** Small marks on a file's card or row (Files, Add file), drawn after its project label.
+   *  `link`: false inside a button (a row of Add file). */
+  chips?: ComponentType<{ file: FileItem; link?: boolean }>;
+  /** A line in a file's ⋯ menu on the Files tab; its dialog is given the file and `onSaved` with
+   *  what changed, to show it in the listing at once. */
+  menu?: {
+    label: string;
+    icon: ComponentChildren;
+    dialog: ComponentType<{ file: FileItem; onClose: () => void; onSaved: (patch: Partial<FileItem>) => void }>;
+  };
+  /** In a file's own page header (a note's, list's or project's notes page); loads its own data. */
+  header?: ComponentType<{ file: FileRef }>;
+  /** A filter of the Files tab: a query parameter of GET /api/files and its control, drawn under the type chips. */
+  filter?: { param: string; component: ComponentType<{ value: string; onChange: (v: string) => void }> };
+}
+const fileAddons: FileAddonDef[] = [];
+export const registerFileAddon = (d: FileAddonDef) => add(fileAddons, d);
+/** The file addons whose flag is on, in order. */
+export function useFileAddons(): FileAddonDef[] {
+  return visible(fileAddons, useFlags()).sort((a, b) => a.order - b.order);
+}
+/** Every addon's marks for a file (nothing when none is registered or on). */
+export function FileChips({ file, link }: { file: FileItem; link?: boolean }) {
+  const list = useFileAddons().filter((a) => a.chips);
+  return (
+    <>
+      {list.map((a) => {
+        const C = a.chips!;
+        return <C key={a.id} file={file} link={link} />;
+      })}
+    </>
+  );
+}
+/** Every addon's piece of a file's page header. */
+export function FileHeaderAddons({ file }: { file: FileRef }) {
+  const list = useFileAddons().filter((a) => a.header);
+  return (
+    <>
+      {list.map((a) => {
+        const C = a.header!;
+        return <C key={a.id} file={file} />;
+      })}
+    </>
+  );
 }
 
 // ---------- Add panel (the "+ Add panel" button) ----------
