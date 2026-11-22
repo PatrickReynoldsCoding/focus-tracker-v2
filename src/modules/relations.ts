@@ -11,6 +11,7 @@ import type { Entity } from '../core/entity';
 import { ApiError, bad, notFound } from '../core/errors';
 import { requireFeature } from '../core/features';
 import type { Module } from '../core/registry';
+import { parseScope, scopedSetting, writeScoped, type Scope } from '../core/setting-scope';
 import { create, getRaw, remove } from '../core/store';
 
 const FLAG = 'issue-links';
@@ -412,7 +413,27 @@ export async function moveLinks(ctx: Ctx, from: Ref, to: Ref): Promise<void> {
   }
 }
 
-async function addType(ctx: Ctx, input: { outward?: string; inward?: string }) {
+/** Every profile's list becomes `list` (scope all): refuse while a profile has links of a type it leaves out. */
+async function checkTypesForAll(ctx: Ctx, value: unknown) {
+  let list: { id: string }[] = [];
+  try {
+    list = typeof value === 'string' ? JSON.parse(value) : [];
+  } catch {
+    /* not a list: no custom types */
+  }
+  const keep = [...LINK_TYPES.map((t) => t.id), ...(Array.isArray(list) ? list.map((t) => t.id) : [])];
+  const used = (
+    await ctx.db
+      .prepare(`SELECT l.type, m.label, COUNT(*) AS n FROM links l JOIN modes m ON m.id = l.mode WHERE l.type NOT IN (${keep.map(() => '?').join(',')}) GROUP BY l.type, m.label`)
+      .bind(...keep)
+      .all<{ type: string; label: string; n: number }>()
+  ).results;
+  if (used.length) throw bad(`These link types are still used, so every profile cannot have the same list: ${used.map((u) => `“${u.type}” in ${u.label} (${u.n})`).join(', ')}. Remove those links first, or change this profile only.`);
+}
+
+const saveTypes = (ctx: Ctx, list: { id: string; outward: string; inward: string }[], scope: Scope) => writeScoped(ctx, scopedSetting(TYPES_SETTING), JSON.stringify(list), scope);
+
+async function addType(ctx: Ctx, input: { outward?: string; inward?: string }, scope: Scope = 'profile') {
   const outward = String(input.outward ?? '').trim().toLowerCase();
   const inward = String(input.inward ?? '').trim().toLowerCase() || outward;
   if (!outward || outward.length > 40 || inward.length > 40) throw bad('A link type needs an outward phrase (and an inward one) of up to 40 letters');
@@ -423,16 +444,16 @@ async function addType(ctx: Ctx, input: { outward?: string; inward?: string }) {
   let id = slug;
   for (let n = 2; types.some((t) => t.id === id); n++) id = `${slug}-${n}`;
   const custom = (await customTypes(ctx)).map(({ custom: _c, ...t }) => t);
-  await ctx.setSetting(TYPES_SETTING, JSON.stringify([...custom, { id, outward, inward }]));
+  await saveTypes(ctx, [...custom, { id, outward, inward }], scope);
   return linkTypes(ctx);
 }
 
-async function deleteType(ctx: Ctx, id: string) {
+async function deleteType(ctx: Ctx, id: string, scope: Scope = 'profile') {
   const custom = await customTypes(ctx);
   if (!custom.some((t) => t.id === id)) throw bad(LINK_TYPES.some((t) => t.id === id) ? 'Built-in link types cannot be removed' : `No link type ${id}`);
   const used = await ctx.db.prepare('SELECT COUNT(*) AS n FROM links WHERE mode = ? AND type = ?').bind(ctx.mode, id).first<{ n: number }>();
   if (used?.n) throw bad(`${used.n} link${used.n === 1 ? ' uses' : 's use'} this type. Remove ${used.n === 1 ? 'it' : 'them'} first.`);
-  await ctx.setSetting(TYPES_SETTING, JSON.stringify(custom.filter((t) => t.id !== id).map(({ custom: _c, ...t }) => t)));
+  await saveTypes(ctx, custom.filter((t) => t.id !== id).map(({ custom: _c, ...t }) => t), scope);
   return linkTypes(ctx);
 }
 
@@ -445,6 +466,8 @@ export const relationsModule: Module = {
   id: 'relations',
   description: 'Issue links: typed relationships between projects, cards, to-dos, backlog items and lists.',
   entities: [linksEntity],
+  // The custom link types: this profile's list or every profile's (D46).
+  scopedSettings: [{ id: TYPES_SETTING, key: TYPES_SETTING, label: 'Link types', section: 'link-types', beforeAll: checkTypesForAll }],
   features: [
     {
       id: FLAG,
@@ -474,12 +497,13 @@ export const relationsModule: Module = {
     api.post('/links/types', async (c) => {
       const ctx = c.get('ctx');
       await requireFeature(ctx, CUSTOM_FLAG);
-      return c.json(await addType(ctx, await c.req.json()));
+      const { scope, ...body } = (await c.req.json()) as { scope?: string; outward?: string; inward?: string };
+      return c.json(await addType(ctx, body, parseScope(scope ?? c.req.query('scope'))));
     });
     api.delete('/links/types/:id', async (c) => {
       const ctx = c.get('ctx');
       await requireFeature(ctx, CUSTOM_FLAG);
-      return c.json(await deleteType(ctx, c.req.param('id')));
+      return c.json(await deleteType(ctx, c.req.param('id'), parseScope(c.req.query('scope'))));
     });
     api.get('/links/of/:kind/:id', async (c) => {
       const ctx = c.get('ctx');

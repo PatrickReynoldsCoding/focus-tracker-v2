@@ -30,16 +30,18 @@ async function enabledTools(env: Env): Promise<Tool[]> {
   const rows = (
     await env.DB.prepare('SELECT m.id, s.value FROM modes m LEFT JOIN settings s ON s.mode = m.id AND s.key = ?').bind(FEATURES_KEY).all<{ id: string; value: string | null }>()
   ).results;
-  const on = new Set<string>();
-  for (const r of rows) {
-    let chosen: Record<string, boolean> = {};
+  // Switches set for every profile (mode '', D46), with each profile's own over them.
+  const parse = (raw: string | null | undefined): Record<string, boolean> => {
     try {
-      chosen = r.value ? JSON.parse(r.value) : {};
+      const v = raw ? JSON.parse(raw) : {};
+      return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
     } catch {
-      /* a broken value: the defaults */
+      return {}; // a broken value: the defaults
     }
-    for (const [id, v] of Object.entries(statesFrom(chosen))) if (v) on.add(id);
-  }
+  };
+  const forAll = parse((await env.DB.prepare("SELECT value FROM settings WHERE mode = '' AND key = ?").bind(FEATURES_KEY).first<{ value: string }>())?.value);
+  const on = new Set<string>();
+  for (const r of rows) for (const [id, v] of Object.entries(statesFrom({ ...forAll, ...parse(r.value) }))) if (v) on.add(id);
   return (allTools() as Tool[]).filter((t) => toolFeatures(t).every((f) => on.has(f)));
 }
 

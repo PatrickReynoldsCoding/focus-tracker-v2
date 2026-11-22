@@ -7,6 +7,7 @@ import { newId, randomToken, sha256Hex } from '../core/ids';
 import { alias, allAliases, allEntities, entity, type Module } from '../core/registry';
 import { create, kindOps, redoLast, undoLast } from '../core/store';
 import { allFeatures, featureStates, setFeature } from '../core/features';
+import { parseScope, wholeKey, writeScoped, type Scope } from '../core/setting-scope';
 import { PER_PROFILE_SETTINGS } from './profiles';
 
 /** Settings a client may not write directly (they have their own calls). */
@@ -21,9 +22,17 @@ export async function allSettings(ctx: Ctx) {
   return out;
 }
 
-export async function putSetting(ctx: Ctx, key: string, value: string | null, global = false) {
+export async function putSetting(ctx: Ctx, key: string, value: string | null, global = false, scope: Scope = 'profile') {
   if (!/^[a-z0-9_.-]{1,80}$/i.test(key)) throw bad('Setting keys are letters, digits, dots, dashes and underscores');
   if (PROTECTED.test(key)) throw bad(`${key} is changed through its own call`);
+  // A setting that can be set for one profile or for all (D46) goes through the scoped writer.
+  const scoped = wholeKey(key);
+  if (scope === 'all' && !scoped) throw bad(`${key} cannot be set for all profiles`);
+  if (scoped && global) throw bad(`${key} belongs to each profile: send scope "all" to set it for every profile`);
+  if (scoped) {
+    const r = await writeScoped(ctx, scoped, value, scope);
+    return { key, value: await ctx.setting(key), global: false, scope, cleared: r.cleared };
+  }
   if (key === 'timezone') {
     if (!global) throw bad('timezone is a global setting');
     try {
@@ -57,8 +66,8 @@ export const systemModule: Module = {
   routes(api) {
     api.get('/settings', async (c) => c.json(await allSettings(c.get('ctx'))));
     api.put('/settings/:key', async (c) => {
-      const b = await c.req.json<{ value: string | null; global?: boolean }>();
-      return c.json(await putSetting(c.get('ctx'), c.req.param('key'), b.value ?? null, !!b.global));
+      const b = await c.req.json<{ value: string | null; global?: boolean; scope?: string }>();
+      return c.json(await putSetting(c.get('ctx'), c.req.param('key'), b.value ?? null, !!b.global, parseScope(b.scope ?? c.req.query('scope'))));
     });
     api.post('/undo', async (c) => c.json((await undoLast(c.get('ctx'))) ?? { label: null, changes: 0 }));
     api.post('/redo', async (c) => c.json((await redoLast(c.get('ctx'))) ?? { label: null, changes: 0 }));
@@ -127,9 +136,9 @@ export const systemModule: Module = {
       return c.json(allFeatures().map((f) => ({ ...f, enabled: states[f.id] })));
     });
     api.put('/features/:id', async (c) => {
-      const { enabled } = await c.req.json<{ enabled: boolean }>();
+      const { enabled, scope } = await c.req.json<{ enabled: boolean; scope?: string }>();
       if (typeof enabled !== 'boolean') throw bad('enabled must be true or false');
-      await setFeature(c.get('ctx'), c.req.param('id'), enabled);
+      await setFeature(c.get('ctx'), c.req.param('id'), enabled, parseScope(scope ?? c.req.query('scope')));
       const states = await featureStates(c.get('ctx'));
       return c.json(allFeatures().map((f) => ({ ...f, enabled: states[f.id] })));
     });

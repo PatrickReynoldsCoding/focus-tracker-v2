@@ -1,12 +1,14 @@
 // Feature flags. A module declares the switches it reads (Module.features); the owner turns
 // them on and off in Settings → Features. Each profile (mode) has its own set (settings row
-// <mode> / 'features', DECISIONS D35), so a request's flags are those of its profile.
+// <mode> / 'features', DECISIONS D35), so a request's flags are those of its profile; a flag
+// switched for all profiles is in the row with mode '' and a profile's own value wins (D46).
 // Use a flag for big or experimental decisions, so a change can be tried and turned back
 // without a deploy. Server code asks ctx.feature(id); a tool or route behind a flag says so.
 
 import type { Ctx } from './ctx';
 import { ApiError } from './errors';
 import { allModules } from './registry';
+import { scopedSetting, writeScoped, type Scope, type ScopedSetting, type WriteResult } from './setting-scope';
 
 export interface Feature {
   /** Short kebab-case id, unique across modules: 'issue-links'. */
@@ -47,11 +49,22 @@ export async function requireFeature(ctx: Ctx, id: string): Promise<void> {
   if (!(await isOn(ctx, id))) throw new ApiError(404, `The feature "${id}" is turned off in this profile (Settings → Features)`, 'feature_off');
 }
 
-/** Switch a flag in the request's profile only. */
-export async function setFeature(ctx: Ctx, id: string, enabled: boolean): Promise<Record<string, boolean>> {
+/** Each flag is a setting that can be set for one profile or for all (D46): features.<id>. */
+export const featureSettings = (): ScopedSetting[] =>
+  allFeatures().map((f) => ({
+    id: `features.${f.id}`,
+    key: FEATURES_KEY,
+    field: f.id,
+    label: f.label,
+    section: 'features',
+    parse: (v: unknown) => {
+      if (typeof v !== 'boolean') throw new ApiError(400, 'enabled must be true or false');
+      return v;
+    },
+  }));
+
+/** Switch a flag in the request's profile (the usual) or in every profile (scope 'all'). */
+export async function setFeature(ctx: Ctx, id: string, enabled: boolean, scope: Scope = 'profile'): Promise<WriteResult> {
   if (!allFeatures().some((f) => f.id === id)) throw new ApiError(400, `Unknown feature ${id}`);
-  const chosen = await ctx.jsonSetting<Record<string, boolean>>(FEATURES_KEY, {}, ctx.mode);
-  chosen[id] = enabled;
-  await ctx.setSetting(FEATURES_KEY, JSON.stringify(chosen), ctx.mode);
-  return featureStates(ctx);
+  return writeScoped(ctx, scopedSetting(`features.${id}`), enabled, scope);
 }
