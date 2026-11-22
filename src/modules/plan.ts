@@ -14,7 +14,7 @@ import type { Module } from '../core/registry';
 import { leadOn, loadRotation, setWeekChanges, weekdayOf, type Rotation } from '../core/rotation';
 import { create, get, list, remove, update } from '../core/store';
 import { categoriesEntity } from './basics';
-import { AWAY_FLAG, habitLogEntity, habitsEntity, levelForDay, levelHistory } from './habits';
+import { AWAY_FLAG, HABITS_FLAG, habitLogEntity, habitsEntity, levelForDay, levelHistory } from './habits';
 import { listsEntity } from './lists';
 import { readTodos, updateTodo } from './todos';
 
@@ -49,11 +49,13 @@ export async function weekPlan(ctx: Ctx, which: Which = 'this') {
   const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
   // To-dos still open from before: before this week (this week's past days show their own), or before today for next week.
   const earlierThan = which === 'this' ? monday : today;
+  // Habits off (flag habits): no habit rows or sessions in the plan.
+  const habitsOn = await ctx.feature(HABITS_FLAG);
   const [cats, habits, logs, levels, todos, loose, awayOn, todoLists] = await Promise.all([
     list(ctx, categoriesEntity),
-    list(ctx, habitsEntity, { where: { status: 'active' } }),
-    list(ctx, habitLogEntity, { sql: "day >= ? AND day <= ? AND kind IN ('done', 'plan', 'skip')", params: [monday, sunday], limit: 2000 }),
-    list(ctx, habitLogEntity, { where: { kind: 'level' }, order: 'day', limit: 2000 }),
+    habitsOn ? list(ctx, habitsEntity, { where: { status: 'active' } }) : [],
+    habitsOn ? list(ctx, habitLogEntity, { sql: "day >= ? AND day <= ? AND kind IN ('done', 'plan', 'skip')", params: [monday, sunday], limit: 2000 }) : [],
+    habitsOn ? list(ctx, habitLogEntity, { where: { kind: 'level' }, order: 'day', limit: 2000 }) : [],
     readTodos(ctx, { sql: 'day >= ? AND day <= ?', params: [monday, sunday], order: 'day, done IS NOT NULL, ord', limit: 500 }),
     readTodos(ctx, { sql: 'done IS NULL AND (day IS NULL OR day < ?)', params: [earlierThan], order: 'day IS NOT NULL, day, ord', limit: 200 }),
     ctx.feature(AWAY_FLAG),
@@ -126,6 +128,7 @@ export async function weekPlan(ctx: Ctx, which: Which = 'this') {
 
 /** Add (or with a negative `add`, take off) planned sessions of a habit on a day from today to next Sunday. */
 export async function planSession(ctx: Ctx, habitId: string, day: string, opts: { add?: number; count?: number }) {
+  await requireFeature(ctx, HABITS_FLAG);
   const r = await loadRotation(ctx);
   checkPlanDay(r, day, 'Planning a session');
   const h = await get(ctx, habitsEntity, habitId);
@@ -206,14 +209,14 @@ export const planModule: Module = {
     {
       name: 'plan_habit_session',
       description: 'Plan sessions of an active habit on a day from today to next Sunday (adds `count`, default 1). A plan is only a plan: a session done on another day of the week still counts.',
-      feature: PLAN_FLAG,
+      feature: [PLAN_FLAG, HABITS_FLAG],
       input: z.object({ habit_id: z.string(), day: z.string(), count: z.number().int().min(1).max(MAX_PLANNED).default(1) }),
       run: (ctx, a) => planSession(ctx, a.habit_id, a.day, { add: a.count }),
     },
     {
       name: 'unplan_habit_session',
       description: 'Take planned sessions of a habit off a day (removes `count`, default 1; `all: true` removes every planned session that day). Done sessions are not touched.',
-      feature: PLAN_FLAG,
+      feature: [PLAN_FLAG, HABITS_FLAG],
       input: z.object({ habit_id: z.string(), day: z.string(), count: z.number().int().min(1).max(MAX_PLANNED).default(1), all: z.boolean().optional() }),
       run: (ctx, a) => planSession(ctx, a.habit_id, a.day, a.all ? { count: 0 } : { add: -a.count }),
     },

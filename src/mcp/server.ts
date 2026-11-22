@@ -23,6 +23,8 @@ type Rpc = { jsonrpc: '2.0'; id?: string | number | null; method: string; params
 
 const modeArg = z.string().optional().describe('Profile id such as "personal" or "work" (list_profiles). Default: the default profile.');
 
+const toolFeatures = (t: Tool): string[] => (t.feature ? [t.feature].flat() : []);
+
 /** Tools whose feature is on in at least one profile: tools/list names no profile, and a call may name any (D35). */
 async function enabledTools(env: Env): Promise<Tool[]> {
   const rows = (
@@ -38,7 +40,7 @@ async function enabledTools(env: Env): Promise<Tool[]> {
     }
     for (const [id, v] of Object.entries(statesFrom(chosen))) if (v) on.add(id);
   }
-  return (allTools() as Tool[]).filter((t) => !t.feature || on.has(t.feature));
+  return (allTools() as Tool[]).filter((t) => toolFeatures(t).every((f) => on.has(f)));
 }
 
 async function toolList(env: Env) {
@@ -62,8 +64,8 @@ async function callTool(env: Env, name: string, args: Record<string, unknown>) {
     const parsed = tool.input.parse(rest);
     const ctx = new Ctx(env, await resolveMode(env, typeof mode === 'string' ? mode : undefined));
     // The switches of the profile the call is for decide.
-    if (tool.feature && !(await isOn(ctx, tool.feature)))
-      throw new ApiError(404, `${name} is turned off in the profile "${ctx.mode}" (its feature ${tool.feature} is off there: Settings → Features)`, 'feature_off');
+    for (const f of toolFeatures(tool))
+      if (!(await isOn(ctx, f))) throw new ApiError(404, `${name} is turned off in the profile "${ctx.mode}" (its feature ${f} is off there: Settings → Features)`, 'feature_off');
     ctx.label = `Claude: ${name}`;
     const result = await tool.run(ctx, parsed);
     await ctx.flushUndo();

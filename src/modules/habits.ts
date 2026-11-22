@@ -22,6 +22,8 @@ import { awayLookup, mondayOf } from '../core/rotation';
 import { formatLevel, levelFromRow, nextSteps, parseEvery, parseLevel, weekTarget, type Level, type Step } from '../core/habit-levels';
 
 export const HABIT_STATUS = ['active', 'paused', 'ended', 'aspiring'] as const;
+/** The whole Habits feature: tab, panels, Today list, notifications, Insights and Plan my week parts, routes and Claude's tools. Data stays while off. */
+export const HABITS_FLAG = 'habits';
 export const STEP_UP_FLAG = 'habit-step-up';
 /** Away days in the rotation ask nothing of a daily habit (step-up maths, Insights, Plan my week). */
 export const AWAY_FLAG = 'away-lowers-targets';
@@ -39,6 +41,7 @@ export const habitsEntity: Entity = {
     'The row holds the level in force now; changing sessions, per or size writes a level row in the habit log and drops a waiting level change. ' +
     'Changing status to paused or active is recorded, so paused weeks do not count against a step-up.',
   modeScoped: true,
+  feature: HABITS_FLAG,
   orderGroup: [],
   filters: ['status', 'category_id', 'per', 'project_id'],
   fields: {
@@ -105,6 +108,7 @@ export const habitLogEntity: Entity = {
     'level (a level took effect on that day; value "3 a week, 30 min"), pending (a level change waiting for the owner to accept), ' +
     'answer (answer to a step-up prompt), pause, resume.',
   modeScoped: true,
+  feature: HABITS_FLAG,
   filters: ['habit_id', 'day', 'kind'],
   sort: 'day DESC',
   fields: {
@@ -589,6 +593,12 @@ export const habitsModule: Module = {
   entities: [habitsEntity, habitLogEntity],
   features: [
     {
+      id: HABITS_FLAG,
+      label: 'Habits',
+      description: 'The whole Habits feature: the Habits tab and panels, habits on the Today list, counts, menu bar, widgets and notifications, their parts of Insights and Plan my week, and Claude’s habit tools. Off: all of that is hidden and refused; your habits and their history stay and come back when it is on.',
+      default: true,
+    },
+    {
       id: STEP_UP_FLAG,
       label: 'Habit step-up prompts',
       description: 'Ask "Want to go further?" when a habit’s level has been met, and let the owner accept a bigger level. Off: habits keep the level they have until edited.',
@@ -602,6 +612,10 @@ export const habitsModule: Module = {
     },
   ],
   routes(api) {
+    api.use('/habits/*', async (c, next) => {
+      await requireFeature(c.get('ctx'), HABITS_FLAG);
+      await next();
+    });
     api.get('/habits/progress', async (c) => c.json(await habitProgress(c.get('ctx'), c.req.query('day'))));
     api.post('/habits/:id/check', async (c) => {
       const ctx = c.get('ctx');
@@ -643,12 +657,14 @@ export const habitsModule: Module = {
         'Active habits with sessions done today / this week, how many are left, the level that applies now, the last 7 days (or the week), ' +
         'a waiting level change (pending) and a step-up prompt that is due (step_up, with options).',
       readOnly: true,
+      feature: HABITS_FLAG,
       input: z.object({ day: z.string().optional() }),
       run: (ctx, a) => habitProgress(ctx, a.day),
     },
     {
       name: 'check_habit',
       description: 'Record sessions of a habit as done (add 1 by default; a negative add removes). day defaults to today; it can be up to 7 days back.',
+      feature: HABITS_FLAG,
       input: z.object({ id: z.string(), day: z.string().optional(), add: z.number().int().default(1) }),
       run: (ctx, a) => checkHabit(ctx, a.id, a.day, a.add),
     },
@@ -658,7 +674,7 @@ export const habitsModule: Module = {
         'For every active habit: its level, goal, how much of the target was done in the full weeks since the level last changed (paused weeks left out), ' +
         'whether that counts as met (80 %), whether the prompt is due, the next step(s) towards the goal and any waiting change. Use it to suggest a step-up.',
       readOnly: true,
-      feature: STEP_UP_FLAG,
+      feature: [HABITS_FLAG, STEP_UP_FLAG],
       input: z.object({}),
       run: (ctx) => stepUpReview(ctx),
     },
@@ -667,7 +683,7 @@ export const habitsModule: Module = {
       description:
         'Answer a habit’s step-up prompt for the owner: "yes" makes a pending level change (one step; option "sessions" or "size" when both are possible) that the owner still has to accept on Today; ' +
         '"not now" asks again after the habit’s pace; "at goal" stops prompts and sets the goal to the current level; "stop asking" / "keep asking" answer "Stop asking about this habit?". Only when the owner has said which.',
-      feature: STEP_UP_FLAG,
+      feature: [HABITS_FLAG, STEP_UP_FLAG],
       input: z.object({
         id: z.string(),
         answer: z.enum(['yes', 'not now', 'at goal', 'stop asking', 'keep asking']),
@@ -679,6 +695,7 @@ export const habitsModule: Module = {
       name: 'answer_pending_level',
       description:
         'Accept a habit’s waiting level change (it applies from this week for a weekly habit, from today for a daily one) or put it off to next Monday / tomorrow ("not yet"). Only when the owner says so.',
+      feature: HABITS_FLAG,
       input: z.object({ id: z.string(), answer: z.enum(['accept', 'not yet']) }),
       run: (ctx, a) => answerPending(ctx, a.id, a.answer),
     },
@@ -687,8 +704,14 @@ export const habitsModule: Module = {
       description:
         'Note an idea for a habit the owner is not starting yet (name, optional why). It is shown in its own group on the Habits tab and never on Today. ' +
         'To start it later, update_item the habit with status "active" and its sessions, per, size, goal.',
+      feature: HABITS_FLAG,
       input: z.object({ name: z.string().min(1), description: z.string().optional() }),
       run: (ctx, a) => create(ctx, habitsEntity, { name: a.name, description: a.description, status: 'aspiring' }),
     },
   ],
 };
+
+/** Habits for the Today list, counts, menu bar, widgets and notifications: none while the Habits feature is off. */
+export async function habitProgressIfOn(ctx: Ctx, day?: string): ReturnType<typeof habitProgress> {
+  return (await ctx.feature(HABITS_FLAG)) ? habitProgress(ctx, day) : [];
+}

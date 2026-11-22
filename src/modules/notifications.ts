@@ -7,7 +7,7 @@ import type { Entity } from '../core/entity';
 import { newId } from '../core/ids';
 import type { Module } from '../core/registry';
 import { find, list, update } from '../core/store';
-import { habitProgress } from './habits';
+import { HABITS_FLAG, habitProgress } from './habits';
 import { deliverable, getPrefs, kindAllowed } from './notify-prefs';
 
 export const notificationsEntity: Entity = {
@@ -59,7 +59,7 @@ export async function generate(ctx: Ctx): Promise<void> {
   for (const r of reminders.results) {
     await insertOnce(ctx, { kind: 'reminder', title: r.project ?? 'Reminder', body: r.text, due: r.due, dedupe_key: `reminder:${r.id}` });
   }
-  const habits = !kindAllowed(prefs, 'habit')
+  const habits = !kindAllowed(prefs, 'habit') || !(await ctx.feature(HABITS_FLAG))
     ? { results: [] as { id: string; name: string; small_version: string | null; next_prompt: string; goal: string | null }[] }
     : await ctx.db
     .prepare(`SELECT id, name, small_version, next_prompt, goal FROM habits WHERE mode = ? AND status = 'active' AND next_prompt IS NOT NULL AND next_prompt <= ?`)
@@ -148,7 +148,9 @@ export async function pendingNotifications(ctx: Ctx) {
   const prefs = await getPrefs(ctx);
   if (!(await deliverable(ctx, prefs, ctx.client))) return [];
   const all = await list(ctx, notificationsEntity, { sql: 'dismissed_at IS NULL AND due <= ?', params: [ctx.now()], order: 'due', limit: 50 });
-  return all.filter((n: any) => kindAllowed(prefs, n.kind)).map(({ dedupe_key, ...n }: any) => n);
+  // Habit prompts made before Habits was switched off wait, unseen, until it is on again.
+  const habitsOn = await ctx.feature(HABITS_FLAG);
+  return all.filter((n: any) => kindAllowed(prefs, n.kind) && (habitsOn || n.kind !== 'habit')).map(({ dedupe_key, ...n }: any) => n);
 }
 
 export async function dismiss(ctx: Ctx, id: string) {

@@ -76,7 +76,7 @@ export async function searchAll(ctx: Ctx, q: string, limit = 30) {
     one('notes', ['body'], 'id'),
     one('backlog', ['title', 'note'], 'title'),
     one('resources', ['title', 'value', 'note'], 'title'),
-    one('habits', ['name', 'description'], 'name'),
+    (await ctx.feature('habits')) ? one('habits', ['name', 'description'], 'name') : [],
     // Tags (D43): a tag's name finds the tag; list_files with tags finds its files.
     (await ctx.feature('tags')) ? one('tags', ['name'], 'name') : [],
   ]);

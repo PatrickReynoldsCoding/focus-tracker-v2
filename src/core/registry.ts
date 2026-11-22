@@ -13,8 +13,8 @@ export interface Tool<S extends z.ZodType = z.ZodType> {
   input: S;
   /** Read-only tools are marked as such for Claude. */
   readOnly?: boolean;
-  /** Only offered to Claude while this feature flag is on. */
-  feature?: string;
+  /** Only offered to Claude while this feature flag is on (a list: while all are on). */
+  feature?: string | string[];
   run(ctx: Ctx, args: z.infer<S>): Promise<unknown>;
 }
 

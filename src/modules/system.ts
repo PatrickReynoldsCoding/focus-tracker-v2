@@ -145,8 +145,8 @@ export const systemModule: Module = {
       description: 'The kinds of rows this tracker stores, their fields and what they mean. Read this before using the generic *_item tools.',
       readOnly: true,
       input: z.object({}),
-      run: async () =>
-        [...kinds(), ...allAliases().map((a) => ({ name: a.name, desc: a.desc, orderGroup: ['list_id', 'group_id'], fields: a.fields }))].map((e) => ({
+      run: async (ctx) =>
+        [...(await Promise.all(kinds().map(async (e) => (e.feature && !(await ctx.feature(e.feature)) ? null : e)))).filter((e) => !!e), ...allAliases().map((a) => ({ name: a.name, desc: a.desc, orderGroup: ['list_id', 'group_id'], fields: a.fields }))].map((e) => ({
           kind: e.name,
           what: e.desc,
           ordered: !!e.orderGroup,

@@ -9,7 +9,7 @@ import type { Entity, Row } from '../core/entity';
 import { bad } from '../core/errors';
 import type { Module } from '../core/registry';
 import { create, find, get, list, update } from '../core/store';
-import { habitProgress } from './habits';
+import { habitProgressIfOn } from './habits';
 import { listsEntity } from './lists';
 import { todosForDay } from './todos';
 import { pendingNotifications } from './notifications';
@@ -208,7 +208,7 @@ export async function today(ctx: Ctx) {
     rotation(ctx, day),
     currentSession(ctx),
     todosForDay(ctx, day),
-    habitProgress(ctx, day),
+    habitProgressIfOn(ctx, day),
     list(ctx, listsEntity, { where: { show_today: true } }),
     neglected(ctx, day),
     withList ? cardsForDay(ctx, day) : [],
@@ -244,7 +244,7 @@ export async function status(ctx: Ctx) {
     focusOf(ctx, day),
     currentSession(ctx),
     todosForDay(ctx, day),
-    habitProgress(ctx, day),
+    habitProgressIfOn(ctx, day),
     pendingNotifications(ctx),
     ctx.feature(TODAY_LIST_FLAG).then(async (on) => (on ? { cards: await cardsForDay(ctx, day), names: await todoListNames(ctx) } : null)),
   ]);

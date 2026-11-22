@@ -160,7 +160,7 @@ export async function pillPanels(ctx: Ctx) {
   const listOn = await ctx.feature('today-panel');
   return [
     ...(listOn ? [{ id: 'today-list', name: 'Today (habits, to-dos and cards for today)' }] : [{ id: 'todos', name: 'To do today' }]),
-    { id: 'habits', name: 'Habits' },
+    ...((await ctx.feature('habits')) ? [{ id: 'habits', name: 'Habits' }] : []),
     { id: 'plan-week', name: 'This week' },
     { id: 'neglected', name: 'Waiting for you' },
     ...lists.results.map((l) => ({ id: `list-${l.id}`, name: l.name, kind: l.kind, on_today: !!l.show_today })),

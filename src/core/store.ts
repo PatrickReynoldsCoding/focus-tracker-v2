@@ -399,13 +399,17 @@ export function kindOps(kind: string): Omit<KindAlias, 'name' | 'singular' | 'de
     if (e.internal) throw bad(`${kind} cannot be changed directly`);
     return e;
   };
+  // A kind that belongs to a feature refuses while the feature is off in the profile.
+  const on = async (ctx: Ctx) => {
+    if (e.feature) await (await import('./features')).requireFeature(ctx, e.feature);
+  };
   return {
-    list: (ctx, opts) => list(ctx, e, opts),
-    get: (ctx, id) => get(ctx, e, id),
-    create: (ctx, input, opts) => create(ctx, writable(), input, opts),
-    update: (ctx, id, input) => update(ctx, writable(), id, input),
-    remove: (ctx, id) => remove(ctx, writable(), id),
-    move: (ctx, id, target) => move(ctx, writable(), id, target),
+    list: async (ctx, opts) => (await on(ctx), list(ctx, e, opts)),
+    get: async (ctx, id) => (await on(ctx), get(ctx, e, id)),
+    create: async (ctx, input, opts) => (await on(ctx), create(ctx, writable(), input, opts)),
+    update: async (ctx, id, input) => (await on(ctx), update(ctx, writable(), id, input)),
+    remove: async (ctx, id) => (await on(ctx), remove(ctx, writable(), id)),
+    move: async (ctx, id, target) => (await on(ctx), move(ctx, writable(), id, target)),
   };
 }
 

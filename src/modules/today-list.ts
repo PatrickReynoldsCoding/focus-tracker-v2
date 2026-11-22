@@ -9,7 +9,7 @@ import { requireFeature } from '../core/features';
 import type { Module } from '../core/registry';
 import type { Row } from '../core/entity';
 import { buildTodayList, type TodayCardIn, type TodayList, type TodayTodoIn } from '../core/today-list';
-import { checkHabit, habitProgress, skipHabit } from './habits';
+import { checkHabit, HABITS_FLAG, habitProgressIfOn, skipHabit } from './habits';
 import { DONE_FLAG, tickCard } from './boards';
 import { tickTodo, todosForDay } from './todos';
 
@@ -83,7 +83,7 @@ export async function setNotToday(ctx: Ctx, kind: 'todo' | 'card', id: string, o
 /** Everything for today, in one list (GET /api/today/list, Claude's get_today_list, the menu bar). */
 export async function todayList(ctx: Ctx): Promise<TodayList> {
   const day = await ctx.today();
-  const [habits, todos, cards, names, hide] = await Promise.all([habitProgress(ctx, day), todosForDay(ctx, day), cardsForDay(ctx, day), todoListNames(ctx), notTodayKeys(ctx, day)]);
+  const [habits, todos, cards, names, hide] = await Promise.all([habitProgressIfOn(ctx, day), todosForDay(ctx, day), cardsForDay(ctx, day), todoListNames(ctx), notTodayKeys(ctx, day)]);
   return buildTodayList(day, { habits, todos: withListNames(todos, names), cards, hide });
 }
 
@@ -95,6 +95,7 @@ const KINDS = ['habit', 'todo', 'card'] as const;
 async function tickItem(ctx: Ctx, a: { kind: (typeof KINDS)[number]; id: string; done?: boolean; not_today?: boolean }) {
   const done = a.done !== false;
   if (a.kind === 'habit') {
+    await requireFeature(ctx, HABITS_FLAG);
     if (a.not_today !== undefined) await skipHabit(ctx, a.id, a.not_today);
     else await checkHabit(ctx, a.id, undefined, done ? 1 : -1);
   } else if (a.not_today !== undefined) {

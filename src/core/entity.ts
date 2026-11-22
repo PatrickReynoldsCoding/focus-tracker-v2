@@ -41,6 +41,8 @@ export interface Entity {
   filters?: string[];
   /** ORDER BY clause for lists. */
   sort?: string;
+  /** The generic routes and tools for this kind refuse (404) while this feature flag is off in the profile. */
+  feature?: string;
   /** Not editable through the generic endpoints (managed by a module). */
   internal?: boolean;
   /** Run before a row is written. May change `row` or throw ApiError. */

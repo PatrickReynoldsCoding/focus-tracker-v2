@@ -6,7 +6,8 @@ import type { Ctx } from '../core/ctx';
 import { bad } from '../core/errors';
 import type { Module } from '../core/registry';
 import { update } from '../core/store';
-import { checkHabit, skipHabit } from './habits';
+import { requireFeature } from '../core/features';
+import { checkHabit, HABITS_FLAG, skipHabit } from './habits';
 import { dismiss, notificationsEntity } from './notifications';
 import { nextPomodoroPeriod, pausePomodoro, resumePomodoro, startPomodoro, stopPomodoro } from './pomodoro';
 import { extendSession, nextPeriod, pauseSession, resumeSession, startSession, stopSession } from './sessions';
@@ -142,11 +143,15 @@ export async function swiftbarAction(ctx: Ctx, form: Record<string, string>) {
       return tickCard(ctx, id, true);
     case 'nottoday': {
       const [kind, itemId] = [id.slice(0, id.indexOf(':')), id.slice(id.indexOf(':') + 1)];
-      if (kind === 'habit') return skipHabit(ctx, itemId, true);
+      if (kind === 'habit') {
+        await requireFeature(ctx, HABITS_FLAG);
+        return skipHabit(ctx, itemId, true);
+      }
       if (kind === 'todo' || kind === 'card') return setNotToday(ctx, kind, itemId, true);
       throw bad(`Cannot put ${kind} off for today`);
     }
     case 'habit':
+      await requireFeature(ctx, HABITS_FLAG);
       return checkHabit(ctx, id);
     case 'dismiss':
       return dismiss(ctx, id);

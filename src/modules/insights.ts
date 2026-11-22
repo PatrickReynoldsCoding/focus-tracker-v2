@@ -17,7 +17,7 @@ import { requireFeature } from '../core/features';
 import type { Module } from '../core/registry';
 import { list } from '../core/store';
 import { formatLevel, levelFromRow, type Level } from '../core/habit-levels';
-import { awayForTargets, habitsEntity, levelHistory, levelOn, mondayOf, pauseIntervals, type LevelRow } from './habits';
+import { awayForTargets, HABITS_FLAG, habitsEntity, levelHistory, levelOn, mondayOf, pauseIntervals, type LevelRow } from './habits';
 
 export const INSIGHTS_FLAG = 'insights';
 /** A project not touched for this many days is "stale" (the page shows it in bold). */
@@ -132,6 +132,7 @@ interface HabitData {
 
 /** The habits (active and paused) with their level history, pauses and the done / plan / skip rows from `from`. */
 async function loadHabits(ctx: Ctx, from: string, to: string, today: string): Promise<HabitData> {
+  if (!(await ctx.feature(HABITS_FLAG))) return { habits: [] };
   const [habits, logs, meta, away] = await Promise.all([
     list(ctx, habitsEntity, { sql: "status IN ('active', 'paused')", limit: 500 }),
     ctx.db
@@ -373,14 +374,20 @@ export async function logLines(ctx: Ctx, q: { project?: string; from?: string; t
 
 // ---------- the module ----------
 
+/** Claude's habits view: refused while the Habits feature is off. */
+async function habitsView(ctx: Ctx, weeks: number) {
+  await requireFeature(ctx, HABITS_FLAG);
+  return habitsHistory(ctx, weeks);
+}
+
 export const insightsModule: Module = {
   id: 'insights',
   description: 'Insights: how the weeks went (focus time, habits against target, to-dos, projects). Read only.',
   features: [
     {
       id: INSIGHTS_FLAG,
-      label: 'Insights tab',
-      description: 'The Log tab becomes Insights: Week, Habits, Projects and Logs. Off: the plain Log list comes back.',
+      label: 'Insights',
+      description: 'The whole Insights feature: the Insights tab (Week, Habits, Projects and Logs), its way in from Settings, its routes and Claude’s insights tool. Off: all of that is hidden and refused, and the plain Log list comes back. Its Habits parts also need Habits.',
       default: true,
     },
   ],
@@ -391,7 +398,11 @@ export const insightsModule: Module = {
       return ctx;
     };
     api.get('/insights/week', async (c) => c.json(await weekSummary(await on(c))));
-    api.get('/insights/habits', async (c) => c.json(await habitsHistory(await on(c), clampWeeks(c.req.query('weeks'), 8))));
+    api.get('/insights/habits', async (c) => {
+      const ctx = await on(c);
+      await requireFeature(ctx, HABITS_FLAG);
+      return c.json(await habitsHistory(ctx, clampWeeks(c.req.query('weeks'), 8)));
+    });
     api.get('/insights/projects', async (c) => c.json(await projectsInsight(await on(c), clampWeeks(c.req.query('weeks'), 4))));
     api.get('/insights/logs', async (c) => {
       const ctx = await on(c);
@@ -410,7 +421,7 @@ export const insightsModule: Module = {
       feature: INSIGHTS_FLAG,
       input: z.object({ view: z.enum(['week', 'projects', 'habits']).default('week'), weeks: z.number().int().min(1).max(MAX_WEEKS).optional() }),
       run: (ctx, a) =>
-        a.view === 'projects' ? projectsInsight(ctx, clampWeeks(a.weeks, 4)) : a.view === 'habits' ? habitsHistory(ctx, clampWeeks(a.weeks, 8)) : weekSummary(ctx),
+        a.view === 'projects' ? projectsInsight(ctx, clampWeeks(a.weeks, 4)) : a.view === 'habits' ? habitsView(ctx, clampWeeks(a.weeks, 8)) : weekSummary(ctx),
     },
   ],
 };
