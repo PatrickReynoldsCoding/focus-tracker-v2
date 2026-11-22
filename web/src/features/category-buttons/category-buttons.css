@@ -1,7 +1,9 @@
 /* Strong variants of the category colours: white text on each reaches 4.5:1 in light and dark. */
-.cat-buttons {
+:root {
   --kb-red: #b83a2b; --kb-orange: #a35400; --kb-yellow: #7f6200; --kb-green: #2b7339; --kb-teal: #17726c;
   --kb-blue: #2f5fc0; --kb-purple: #7446ad; --kb-pink: #b0336f; --kb-grey: #55555a;
+}
+.cat-buttons {
   display: flex; gap: 8px; overflow-x: auto; padding: 4px 4px 10px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch;
 }
 .cat-btn {

@@ -1,0 +1,31 @@
+.mc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.mc-row { border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 8px; background: var(--surface); }
+.mc-head { display: flex; gap: 8px; align-items: center; }
+.mc-name { flex: 1; min-width: 0; }
+.mc-name input { width: 100%; }
+.mc-move { display: flex; gap: 4px; }
+.mc-preview { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.mc-sample { cursor: default; min-height: 40px; padding: 6px 14px; }
+.mc-text { font-weight: 700; }
+.mc-swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.mc-swatch { width: 40px; height: 40px; min-height: 40px; padding: 0; border-radius: 50%; border: 3px solid var(--line); background: var(--kb-grey); color: #fff; font-weight: 800; font-size: 1.1rem; display: inline-flex; align-items: center; justify-content: center; }
+.mc-swatch[data-color='red'] { background: var(--kb-red); } .mc-swatch[data-color='orange'] { background: var(--kb-orange); }
+.mc-swatch[data-color='yellow'] { background: var(--kb-yellow); } .mc-swatch[data-color='green'] { background: var(--kb-green); }
+.mc-swatch[data-color='teal'] { background: var(--kb-teal); } .mc-swatch[data-color='blue'] { background: var(--kb-blue); }
+.mc-swatch[data-color='purple'] { background: var(--kb-purple); } .mc-swatch[data-color='pink'] { background: var(--kb-pink); }
+.mc-swatch[data-color='grey'] { background: var(--kb-grey); }
+.mc-swatch.mc-none { background: var(--fg); color: var(--bg); }
+.mc-swatch.on { border-color: var(--fg); box-shadow: 0 0 0 2px var(--surface) inset; }
+.mc-custom { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.mc-custom input[type='color'] { width: 44px; min-height: 40px; padding: 2px; }
+.mc-hex { width: 7.5em; font-family: monospace; }
+.mc-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.mc-confirm p { margin: 0 0 8px; }
+.manage-categories-link { align-self: center; }
+
+/* E-ink: no colour to tell swatches apart, so the colour's name is written beside the preview; the chosen one is solid black with a tick. */
+html[data-theme='eink'] .mc-swatch, html[data-theme='eink'] .mc-swatch[data-color] { background: #fff; color: #000; border: 2px solid #000; }
+html[data-theme='eink'] .mc-swatch.on { background: #000; color: #fff; box-shadow: none; }
+html[data-theme='eink'] .mc-sample { background: #fff; color: #000; border: 2px solid #000; }
+.mc-last { margin: 0; }
+html[data-theme='eink'] .mc-swatch[data-color]:not(.on)::after { content: attr(data-abbr); font-size: 0.8rem; font-weight: 700; }

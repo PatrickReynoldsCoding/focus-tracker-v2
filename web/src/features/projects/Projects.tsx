@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks';
 import { change, del, localStorageSet, post } from '../../core/api';
 import { useFlag } from '../../core/features';
 import { CategoryButtons, FLAG as CAT_BUTTONS, loadChoice, NONE, saveChoice } from '../category-buttons/CategoryButtons';
+import { ManageCategories } from '../category-buttons/ManageCategories';
 import { Panels, type ProjectsPanelProps } from '../../core/registry';
 import { AddInput, daysAgo, go, Linkify, Loading, todayLocal, useData } from '../../core/ui';
 
@@ -22,7 +23,8 @@ function loadPrefs(): { status: string[]; sort: SortKey; dir: 1 | -1 } {
 
 export function Projects() {
   const { data: projects, error } = useData<Project[]>('/projects?limit=2000');
-  const { data: cats } = useData<Category[]>('/categories');
+  const { data: cats, setData: setCats } = useData<Category[]>('/categories');
+  const [managing, setManaging] = useState(false);
   const { data: backlog } = useData<Backlog[]>('/backlog');
   const [prefs, setPrefsState] = useState(loadPrefs);
   const [q, setQ] = useState('');
@@ -89,6 +91,14 @@ export function Projects() {
       {buttons && cats && (
         <CategoryButtons cats={cats} counts={counts} noneCount={inView.filter((p) => !p.category_id).length} total={inView.length} value={cat} onPick={pickCat} />
       )}
+      {cats && (
+        <div class="manage-categories-link">
+          <button type="button" class="ghost small" onClick={() => setManaging(true)}>
+            Manage categories…
+          </button>
+        </div>
+      )}
+      {managing && cats && <ManageCategories cats={cats} setCats={setCats} onClose={() => setManaging(false)} />}
       <AddInput
         placeholder="New project"
         onAdd={async (name) => {

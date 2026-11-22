@@ -6,7 +6,7 @@ import './category-buttons.css';
 
 export const FLAG = 'category-buttons';
 export const NONE = '__none';
-type Cat = { id: string; label: string; color: string | null };
+export type Cat = { id: string; label: string; color: string | null };
 
 const key = () => `ft.category-button.${mode.value}`;
 export const loadChoice = (): string => {
@@ -19,13 +19,16 @@ export const loadChoice = (): string => {
 export const saveChoice = (v: string) => localStorageSet(key(), v);
 
 /** White or black text for a #rrggbb colour. */
-function inkFor(hex: string): string {
+export function inkFor(hex: string): string {
   const n = parseInt(hex.slice(1), 16);
   const lin = (c: number) => ((c /= 255) <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
   const l = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
   return l > 0.4 ? '#000' : '#fff';
 }
-const HEX = /^#[0-9a-f]{6}$/i;
+export const HEX = /^#[0-9a-f]{6}$/i;
+
+/** The strong button colours (category-buttons.css), in the order the colour picker shows them. */
+export const PALETTE = ['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'grey'];
 
 export function CategoryButtons({ cats, counts, noneCount, total, value, onPick }: { cats: Cat[]; counts: Record<string, number>; noneCount: number; total: number; value: string; onPick: (id: string) => void }) {
   // A category with no projects in the list is hidden, except the chosen one (so it can be cleared).
