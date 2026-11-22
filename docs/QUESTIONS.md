@@ -104,3 +104,13 @@ Questions the owner could not be asked while an item was built. Each gives the d
 5. Undo history was cleared by the migration (14 days of steps), because older steps named the old to-dos table. Default: cleared once.
 6. Deleting a to-do's group deletes the open to-dos in it (as deleting a board column always did); done ones stay in Done and go back to the first group when unticked. Default: as now. Should deleting a group move its to-dos to another group instead?
 7. A to-do *about* a project (old `todos.project_id`, now `tasks.about_project_id`) is kept but is not on that project's board. Production has none. Default: kept for the old API. Drop it in stage 2?
+
+## 0.35.0 (one to-do screen with Board and List views, stage 2)
+
+1. The view (Board or List) is remembered per board on each device, not on the server. Default: per device (a phone can keep List, a computer Board). Should it follow you across devices?
+2. A to-do's Hide done is per device and folded by default; a project's stays on the server. Default: as now. Should a to-do's be saved on the server too (needs a column)?
+3. A project opens in Board view and a to-do in List view until switched, on a phone too. Default: as now. Should a project open in List view on a phone?
+4. The "Stack columns" toggle of the old board is gone (List view replaces it). Default: gone.
+5. A plain list has no switch and keeps its board look. Default: as now. Should a plain list have a List view too (without ticks)?
+6. The small version of a to-do on Today cannot be dragged (a long press arranges the panel). Default: as now; drag on the to-do's page.
+7. The old to-do page's date box on each row is gone: a to-do's day is set in its dialog (Today, Tomorrow or a date) and shows as a tag. Default: as now.
