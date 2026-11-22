@@ -625,3 +625,20 @@ Code: web `features/settings/Settings.tsx` (`Settings`, `SectionRow`, `usePhone`
 - Browser checks that needed every section on a phone now open `#/settings/all`.
 
 Why: one long page with a chip row was tiring on a phone.
+
+
+## D61. Colour themes: eight, a swatch picker, follow my phone, a theme per profile (owner, 2026-11-22: mockup docs/mockups/themes.html, all 8 and option A)
+
+Code: web `themes/` (one small file per theme; `define.ts`, `index.ts`), `core/theme.ts`, `features/theme/` (`index.tsx` Appearance, `profile-theme.tsx`), `features/profiles/ManageProfiles.tsx`, `index.html` (early script); server `modes.theme` (migration 0028), `src/modules/profiles.ts`; tests `test/themes.test.ts` (contrast), `test/profile-theme.test.ts`, browser check `scripts/ui/themes.mjs`.
+
+- **Themes**: Midnight (the old dark), Paper (the old light), Forest, Ocean, Sunset, Berry, Sand, Slate. A theme is a set of CSS variables (the tokens of styles.css) built by `defineTheme` from six colours. Adding one is one file in `web/src/themes/` (copy `sand.ts`): it is found by itself and shows in Appearance and Manage profiles.
+- **Picking**: Settings → Appearance has a swatch per theme (tap to apply at once; that turns "follow my phone" off), a "Follow my phone: light theme by day, dark by night" tickbox with a Light and a Dark theme choice (defaults Paper and Midnight; a new device starts with it on, as "Same as computer" was), and E-ink as its own switch that wins over every theme and is unchanged (eink.css). These stay per device (localStorage), as D35 had them.
+- **Order on screen**: E-ink switch, then the open profile's own theme, then follow my phone, then the device's theme.
+- **Per profile (option A)**: Manage profiles has a Theme drop-down on each profile, default "Same as app". Stored in `modes.theme` (migration 0028, additive); Claude's `update_profile` takes `theme`. Switching profile changes the look at once; a copy per profile is kept on the device, so a reload paints the right theme (see no flash below).
+- **No flash**: every theme's rule is saved in localStorage (`ft.tcss.<id>`); the small script in index.html picks the theme (same order) and injects the rule before the first paint. `data-theme` is the theme id and `data-kind` is `light` or `dark` (the editor's paper styles use it).
+- **Profile colour**: Midnight and Paper still use the open profile's colour as the accent, as before; the other six use their own accent (a profile colour would hide the theme).
+- **Contrast**: `test/themes.test.ts` checks every theme: text 7:1 on the page, panels and tints; muted, accent and danger text 4.5:1 (AA); button text on accent 4.5:1. Fixes made to get there: Sand's muted and accent darker than the mockup, Slate's muted lighter, Paper's muted and warm slightly darker.
+- **Browser bar**: `<meta name="theme-color">` follows the theme. The Android app's status bar is a fixed native colour (not changed).
+- Summary in Settings: "Forest · follows phone off".
+
+Why: more looks, and a quick sign of which profile is open.

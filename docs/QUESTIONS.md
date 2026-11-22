@@ -306,3 +306,10 @@ My suggestion: 1.
 2. Desktop keeps the sidebar. Options: (a) keep (now); (b) use the same drill-down on desktop too. My suggestion: (a).
 3. Sections without a computed summary show a fixed line (for example "Work and break lengths"). Options: (a) fixed lines (now); (b) compute every one. My suggestion: (a); say which ones you want live.
 4. The phone's in-app "← Back" button and the ‹ both show inside a section. Options: (a) both (now); (b) hide the app Back inside Settings sections. My suggestion: (a).
+
+## Colour themes (D61)
+1. "Applies to: This profile / All profiles" is not used for the app theme: the theme is per device (as before) and the profile's own theme is set in Manage profiles. Options: (a) as now; (b) make the app theme a setting for this profile or all profiles, synced between devices. My suggestion: (a); say if you want your phone and computer to share one.
+2. A profile's own theme beats "follow my phone" on that profile. Options: (a) beats (now); (b) follow my phone wins. My suggestion: (a).
+3. Midnight and Paper keep the profile colour as accent; the six new themes use their own. Options: (a) now; (b) always tint with the profile colour. My suggestion: (a).
+4. The Android app's status bar stays the fixed colour. Options: (a) leave; (b) set it from the theme in the app (needs an APK). My suggestion: (a) until you notice it.
+5. A new device starts with "follow my phone" on (Paper by day, Midnight by night). Options: (a) on (now); (b) off with Paper. My suggestion: (a).
