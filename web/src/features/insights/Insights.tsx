@@ -1,4 +1,5 @@
 // The Insights page: four sub-tabs. Loaded on demand (index.tsx), so the charts stay out of the main bundle.
+import { useFlag } from '../../core/features';
 import { ChartDefs } from './charts';
 import { HabitsTab } from './HabitsTab';
 import { LogsTab } from './LogsTab';
@@ -16,8 +17,11 @@ const SUBS = [
 type Sub = (typeof SUBS)[number][0];
 
 export function Insights({ open }: { open?: Sub }) {
+  const habitsOn = useFlag('habits');
+  const subs = SUBS.filter(([id]) => habitsOn || id !== 'habits');
   const [saved, setSub] = usePref<Sub>('sub', SUBS.map((s) => s[0]), 'week');
-  const sub = open ?? saved;
+  const wanted = open ?? saved;
+  const sub = subs.some(([id]) => id === wanted) ? wanted : 'week';
   return (
     <div class="stack insights">
       <ChartDefs />
@@ -25,7 +29,7 @@ export function Insights({ open }: { open?: Sub }) {
         <h1>Insights</h1>
       </div>
       <div class="subtabs" role="tablist" aria-label="Insights">
-        {SUBS.map(([id, label]) => (
+        {subs.map(([id, label]) => (
           <button key={id} role="tab" id={`ins-tab-${id}`} aria-selected={sub === id} aria-controls="ins-panel" class={sub === id ? 'on' : ''} onClick={() => setSub(id)}>
             {label}
           </button>

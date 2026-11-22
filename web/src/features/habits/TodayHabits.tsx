@@ -62,6 +62,7 @@ function HabitsSmall({ data, setData }: { data: TodayData; setData: (fn: (d: Tod
 
 registerPanel('today', {
   id: 'habits',
+  feature: 'habits',
   icon: '◎',
   title: 'Habits',
   description: 'Each habit with its sessions this week; tap to check in.',

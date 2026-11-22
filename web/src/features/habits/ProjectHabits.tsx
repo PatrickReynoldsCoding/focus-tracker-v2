@@ -32,6 +32,7 @@ function ProjectHabits({ projectId }: { projectId: string }) {
 
 registerPanel('project', {
   id: 'habits',
+  feature: 'habits',
   icon: '◎',
   title: 'Habits',
   description: 'The habits linked to this project, with check-in.',

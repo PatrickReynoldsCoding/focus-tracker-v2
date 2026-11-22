@@ -1,3 +1,4 @@
+import { useFlag } from '../../core/features';
 import { fmtMinutes, Loading } from '../../core/ui';
 import { DayBars, rangeLabel, TargetBar } from './charts';
 import { usePref, useInsights } from './prefs';
@@ -37,6 +38,7 @@ function habitNote(h: WeekSummary['habits'][number]): string {
 }
 
 export function Week() {
+  const habitsOn = useFlag('habits');
   const { data, error } = useInsights<WeekData>('/insights/week');
   const [which, setWhich] = usePref<'this' | 'last'>('week', WHICH, 'this');
   if (!data) return <Loading error={error} />;
@@ -61,7 +63,7 @@ export function Week() {
       <div class="ins-tiles">
         <Tile label="Focus sessions" value={String(w.focus.sessions)} other={String(o.focus.sessions)} otherLabel={otherLabel} />
         <Tile label="Focus time" value={fmtMinutes(w.focus.minutes)} other={fmtMinutes(o.focus.minutes)} otherLabel={otherLabel} />
-        <Tile label="Habit sessions" value={habitsText(w)} other={habitsText(o)} otherLabel={otherLabel} />
+        {habitsOn && <Tile label="Habit sessions" value={habitsText(w)} other={habitsText(o)} otherLabel={otherLabel} />}
         <Tile label="To-dos done" value={String(w.todos.done)} other={String(o.todos.done)} otherLabel={otherLabel} />
       </div>
 
@@ -72,6 +74,7 @@ export function Week() {
         {w.skips > 0 && <p class="muted small">Focus was swapped away from a project {plural(w.skips, 'time')} this week.</p>}
       </section>
 
+      {habitsOn && (
       <section class="card">
         <h2>Habits against target</h2>
         {w.habits.length === 0 ? (
@@ -94,6 +97,7 @@ export function Week() {
           <i class="sw solid" /> Done <i class="sw hatch" /> Extra above the target <i class="sw tick" /> Target
         </p>
       </section>
+      )}
       </div>
 
       <section class="card">

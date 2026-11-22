@@ -3,6 +3,7 @@
 // To-dos move by dragging (mouse) or with Move, then "Put here" on a day (any screen).
 import { useEffect, useState } from 'preact/hooks';
 import { localStorageSet } from '../../core/api';
+import { useFlag } from '../../core/features';
 import { AddInput, go, Linkify, Loading, useData } from '../../core/ui';
 import { addTodo, moveTodo, planSession, setLead, type SetPlan } from './actions';
 import type { Plan, PlanDay, PlanHabit, Todo } from './types';
@@ -34,6 +35,8 @@ function plannedText(h: PlanHabit) {
 }
 
 function HabitPicker({ plan, pick, setPick }: { plan: Plan; pick: string | null; setPick: (id: string) => void }) {
+  const habitsOn = useFlag('habits');
+  if (!habitsOn) return null;
   if (!plan.habits.length)
     return (
       <section class="card plan-picker">

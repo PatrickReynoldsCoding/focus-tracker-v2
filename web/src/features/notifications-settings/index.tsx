@@ -4,6 +4,7 @@
 
 import './notifications-settings.css';
 import { optimistic, put } from '../../core/api';
+import { useFlag } from '../../core/features';
 import { registerPanel } from '../../core/registry';
 import { Loading, useData } from '../../core/ui';
 
@@ -29,6 +30,7 @@ const KINDS: [keyof Pick<Prefs, 'reminders' | 'habits' | 'nudge' | 'session'>, s
 ];
 
 function Notifications() {
+  const habitsOn = useFlag('habits');
   const { data, setData } = useData<Prefs>('/notification-settings');
   if (!data) return <Loading />;
   // Show the change at once, send it, and put it back with a message if the server refuses.
@@ -58,7 +60,7 @@ function Notifications() {
       <div class={`stack ns-body ${off ? 'ns-off' : ''}`} aria-disabled={off}>
         <fieldset disabled={off}>
           <legend>What to be told about</legend>
-          {KINDS.map(([key, label, hint]) => (
+          {KINDS.filter(([key]) => key !== 'habits' || habitsOn).map(([key, label, hint]) => (
             <label key={key} class="inline ns-kind">
               <input type="checkbox" checked={data[key]} onChange={(e) => save({ [key]: (e.target as HTMLInputElement).checked }, (p) => ({ ...p, [key]: (e.target as HTMLInputElement).checked }))} />
               <span>

@@ -134,4 +134,4 @@ export function Habits() {
   );
 }
 
-registerTab({ id: 'habits', path: '/habits', label: 'Habits', icon: '✓', order: 40, phone: true, render: () => <Habits /> });
+registerTab({ id: 'habits', path: '/habits', label: 'Habits', icon: '✓', order: 40, phone: true, feature: 'habits', render: () => <Habits /> });
