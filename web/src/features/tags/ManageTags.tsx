@@ -4,12 +4,12 @@ import { useState } from 'preact/hooks';
 import { del, newId, optimistic, patch, post } from '../../core/api';
 import { AddInput, ColorPicker, Dialog } from '../../core/ui';
 import { TagChip } from './Chips';
-import { byName, cleanName, patchTags, sameName, useTags, type Tag } from './store';
+import { byName, cleanName, patchTags, sameName, useOwnTags, type Tag } from './store';
 
 const files = (n: number) => `${n} file${n === 1 ? '' : 's'}`;
 
 export function ManageTags({ onClose }: { onClose: () => void }) {
-  const tags = useTags();
+  const tags = useOwnTags();
   const [open, setOpen] = useState<string | null>(null);
   const make = (raw: string) => {
     const name = cleanName(raw);

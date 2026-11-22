@@ -6,8 +6,10 @@ import * as offline from '../../core/offline';
 import { signal, useSignal } from '../../core/signal';
 
 export const FLAG = 'tags';
-export type Tag = { id: string; name: string; color: string | null; count: number };
-export type TagOnFile = { id: string; name: string; color: string | null };
+/** A tag of the profile; `auto`: a project's automatic tag (D53: id project:<id>, the project's
+ *  name, read only; its count is not worked out). */
+export type Tag = { id: string; name: string; color: string | null; count: number; auto?: true; project_id?: string; status?: string };
+export type TagOnFile = { id: string; name: string; color: string | null; auto?: true; project_id?: string };
 const PATH = '/tags';
 
 const tags = signal<{ mode: string; list: Tag[] } | null>(null);
@@ -39,6 +41,12 @@ export function useTags(): Tag[] | undefined {
   const t = useSignal(tags);
   useEffect(() => load(m, v), [m, v]);
   return t?.mode === m ? t.list : undefined;
+}
+
+/** The profile's own tags (not the projects' automatic ones). */
+export function useOwnTags(): Tag[] | undefined {
+  const all = useTags();
+  return all?.filter((t) => !t.auto);
 }
 
 /** Show a change to the list at once (before the server's answer reloads it). */

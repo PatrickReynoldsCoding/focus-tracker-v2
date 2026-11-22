@@ -7,12 +7,12 @@ import type { FileRef } from '../../core/registry';
 import { Dialog } from '../../core/ui';
 import { TagChip } from './Chips';
 import { ManageTags } from './ManageTags';
-import { byName, cleanName, patchTags, sameName, useTags, type TagOnFile } from './store';
+import { byName, cleanName, patchTags, sameName, useOwnTags, type TagOnFile } from './store';
 
 const SUGGEST = 10;
 
 export function TagEditor({ file, initial, onChange, onClose }: { file: FileRef; initial?: TagOnFile[]; onChange?: (tags: TagOnFile[]) => void; onClose: () => void }) {
-  const all = useTags();
+  const all = useOwnTags();
   const [tags, setTags] = useState<TagOnFile[] | null>(initial ?? null);
   const [text, setText] = useState('');
   const [managing, setManaging] = useState(false);
@@ -22,7 +22,8 @@ export function TagEditor({ file, initial, onChange, onClose }: { file: FileRef;
   }, [file.type, file.id]);
 
   const show = (next: TagOnFile[]) => {
-    const sorted = [...next].sort(byName);
+    // The project's automatic tag first (D53), then the file's own by name.
+    const sorted = [...next].sort((a, b) => (a.auto ? 0 : 1) - (b.auto ? 0 : 1) || byName(a, b));
     setTags(sorted);
     onChange?.(sorted);
   };
@@ -44,7 +45,7 @@ export function TagEditor({ file, initial, onChange, onClose }: { file: FileRef;
     send({ add: [known?.id ?? name] }, before);
   };
   const removeTag = (t: TagOnFile) => {
-    if (!tags) return;
+    if (!tags || t.auto) return;
     const before = tags;
     show(tags.filter((x) => x.id !== t.id));
     send({ remove: [t.id.startsWith('new:') ? t.name : t.id] }, before);
@@ -67,6 +68,7 @@ export function TagEditor({ file, initial, onChange, onClose }: { file: FileRef;
             {tags.length ? tags.map((t) => <TagChip key={t.id} tag={t} onRemove={() => removeTag(t)} />) : <span class="muted small">No tags yet.</span>}
           </div>
         )}
+        {tags?.some((t) => t.auto) && <p class="muted small tag-auto-note">● {tags.find((t) => t.auto)!.name} is the project’s tag: every file of the project has it, and it follows the project’s name.</p>}
         <form
           class="tag-editor-add"
           onSubmit={(e) => {

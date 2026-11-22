@@ -9,7 +9,7 @@ import { TagFilter } from './Filter';
 import { TagsHeader } from './Header';
 import { ManageTags } from './ManageTags';
 import { TagEditor } from './TagEditor';
-import { FLAG, useTags } from './store';
+import { FLAG, useOwnTags } from './store';
 import './tags.css';
 
 registerFileAddon({
@@ -27,12 +27,12 @@ registerFileAddon({
 });
 
 function TagsSettings() {
-  const tags = useTags();
+  const tags = useOwnTags();
   const [open, setOpen] = useState(false);
   return (
     <section class="card">
       <h2>Tags</h2>
-      <p class="muted small">Free labels on notes, lists, whiteboards and links, to filter Files by. This profile has {tags ? tags.length : '…'} tag{tags?.length === 1 ? '' : 's'}.</p>
+      <p class="muted small">Free labels on notes, lists, whiteboards and links, to filter Files by. This profile has {tags ? tags.length : '…'} tag{tags?.length === 1 ? '' : 's'}. Every file of a project also has the project’s own tag (● name), made and kept for you.</p>
       <div class="row">
         <button onClick={() => setOpen(true)}>Manage tags…</button>
       </div>

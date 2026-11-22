@@ -81,3 +81,12 @@ html[data-theme='eink'] :is(.tag-chip, .tag-suggestion, .tag-filter-chip)[data-p
 html[data-theme='eink'] .tag-filter-chip.on { outline: 3px solid #000; text-decoration: underline; }
 html[data-theme='eink'] .manage-tags-list { border: 2px solid #000; }
 html[data-theme='eink'] .manage-tag + .manage-tag { border-top: 2px solid #000; }
+
+/* A project's automatic tag (D53): a dot instead of #, a dashed outline, a lock where tags are edited. */
+.tag-chip.tag-auto, .tag-filter-chip.tag-auto { border-style: dashed; border-color: var(--muted); }
+.tag-filter-chip.tag-auto.on { border-style: solid; }
+.tag-auto-dot { color: var(--muted); font-size: 0.8em; }
+.tag-chip-lock { font-size: 0.75em; margin-left: 3px; opacity: 0.8; }
+.tag-auto-note { margin: 0; }
+html[data-theme='eink'] .tag-chip.tag-auto, html[data-theme='eink'] .tag-filter-chip.tag-auto { border: 2px dashed #000; }
+html[data-theme='eink'] .tag-auto-dot { color: #000; }
