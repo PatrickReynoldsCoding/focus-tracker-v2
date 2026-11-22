@@ -47,6 +47,8 @@ export interface Module {
   fileAddons?: import('./files').FileAddon[];
   /** Feature flags this module reads (src/core/features.ts). */
   features?: import('./features').Feature[];
+  /** Settings the owner can set for one profile or for every profile (src/core/setting-scope.ts, D46). */
+  scopedSettings?: import('./setting-scope').ScopedSetting[] | (() => import('./setting-scope').ScopedSetting[]);
   /** Old kinds kept for clients that still use them, stored as rows of another entity (D40: todos are cards). */
   aliases?: KindAlias[];
 }
