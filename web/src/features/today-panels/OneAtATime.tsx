@@ -1,7 +1,7 @@
 // "One at a time": a random item of a list as a quote card in the list's colour, its note under
 // it. Moves on every N seconds, shuffled so nothing repeats until all were shown; ‹ › to skip.
 
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { useEink } from '../../core/theme';
 import { ProjectLabel } from '../../core/registry';
 import { Markdown } from '../../core/ui';
@@ -63,6 +63,30 @@ export function OneAtATime({ list, setList, items, onRemove }: { list: ListSetti
     return () => clearInterval(t);
   }, [seconds, tick, ids, eink]);
   const item = items.find((i) => i.id === order[at]);
+  const body = useRef<HTMLDivElement>(null);
+  const text = useRef<HTMLDivElement>(null);
+  useFit(body, text, item?.id, item?.title, item?.note);
+  const swipe = useRef<{ x: number; y: number } | null>(null);
+  const onDown = (e: PointerEvent) => {
+    swipe.current = { x: e.clientX, y: e.clientY };
+  };
+  const onUp = (e: PointerEvent) => {
+    const s = swipe.current;
+    swipe.current = null;
+    if (!s || order.length < 2) return;
+    const dx = e.clientX - s.x;
+    const dy = e.clientY - s.y;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) return go(dx < 0 ? 1 : -1);
+    if (Math.abs(dx) > 10 || Math.abs(dy) > 10 || (e.target as HTMLElement).closest('a, button')) return;
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    go(e.clientX - r.left < r.width / 2 ? -1 : 1);
+  };
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === 'ArrowLeft') go(-1);
+    else if (e.key === 'ArrowRight') go(1);
+    else return;
+    e.preventDefault();
+  };
   return (
     <section class="card tp-quote" style={{ '--rot-c': color ? `var(--c-${color})` : 'var(--accent)' }}>
       <div class="card-head">
@@ -80,25 +104,82 @@ export function OneAtATime({ list, setList, items, onRemove }: { list: ListSetti
         </span>
       </div>
       {item ? (
-        <div class="tp-quote-body" key={item.id} aria-live="polite">
-          <blockquote>
-            <span class="rq">{item.title}</span>
-          </blockquote>
-          {item.note && <Markdown text={item.note} class="tp-quote-note" />}
+        <div
+          class="tp-quote-body"
+          ref={body}
+          tabIndex={order.length > 1 ? 0 : undefined}
+          role="group"
+          aria-roledescription="carousel"
+          aria-label={`${name}: swipe, tap the left or right side, or use the arrow keys`}
+          onPointerDown={onDown}
+          onPointerUp={onUp}
+          onPointerCancel={() => (swipe.current = null)}
+          onKeyDown={onKey}
+        >
+          <div class="tp-quote-fit" ref={text} key={item.id} aria-live="polite">
+            <blockquote>
+              <span class="rq">{item.title}</span>
+            </blockquote>
+            {item.note && <Markdown text={item.note} class="tp-quote-note" />}
+          </div>
         </div>
       ) : (
         <p class="muted">Nothing on this list yet.</p>
       )}
       {order.length > 1 && (
-        <div class="tp-quote-nav">
-          <button class="icon" aria-label="Previous item" onClick={() => go(-1)}>
-            ‹
-          </button>
-          <button class="icon" aria-label="Next item" onClick={() => go(1)}>
-            ›
-          </button>
+        <div class="tp-quote-foot">
+          <button class="sr-nav" aria-label="Previous item" onClick={() => go(-1)} />
+          <span class="tp-dots" aria-hidden="true">
+            {dotsFor(at, order.length).map((d) => (
+              <i key={d.i} class={d.i === at ? 'on' : d.edge ? 'edge' : ''} />
+            ))}
+          </span>
+          <button class="sr-nav" aria-label="Next item" onClick={() => go(1)} />
         </div>
       )}
     </section>
   );
+}
+
+const MAX_DOTS = 9;
+
+/** The dots to draw: all of them, or a window of nine around the current one (the ends smaller). */
+export function dotsFor(at: number, n: number): { i: number; edge: boolean }[] {
+  if (n <= MAX_DOTS) return Array.from({ length: n }, (_, i) => ({ i, edge: false }));
+  const from = Math.max(0, Math.min(n - MAX_DOTS, at - Math.floor(MAX_DOTS / 2)));
+  return Array.from({ length: MAX_DOTS }, (_, k) => {
+    const i = from + k;
+    return { i, edge: (k === 0 && from > 0) || (k === MAX_DOTS - 1 && from + MAX_DOTS < n) };
+  });
+}
+
+const MIN_SIZE = 13;
+const MAX_SIZE = 72;
+
+/** Sizes the quote so the text fills its box: big for a short one, smaller for a long one. */
+function useFit(box: { current: HTMLDivElement | null }, text: { current: HTMLDivElement | null }, ...deps: unknown[]) {
+  useLayoutEffect(() => {
+    const b = box.current;
+    const t = text.current;
+    if (!b || !t) return;
+    const fit = () => {
+      const w = b.clientWidth;
+      const h = b.clientHeight;
+      if (!w || !h) return;
+      let lo = MIN_SIZE;
+      let hi = MAX_SIZE;
+      while (hi - lo > 0.5) {
+        const mid = (lo + hi) / 2;
+        t.style.setProperty('--q', `${mid}px`);
+        if (t.scrollHeight <= h && t.scrollWidth <= w) lo = mid;
+        else hi = mid;
+      }
+      t.style.setProperty('--q', `${lo}px`);
+    };
+    fit();
+    if (document.fonts?.ready) document.fonts.ready.then(fit);
+    const ro = new ResizeObserver(fit);
+    ro.observe(b);
+    return () => ro.disconnect();
+  }, deps);
 }

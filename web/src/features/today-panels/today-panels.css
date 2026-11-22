@@ -11,21 +11,33 @@
 .tp-items li:last-child { border-bottom: 0; }
 .tp-add { display: flex; align-items: start; }
 
-/* One at a time: v1's quote card in the list's colour (the accent when it has none). */
-.tp-quote { --rot-c: var(--accent); border-color: color-mix(in srgb, var(--rot-c) 55%, var(--line));
-  background: radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--rot-c) 26%, var(--surface)) 0%, var(--surface) 70%); }
-.tp-quote .card-head h2 { color: color-mix(in srgb, var(--rot-c) 75%, var(--fg)); }
-.tp-quote .pos { font-family: ui-monospace, monospace; font-size: 12px; color: var(--muted); }
-.tp-quote-body { text-align: center; margin: 16px 6px 12px; min-height: 4em; display: flex; flex-direction: column; justify-content: center; gap: 10px; animation: tp-fade 0.35s ease; }
+/* One at a time ("Keep in mind", D59): Lora italic on a frosted-glass card, the text sized to fill it. */
+@font-face { font-family: 'Lora'; font-style: italic; font-weight: 500; font-display: swap; src: url('./fonts/lora-latin-500-italic.woff2') format('woff2'); }
+.card.tp-quote { --rot-c: var(--accent); position: relative; overflow: hidden;
+  border-color: color-mix(in srgb, var(--fg) 12%, transparent);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 16%, transparent), color-mix(in srgb, var(--fg) 4%, transparent)), var(--surface);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+.tp-quote .card-head h2 { color: var(--muted); font-size: 13px; font-weight: 600; }
+.tp-quote .card-head h2 .list-title { color: var(--muted); }
+.tp-quote .card-head h2 .list-title::first-letter { color: var(--rot-c); }
+.tp-quote .pos { font-family: ui-monospace, monospace; font-size: 11px; color: var(--muted); }
+.tp-quote-body { flex: 1 1 0; min-height: 8.5rem; min-width: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; text-align: center;
+  touch-action: pan-y; user-select: none; -webkit-user-select: none; cursor: pointer; border-radius: 10px; }
+.tp-quote-body:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tp-quote-fit { --q: 22px; width: 100%; display: flex; flex-direction: column; gap: 0.5em; animation: tp-fade 0.35s ease; }
 @keyframes tp-fade { from { opacity: 0; } to { opacity: 1; } }
-.tp-quote blockquote { margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: clamp(20px, 2.2vw, 25px); line-height: 1.25; overflow-wrap: anywhere; font-weight: 400; }
+.tp-quote blockquote { margin: 0; font-family: 'Lora', Georgia, 'Times New Roman', serif; font-style: italic; font-weight: 500; font-size: var(--q); line-height: 1.25; overflow-wrap: anywhere; }
 .tp-quote blockquote::before, .tp-quote blockquote::after { content: none; }
-.tp-quote blockquote .rq::before, .tp-quote blockquote .rq::after { color: var(--rot-c); font-size: 1.5em; line-height: 0; position: relative; top: 0.22em; }
-.tp-quote blockquote .rq::before { content: '\201C'; margin-right: 4px; }
-.tp-quote blockquote .rq::after { content: '\201D'; margin-left: 4px; }
-.tp-quote-note { font-size: 14.5px; line-height: 1.5; color: var(--muted); max-width: 52ch; margin: 0 auto; overflow-wrap: anywhere; }
-.tp-quote-nav { display: inline-flex; gap: 4px; }
-.tp-quote-nav button { border: 1px solid color-mix(in srgb, var(--rot-c) 55%, var(--line)); background: transparent; color: inherit; width: 30px; min-width: 30px; height: 30px; min-height: 30px; border-radius: 8px; font-size: 16px; }
+.tp-quote-note { font-size: max(12px, calc(var(--q) * 0.55)); line-height: 1.4; color: var(--muted); max-width: 52ch; margin: 0 auto; overflow-wrap: anywhere; }
+.tp-quote-foot { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 18px; }
+.tp-dots { display: inline-flex; gap: 6px; align-items: center; }
+.tp-dots i { width: 6px; height: 6px; border-radius: 50%; background: color-mix(in srgb, var(--fg) 22%, transparent); }
+.tp-dots i.edge { width: 4px; height: 4px; }
+.tp-dots i.on { background: var(--rot-c); width: 16px; border-radius: 3px; }
+.sr-nav { opacity: 0; width: 24px; min-width: 24px; height: 24px; min-height: 24px; padding: 0; border: 0; background: transparent; color: var(--fg); border-radius: 50%; }
+.sr-nav:first-child::after { content: '‹'; }
+.sr-nav:last-child::after { content: '›'; }
+.sr-nav:focus-visible { opacity: 1; outline: 2px solid var(--accent); }
 .list-title { background: none; border: 0; padding: 0; font: inherit; color: var(--fg); text-align: left; cursor: pointer; min-height: 0; }
 .list-title:hover { text-decoration: underline; text-underline-offset: 3px; }
 .seg-radio { display: flex; flex-direction: column; gap: 6px; }

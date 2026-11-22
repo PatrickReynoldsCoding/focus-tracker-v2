@@ -82,7 +82,7 @@ html[data-theme='eink'] .ed-tick { font-weight: 800; }
 
 /* ---------- 44 px tap targets ---------- */
 html[data-theme='eink'] :is(button, input:not([type='checkbox'], [type='radio'], [type='range'], [type='color']), select, .chip, .subtabs button, .seg button, .link-btn, .link-open, button.small, button.link, .ed-tb, .ed-item, .res-row button.small, .day-pick, .strip-day, .tabs a, .tabs .more-tab, .side a, .more-sheet a, .sticky-btn, .wb-bar button) { min-height: 44px; }
-html[data-theme='eink'] :is(button.icon, button.icon.small, .dot-minus, .dot-add, .ed-tb, .sticky-btn, .wb-back, .tp-quote-nav button) { min-width: 44px; }
+html[data-theme='eink'] :is(button.icon, button.icon.small, .dot-minus, .dot-add, .ed-tb, .sticky-btn, .wb-back, .sr-nav) { min-width: 44px; }
 html[data-theme='eink'] :is(.swatch, .sticky-dot) { width: 44px; height: 44px; min-height: 44px; }
 html[data-theme='eink'] .swatches { gap: 8px; }
 html[data-theme='eink'] .sticky-swatches { grid-template-columns: repeat(4, 1fr); }
@@ -209,7 +209,10 @@ html[data-theme='eink'] .ed-grip { background: #fff; border: 2px solid #000; }
 html[data-theme='eink'] .ed-grip:hover, html[data-theme='eink'] .ed-grip:focus-visible { background-color: #fff; }
 
 /* ---------- small things ---------- */
-html[data-theme='eink'] .tp-quote blockquote { font-weight: 700; }
+html[data-theme='eink'] .card.tp-quote { background: #fff; backdrop-filter: none; -webkit-backdrop-filter: none; border-color: #000; }
+html[data-theme='eink'] .tp-quote blockquote { font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-weight: 700; color: #000; }
+html[data-theme='eink'] .tp-dots i { background: #fff; border: 1px solid #000; }
+html[data-theme='eink'] .tp-dots i.on { background: #000; }
 html[data-theme='eink'] .tp-quote-note { opacity: 1; }
 html[data-theme='eink'] .timer { background: #fff; border: 2px solid #000; }
 html[data-theme='eink'] .kcard { border-width: 2px; }

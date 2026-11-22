@@ -37,6 +37,8 @@ export function serviceWorker(): Plugin {
         }
       };
       for (const [name, c] of Object.entries(bundle)) if (c.type === 'chunk' && c.isEntry) addChunk(name, true);
+      // The Lora font of the Keep in mind panel is small and must work offline from the first visit.
+      for (const f of Object.keys(bundle)) if (/^assets\/lora-.*\.woff2$/.test(f)) keep.add(f);
       precache = [...keep].map((f) => `/${f}`).sort();
       assets = Object.keys(bundle)
         .filter((f) => f.startsWith('assets/'))
