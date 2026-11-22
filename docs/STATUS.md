@@ -31,6 +31,7 @@ Updated 2026-11-22. Phases from the spec (`SPEC.md` §7).
 | Owner's bug, 22 Nov | v0.39.1 and Android 0.4.1: the Today widget showed "Nothing left today" because it followed the server's default profile (last opened anywhere: an empty Work); it now follows the phone's app, lists the Today list (cards too), has ✕ Not today, and says when it shows a saved copy (D47). |
 | Owner's item, 22 Nov (6) | v0.39.0: Habits and Insights each switch off as a whole in Settings → Features (flags `habits`, `insights`, per profile, on by default): tabs, panels, Today, status and widgets, notifications, Insights and Plan my week parts, routes and Claude's tools; data stays (D45). |
 | Owner's item, 22 Nov (7) | v0.40.0: a setting can be changed for this profile or for all profiles: “<profile> only \| All profiles” in Features, Notifications, Pomodoro (now with a new session's length), Link types and Today settings; Own value and Use the global value; asks before replacing other profiles' own values; `scope` on the API and Claude's tools, new `set_feature`, `set_setting`, `use_global_setting`, `apply_setting_to_all_profiles`; migration 0024 (D46). |
+| Owner's question, 22 Nov | v0.41.0: Manage categories on the Projects tab: rename, colour (palette or #rrggbb), reorder, delete with what uses it, new; Claude's category tools (D48). |
 | 9 Stretch | Parked: **export all data** button (wanted later), Work-mode PRs tab, fitness view. |
 
 ## Waiting for the owner

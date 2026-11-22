@@ -484,3 +484,15 @@ Code: server `src/core/setting-scope.ts` (`Module.scopedSettings`, `writeScoped`
 - **Fix (Android 0.4.1)**: the app reads `ft.mode` from the WebView when a page loads and when the app goes to the background, and the Today widget, quick add and notifications send it as `X-Mode` (none known yet: the server's default; a deleted profile: forgotten, the default). A tap sends the profile the widget was drawn in. An empty list names its profile when there are several.
 - **The widget shows `today_list`** from `/api/status` when the server sends it (habits, to-dos and cards, without what was put off today), else the old `todos_due` and `habits_left`. An answer with neither is an error, not an empty list; a failed refresh draws the saved copy with "Offline · saved HH:MM", the server's message, or "Could not read the server's answer".
 - **Not today** (server 0.39.1): `POST /api/today/not-today {kind, id, on}` (to-do, card or habit; Claude already had `tick_today_item` with `not_today`), `today_list` items carry `can_skip`, and `todos_due` leaves out to-dos put off today. The widget's ✕ is a fill-in intent of its own on each row.
+
+## D48. Manage categories (owner's question, 2026-11-22: "how to change colour on category buttons on project page")
+
+Code: server `src/modules/categories.ts`; web `web/src/features/category-buttons/ManageCategories.tsx`. Tests `test/categories.test.ts`, browser check `scripts/ui/manage-categories.mjs`. No migration: categories already had `color` and `ord`.
+
+- **Where**: "Manage categories..." under the filters on the Projects tab, with the buttons or with the drop-down. The dialog lists every category (also ones with no projects): name, colour preview with a text sample, nine strong button colours plus none, an own colour (picker or #rrggbb), up and down, Delete, and + New category.
+- **Colour** is stored as a palette name (`red`...`grey`, what the buttons already read) or `#rrggbb` (lower case); anything else is refused (400). The swatches use the same strong `--kb-*` colours as the buttons (moved to `:root`). E-ink: the colour's name is written beside the preview and on each swatch (two letters), chosen = solid black with a tick.
+- **Order** uses the existing `ord`; up and down send a move before or after the neighbour, so it queues offline like other edits (so do rename, colour and new). Delete needs a connection.
+- **Delete** asks first and says how many projects, backlog items, habits and resources use it; they stay with no category (the plain `DELETE /categories/:id` still refuses a category in use). One undo brings back the category and what used it. The toast's Undo sits under the dialog, so the dialog shows its own Undo for the last change.
+- **Claude**: `list_categories` now gives `uses` and the order; new `create_category`, `update_category`, `move_category`, `delete_category` (profile aware like every tool). API: `GET /api/categories/usage`, `POST /api/categories/:id/delete`.
+- No flag: it only adds a link and a dialog, and the plain drop-down mode keeps it.
+
