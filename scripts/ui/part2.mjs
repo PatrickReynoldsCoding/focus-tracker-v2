@@ -132,6 +132,8 @@ for (const [tname, t] of themes) {
     await page.close();
   }
 }
+// Switching to Work above made it the default profile (it follows the open one): back to Personal for the other checks.
+await api.put('/profiles/default', { id: 'personal' });
 await browser.close();
 if (errors.length) { console.error('ERRORS:\n' + errors.join('\n')); process.exit(1); }
 console.log('part2 ok');

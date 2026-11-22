@@ -65,6 +65,7 @@ async function tickedOnToday(page) {
   if (await page.$('.today-list')) return (await todayRow(page).count()) === 0 && (await page.textContent('.today-list')).includes('1 done');
   return page.locator('.checks li', { hasText: 'Reply to landlord' }).locator('input').first().isChecked();
 }
+const notesPage = `${B}/#/pn/${p1.id}`;
 const shot = (page, n) => page.screenshot({ path: `${OUT}/offline-${n}.png` });
 
 // ---------- phone: first visit, then no signal ----------
@@ -75,6 +76,8 @@ const shot = (page, n) => page.screenshot({ path: `${OUT}/offline-${n}.png` });
   await page.waitForSelector('text=Reply to landlord');
   await page.goto(`${B}/#/p/${p1.id}`);
   await page.waitForSelector('.kcard >> text=Design schema');
+  // On a phone the project page shows the small note: its editor is on the notes' own page.
+  await page.goto(notesPage);
   await page.waitForSelector('.ed-view >> text=phone first');
   await page.goto(`${B}/#/n/${shopping.id}`);
   await page.waitForSelector('text=Milk');
@@ -101,6 +104,8 @@ const shot = (page, n) => page.screenshot({ path: `${OUT}/offline-${n}.png` });
   await page.locator('.column').first().locator('input[placeholder="Add a card"]').press('Enter');
   await page.waitForSelector('.kcard >> text=Card made offline');
   // 3. edit the project's note
+  await page.waitForTimeout(600); // the saved copy is written after a short pause
+  await page.goto(notesPage);
   await page.locator('.ed-view', { hasText: 'phone first' }).click();
   await page.waitForSelector('.ProseMirror');
   await page.keyboard.press('Control+End');
@@ -124,9 +129,10 @@ const shot = (page, n) => page.screenshot({ path: `${OUT}/offline-${n}.png` });
   ok(true, 'after a reload offline 3 changes still wait');
   await page.goto(`${B}/#/p/${p1.id}`);
   await page.waitForSelector('.kcard >> text=Card made offline');
+  await shot(page, 'phone-project-offline');
+  await page.goto(notesPage);
   await page.waitForSelector('.ed-view >> text=Written on the train.');
   ok(true, 'after a reload offline the new card and the note edit still show');
-  await shot(page, 'phone-project-offline');
 
   // back online: sent in order
   await ctx.setOffline(false);
@@ -143,7 +149,12 @@ const shot = (page, n) => page.screenshot({ path: `${OUT}/offline-${n}.png` });
 
   // ---------- conflicts ----------
   const card = full.columns.flatMap((c) => c.cards).find((k) => k.title === 'MCP tools');
+  await page.goto(`${B}/#/p/${p1.id}`);
   await page.reload();
+  await page.waitForSelector('.kcard >> text=MCP tools');
+  await page.goto(notesPage); // the notes' page too, so its saved copy is fresh
+  await page.waitForSelector('.ed-view >> text=phone first');
+  await page.goto(`${B}/#/p/${p1.id}`);
   await page.waitForSelector('.kcard >> text=MCP tools');
   await page.waitForTimeout(600);
   await ctx.setOffline(true);
@@ -154,6 +165,7 @@ const shot = (page, n) => page.screenshot({ path: `${OUT}/offline-${n}.png` });
   await page.locator('dialog .sheet-head input').press('Enter');
   await page.locator('dialog button[aria-label=Close]').click();
   // edit the note offline
+  await page.goto(notesPage);
   await page.locator('.ed-view', { hasText: 'phone first' }).click();
   await page.waitForSelector('.ProseMirror');
   await page.keyboard.press('Control+End');
@@ -169,8 +181,10 @@ const shot = (page, n) => page.screenshot({ path: `${OUT}/offline-${n}.png` });
   await page.waitForSelector('.toast.error >> text=Not applied', { timeout: 30000 });
   await shot(page, 'phone-conflict-toast');
   ok((await api.get(`/tasks/${card.id}`)).title === 'MCP tools (laptop)', 'card conflict: the newer (laptop) title is kept');
+  await page.goto(`${B}/#/p/${p1.id}`);
   await page.waitForSelector('.kcard >> text=MCP tools (laptop)');
   ok(true, 'the screen reloads with the server version');
+  await page.goto(notesPage);
   // the note: the editor's choice
   await page.waitForSelector('.ed-draft >> text=made offline');
   await shot(page, 'phone-note-clash');
@@ -214,7 +228,7 @@ const shot = (page, n) => page.screenshot({ path: `${OUT}/offline-${n}.png` });
   await todayShown(page);
   await page.goto(`${B}/#/n/${shopping.id}`);
   await page.waitForSelector('text=Milk');
-  await page.locator('li', { hasText: 'Milk' }).locator('input[type=checkbox]').first().check();
+  await page.locator('.ub-item', { hasText: 'Milk' }).locator('.ub-tick').click(); // the to-do's tick circle (D41)
   await page.waitForFunction(() => /1 waiting/.test(document.querySelector('.net')?.textContent ?? ''));
   ok((await badge(page).innerText()).includes('showing saved copy from'), 'desktop: the long badge text');
   await shot(page, 'desktop-list-offline');

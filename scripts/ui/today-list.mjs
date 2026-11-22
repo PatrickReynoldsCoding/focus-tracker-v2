@@ -25,7 +25,8 @@ const back = (n) => new Date(Date.parse(`${day}T12:00:00Z`) - n * 864e5).toISOSt
 const p1 = (await api.get('/projects')).find((p) => p.name === 'Focus Tracker v2');
 if (!p1) throw new Error('Run seed.mjs first');
 const lists = await api.get('/lists');
-const readList = lists.find((l) => l.name === 'Read and watch');
+// A plain list's items have no day (D41): the card from elsewhere is on Garden shed's board.
+const shed = (await api.get('/projects')).find((p) => p.name === 'Garden shed');
 await api.call('DELETE', '/layout/today/pills').catch(() => {});
 await api.put('/features/today-panel', { enabled: true });
 
@@ -39,8 +40,10 @@ async function reset() {
   const card = full.columns.flatMap((c) => c.cards).find((c) => c.title === 'MCP tools');
   if (card.column_id !== full.columns[0].id) await api.post(`/tasks/${card.id}/move`, { column_id: full.columns[0].id });
   await api.call('PATCH', `/tasks/${card.id}`, { day, done: null });
-  const rl = await api.get(`/lists/${readList.id}/full`);
-  const dune = rl.columns[0].cards.find((c) => c.title === 'Dune');
+  const shedCards = (await api.get(`/projects/${shed.id}/full`)).columns.flatMap((c) => c.cards);
+  const dune = shedCards.find((c) => c.title === 'Dune') ?? (await api.post('/tasks', { project_id: shed.id, title: 'Dune' }));
+  const shedTodo = (await api.get(`/projects/${shed.id}/full`)).columns[0];
+  if (dune.column_id !== shedTodo.id) await api.post(`/tasks/${dune.id}/move`, { column_id: shedTodo.id });
   await api.call('PATCH', `/tasks/${dune.id}`, { day: back(1), done: null });
   let habits = await api.get('/habits');
   if (!habits.some((h) => h.name === 'Guitar')) await api.post('/habits', { name: 'Guitar', sessions: 2, per: 'week', size: '15 min' });
@@ -68,7 +71,7 @@ async function view(theme, vname, vp, act) {
   ok(!(await page.$('#pl-panels .habits-panel')) && !(await page.$('#pl-panels h2:text-is("To do today")')), `${name}: no separate To do today or Habits panel in the Today pill`);
   const titles = await openRows(page);
   ok(titles.slice(0, 3).join() === 'Stretch,Run,Guitar' && titles.indexOf('Post the parcel') < titles.indexOf('Dune') && titles.indexOf('Dune') < titles.indexOf('Reply to landlord') && titles.includes('MCP tools'), `${name}: habits first, then the oldest to-dos and cards (${titles.join(', ')})`);
-  ok((await row(page, 'Post the parcel').locator('.tag.late').count()) === 1 && (await row(page, 'Dune').textContent()).includes('Read and watch'), `${name}: late items are marked, a card says where it lives`);
+  ok((await row(page, 'Post the parcel').locator('.tag.late').count()) === 1 && (await row(page, 'Dune').textContent()).includes('Garden shed'), `${name}: late items are marked, a card says where it lives`);
   await sideways(page, vp.width, name);
   await shot(page, `${name}-start`);
   if (act) await act(page, name, card, ctx);
@@ -217,7 +220,8 @@ for (const theme of ['dark', 'eink']) for (const [v, vp] of [['phone', PHONE], [
 // Leave the seeded data as it was for the other checks: no Guitar, no card days, no extra to-dos.
 {
   const { card, dune } = await reset();
-  for (const c of [card, dune]) await api.call('PATCH', `/tasks/${c.id}`, { day: null, done: null });
+  await api.call('PATCH', `/tasks/${card.id}`, { day: null, done: null });
+  await api.call('DELETE', `/tasks/${dune.id}`);
   const guitar = (await api.get('/habits')).find((h) => h.name === 'Guitar');
   if (guitar) await api.call('DELETE', `/habits/${guitar.id}`);
   const parcel = (await api.get('/today')).todos.find((x) => x.title === 'Post the parcel');
