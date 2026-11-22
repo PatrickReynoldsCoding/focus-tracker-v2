@@ -1,9 +1,9 @@
 // The to-do screen (D41): one component for a to-do, a plain list and a project's board. Each
 // switches between Board view (columns side by side) and List view (groups one under the other;
 // a to-do's and a project's items have tick circles, Done folded at the bottom); the view is
-// remembered on this device for each board. A plain list is a to-do without the Done column, the
-// ticks and days (D49: it opens in List view), and can be made a to-do (one way).
-// Flag `unified-board` off: no switch; a project and a plain list show as a board, a to-do as a list.
+// remembered on this device for each board. A plain list is list-only (D58: no switch, groups as
+// boxes, ListItems.tsx), has no Done column, ticks or days, and can be made a to-do (one way).
+// Flag `unified-board` off: no switch; a project shows as a board, a to-do and a plain list as a list.
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useFlag } from '../../core/features';
@@ -68,7 +68,8 @@ export function TodoBoard({
 
   const done = doneColumnOf(cols, kind, doneFlag);
   const b: BoardCtx = { get: () => colsRef.current, set: (fn) => setColsState(fn), kind, owner, done };
-  const view: View = unified ? saved : kind === 'todo' ? 'list' : 'board';
+  // A plain list is list-only (D58); a to-do and a project switch between Board and List.
+  const view: View = kind === 'list' ? 'list' : unified ? saved : kind === 'todo' ? 'list' : 'board';
   const folded = !!done && (kind === 'project' ? !!hideDone : localHide);
   const fold = (hide: boolean) => {
     if (kind !== 'project') return setLocalHide(hide);
@@ -84,7 +85,7 @@ export function TodoBoard({
   return (
     <div class={`board-wrap ub ub-${kind === 'list' ? 'plain' : kind} ub-view-${view}`}>
       <div class="board-tools ub-tools">
-        {unified && <ViewSwitch view={view} onView={setView} />}
+        {unified && kind !== 'list' && <ViewSwitch view={view} onView={setView} />}
         {canFold && <HideDoneButton hidden={folded} count={done!.cards.length} onToggle={() => fold(!folded)} />}
         {unified && kind === 'list' && onConvert && (
           <button class="ghost small" onClick={convert}>

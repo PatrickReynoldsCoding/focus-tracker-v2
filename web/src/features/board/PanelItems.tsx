@@ -12,6 +12,7 @@ import { AddInput, Linkify, todayLocal } from '../../core/ui';
 import { addCard, cardChanged, deleteCard, moveCard, tickCard, type BoardCtx } from './actions';
 import { CardDialog } from './CardDialog';
 import { justDragged, useCardDrag } from './drag';
+import { GroupBox, ListItem } from './ListItems';
 import { doneColumnOf, findCard, openColumns, type Card, type Column, type SetColumns } from './model';
 
 export type PanelProps = { kind: 'todo' | 'list'; listId: string; cols: Column[]; setCols: SetColumns };
@@ -63,6 +64,20 @@ function Group({ b, col, named, drag, onOpen }: { b: BoardCtx; col: Column; name
   );
 }
 
+/** A plain list's group in a panel (D58): its own box when more than one group has items, else just the rows. */
+function PlainGroup({ b, col, groups, index, named, drag, onOpen }: { b: BoardCtx; col: Column; groups: Column[]; index: number; named: boolean; drag: string; onOpen: (c: Card) => void }) {
+  const list = useRef<HTMLUListElement>(null);
+  useCardDrag(list, drag, (id, to, i) => moveCard(b, id, to, i), true, 'a, button, .ll-more');
+  const rows = (folded: boolean) => (
+    <ul class="pi-items ll-items ub-drag" ref={list} data-col={col.id} hidden={folded}>
+      {col.cards.map((c) => (
+        <ListItem key={c.id} b={b} c={c} groups={groups} onOpen={onOpen} />
+      ))}
+    </ul>
+  );
+  return named ? <GroupBox col={col} index={index}>{rows}</GroupBox> : rows(false);
+}
+
 /** The card dialog for an item opened from a panel. */
 function useOpenItem(b: BoardCtx, cols: Column[]) {
   const [open, setOpen] = useState<string | null>(null);
@@ -85,9 +100,13 @@ export function PanelItems(p: PanelProps) {
   const drag = `panel-${p.listId}`;
   return (
     <>
-      {shown.map((g) => (
-        <Group key={g.id} b={b} col={g} named={named} drag={drag} onOpen={onOpen} />
-      ))}
+      {shown.map((g) =>
+        p.kind === 'list' ? (
+          <PlainGroup key={`${g.id}${named}`} b={b} col={g} groups={open} index={open.indexOf(g)} named={named} drag={drag} onOpen={onOpen} />
+        ) : (
+          <Group key={g.id} b={b} col={g} named={named} drag={drag} onOpen={onOpen} />
+        ),
+      )}
       {doneToday.length > 0 && (
         <ul class="checks pi-items ub-compact-done">
           {doneToday.map((c) => (
@@ -135,14 +154,12 @@ export function SmallPanelItems(p: PanelProps) {
       if (to) moveCard(b, id, to.col, to.index);
     },
     true,
-    NO_DRAG,
+    p.kind === 'list' ? 'a, button, .ll-more' : NO_DRAG,
   );
   return (
     <>
-      <ul class="checks pi-items ub-drag" ref={list} data-col="small">
-        {shown.map((c) => (
-          <Item key={c.id} b={b} c={c} done={false} onOpen={onOpen} del={false} />
-        ))}
+      <ul class={`${p.kind === 'list' ? 'll-items' : 'checks'} pi-items ub-drag`} ref={list} data-col="small">
+        {shown.map((c) => (p.kind === 'list' ? <ListItem key={c.id} b={b} c={c} groups={[]} onOpen={onOpen} menu={false} /> : <Item key={c.id} b={b} c={c} done={false} onOpen={onOpen} del={false} />))}
       </ul>
       {items.length > SMALL_ITEMS && <p class="muted small">+{items.length - SMALL_ITEMS} more</p>}
       {dialog}

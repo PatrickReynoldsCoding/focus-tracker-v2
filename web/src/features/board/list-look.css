@@ -1,0 +1,38 @@
+/* A plain list's look (D58, mockup B): group boxes with a coloured edge, two-line text, link chips, a ⋯ menu. */
+.ll-group { --ll-c: var(--accent); background: var(--surface); border: 1px solid var(--line); border-left: 5px solid var(--ll-c); border-radius: 10px; overflow: hidden; min-width: 0; display: flex; flex-direction: column; margin-bottom: 10px; }
+.ll-page .ll-group { margin-bottom: 0; padding: 0; gap: 0; }
+.ll-g0 { --ll-c: var(--accent); } .ll-g1 { --ll-c: var(--warm); } .ll-g2 { --ll-c: var(--ok); } .ll-g3 { --ll-c: var(--danger); } .ll-g4 { --ll-c: var(--muted); }
+.ll-head { display: flex; align-items: center; gap: 6px; padding: 2px 8px 2px 4px; min-height: 44px; background: color-mix(in srgb, var(--ll-c) 14%, transparent); font-size: 0.95rem; }
+.ll-head .column-head { flex: 1; min-width: 0; min-height: 36px; padding: 0; border: 0; background: transparent; }
+.ll-name { font-weight: 700; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.ll-count { color: var(--muted); }
+.ll-fold { flex: none; width: 36px; height: 36px; min-height: 36px; padding: 0; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
+.ll-group.folded .ll-head { border-bottom: 0; }
+ul.ll-items { list-style: none; margin: 0; padding: 0; min-height: 8px; display: flex; flex-direction: column; }
+ul.ll-items[hidden] { display: none; }
+.ll-group ul.ll-items { padding: 0 12px; }
+.ll-group > .add-input { padding: 4px 12px 8px; }
+.ll-item { display: flex; align-items: flex-start; gap: 6px; padding: 6px 0; border-bottom: 1px solid var(--line); min-height: 44px; list-style: none; touch-action: manipulation; user-select: none; -webkit-user-select: none; border-radius: 6px; }
+.ll-item:last-child { border-bottom: 0; }
+.ll-item.drag-ghost { background: var(--accent-soft); }
+ul.ll-items.ub-drag .ll-item { cursor: grab; }
+.ll-body { flex: 1; min-width: 0; padding: 4px 0; cursor: pointer; overflow-wrap: anywhere; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+.ll-body:hover .ll-title { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line); }
+.ll-clamp { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-width: 100%; }
+.ll-clamp.open { display: block; overflow: visible; }
+.ll-title { font-weight: 600; display: block; }
+.ll-note { display: block; color: var(--muted); font-size: 0.86rem; }
+.ll-more { background: transparent; border: 0; padding: 2px 0; min-height: 24px; color: var(--accent); font-size: 0.8rem; cursor: pointer; }
+.ll-chips { display: flex; flex-wrap: wrap; gap: 4px; max-width: 100%; }
+.ll-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); border-radius: 99px; padding: 3px 10px; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none; }
+.ll-chip:hover { text-decoration: underline; }
+.ll-menu-btn { flex: none; width: 44px; height: 44px; min-height: 44px; color: var(--muted); font-size: 1.2rem; align-self: flex-start; margin-right: -8px; }
+.pi-items.ll-items .ll-item { gap: 6px; }
+
+html[data-theme='eink'] .ll-group { border: 2px solid #000; border-left: 8px solid #000; }
+html[data-theme='eink'] .ll-head { background: transparent; border-bottom: 2px solid #000; }
+html[data-theme='eink'] .ll-group.folded .ll-head { border-bottom: 0; }
+html[data-theme='eink'] .ll-item { border-color: #000; }
+html[data-theme='eink'] .ll-chip { background: transparent; color: #000; border: 1px solid #000; }
+html[data-theme='eink'] .ll-more { color: #000; text-decoration: underline; }
+html[data-theme='eink'] .ll-menu-btn, html[data-theme='eink'] .ll-fold { color: #000; }

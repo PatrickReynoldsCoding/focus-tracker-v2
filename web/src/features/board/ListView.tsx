@@ -9,6 +9,7 @@ import { AddInput, Linkify, plainPreview } from '../../core/ui';
 import { addCard, addColumn, moveCard, tickCard, type BoardCtx } from './actions';
 import { ColumnHead } from './BoardView';
 import { useCardDrag } from './drag';
+import { GroupBox, ListItem } from './ListItems';
 import { openColumns, type Card, type Column } from './model';
 
 /** The tick circle: a tap ticks (or unticks); never starts a drag. */
@@ -36,6 +37,27 @@ function Row({ b, c, done, onOpen }: { b: BoardCtx; c: Card; done: boolean; onOp
       <Panels<CardTileProps> place="card-tile" props={{ card: c }} />
       <Panels place="card-extra" props={{ card: c, b, view: 'list' }} />
     </li>
+  );
+}
+
+/** A plain list's group (D58, mockup B): its own box with a coloured edge, folds, items with a ⋯ menu. */
+function PlainGroup({ b, cols, col, index, group, onOpen }: { b: BoardCtx; cols: Column[]; col: Column; index: number; group: string; onOpen: (c: Card) => void }) {
+  const list = useRef<HTMLUListElement>(null);
+  useCardDrag(list, group, (id, to, i) => moveCard(b, id, to, i), true, 'a, button, .ll-more');
+  const groups = openColumns(cols, b.done);
+  return (
+    <GroupBox col={col} index={index} head={<ColumnHead b={b} cols={cols} col={col} count={col.cards.length} what="items" earlier="↑" later="↓" />}>
+      {(folded) => (
+        <>
+          <ul class="ub-items ub-drag ll-items" ref={list} data-col={col.id} hidden={folded}>
+            {col.cards.map((c) => (
+              <ListItem key={c.id} b={b} c={c} groups={groups} onOpen={onOpen} extra={<Panels<CardTileProps> place="card-tile" props={{ card: c }} />} />
+            ))}
+          </ul>
+          {!folded && <AddInput placeholder="Add an item" onAdd={(title) => addCard(b, col.id, title)} />}
+        </>
+      )}
+    </GroupBox>
   );
 }
 
@@ -81,10 +103,10 @@ function DoneGroup({ b, col, group, folded, onFold, onOpen }: { b: BoardCtx; col
 
 export function ListView({ b, cols, group, onOpen, folded, onFold }: { b: BoardCtx; cols: Column[]; group: string; onOpen: (c: Card) => void; folded: boolean; onFold: (hide: boolean) => void }) {
   return (
-    <div class="ub-list">
-      {openColumns(cols, b.done).map((col) => (
-        <Group key={col.id} b={b} cols={cols} col={col} group={group} onOpen={onOpen} />
-      ))}
+    <div class={`ub-list${b.kind === 'list' ? ' ll-page' : ''}`}>
+      {openColumns(cols, b.done).map((col, i) =>
+        b.kind === 'list' ? <PlainGroup key={col.id} b={b} cols={cols} col={col} index={i} group={group} onOpen={onOpen} /> : <Group key={col.id} b={b} cols={cols} col={col} group={group} onOpen={onOpen} />,
+      )}
       <div class="ub-add-group">
         <AddInput placeholder={b.kind === 'project' ? 'Add a column' : 'Add a group'} onAdd={(name) => addColumn(b, name)} />
       </div>
