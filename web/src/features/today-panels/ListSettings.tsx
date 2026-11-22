@@ -54,7 +54,7 @@ export function ListSettings({ list, setList }: { list: ListPage; setList: (fn: 
         {oneAtATime && (
           <>
             <label>
-              Display on Today
+              Display
               <select value={list.display} onChange={(e) => save({ display: (e.target as HTMLSelectElement).value as 'full' | 'one' })}>
                 <option value="full">Full list</option>
                 <option value="one">One at a time</option>

@@ -1,5 +1,5 @@
-// A list's settings in a dialog, opened by clicking the list's title (on Today, a project's page or the
-// list's own page): how it shows on Today (the full list, or one item at a time as a quote card, like v1),
+// A list's settings in a dialog, opened by the ⚙ beside a list's title on a panel (Today, a project's
+// page, a window; with the flag panel-restyle off, by the title itself): how it shows on Today (the full list, or one item at a time as a quote card, like v1),
 // how long each item stays, its colour and the project it is linked to.
 
 import { useState } from 'preact/hooks';
@@ -30,8 +30,8 @@ export function ListSettingsDialog({ list, setList, onClose }: { list: ListSetti
     <Dialog title={list.name} onClose={onClose}>
       <div class="stack">
         {oneFlag && (
-          <div class="seg-radio" role="radiogroup" aria-label="Display on Today">
-            <strong>Display on Today</strong>
+          <div class="seg-radio" role="radiogroup" aria-label="Display">
+            <strong>Display</strong>
             <label class={list.display !== 'one' ? 'on' : ''}>
               <input type="radio" name="list-display" checked={list.display !== 'one'} onChange={() => save({ display: 'full' })} /> Full list
               <small class="muted">All the items.</small>
@@ -93,16 +93,34 @@ export function ListSettingsDialog({ list, setList, onClose }: { list: ListSetti
   );
 }
 
-/** The list's title as a button that opens its settings. */
+/**
+ * The list's title on a panel. With the flag panel-restyle (D49) the title opens the list's page and
+ * a small ⚙ beside it opens its settings; off, the title itself opens the settings (v0.26.0).
+ */
 export function ListTitle({ list, setList, prefix, quote }: { list: ListSettingsProps; setList: (fn: (l: any) => any) => void; prefix?: string; quote?: boolean }) {
   const [open, setOpen] = useState(false);
+  const restyle = useFlag('panel-restyle');
+  const dialog = open && <ListSettingsDialog list={list} setList={setList} onClose={() => setOpen(false)} />;
+  if (restyle)
+    return (
+      <>
+        <a class={`list-title${quote ? ' quote' : ''}`} href={`#/n/${list.id}`} title={`Open ${list.name}`}>
+          {prefix}
+          {list.name}
+        </a>
+        <button class="icon small list-gear" aria-label={`Settings of ${list.name}`} title="Settings: display, colour, linked project" onClick={() => setOpen(true)}>
+          ⚙
+        </button>
+        {dialog}
+      </>
+    );
   return (
     <>
       <button class={`link-btn list-title${quote ? ' quote' : ''}`} title="List settings: show all or one at a time, colour, linked project" onClick={() => setOpen(true)}>
         {prefix}
         {list.name} <span aria-hidden="true" class="muted small">⚙</span>
       </button>
-      {open && <ListSettingsDialog list={list} setList={setList} onClose={() => setOpen(false)} />}
+      {dialog}
     </>
   );
 }
