@@ -56,14 +56,17 @@ describe('tags', () => {
     await call('POST', '/tags/set', { type: 'whiteboard', id: board.id, add: ['Money'] }, m);
     await call('POST', '/tags/set', { type: 'link', id: link.id, add: ['Home'] }, m);
     await call('POST', '/tags/set', { type: 'project-note', id: p.id, add: ['Home'] }, m);
-    expect(names(await call('GET', `/tags/of/project/${p.id}`, undefined, m))).toEqual(['Home']);
+    // The project's notes have their own tags (D53); the project itself has only its automatic tag.
+    expect(names(await call('GET', `/tags/of/project-note/${p.id}`, undefined, m))).toEqual(['Home', 'Kitchen']);
+    expect(names(await call('GET', `/tags/of/project/${p.id}`, undefined, m))).toEqual(['Kitchen']);
     await call('POST', '/tags/set', { type: 'note', id: 'nope-nope', add: ['Home'] }, { ...m, expect: 404 });
     await call('POST', '/tags/set', { type: 'folder', id: note.id, add: ['Home'] }, { ...m, expect: 400 });
 
     const tags = await call('GET', '/tags', undefined, m);
-    expect(tags.map((t: any) => [t.name, t.count])).toEqual([
-      ['Home', 4],
-      ['Money', 2],
+    expect(tags.map((t: any) => [t.name, t.count, !!t.auto])).toEqual([
+      ['Home', 4, false],
+      ['Money', 2, false],
+      ['Kitchen', null, true],
     ]);
     const home = tags[0];
 

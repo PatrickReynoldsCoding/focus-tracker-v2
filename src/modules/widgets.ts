@@ -10,6 +10,8 @@ import type { Ctx } from '../core/ctx';
 import { bad, notFound } from '../core/errors';
 import { requireFeature } from '../core/features';
 import type { Module } from '../core/registry';
+import { CATEGORY_PREFIX, isVirtual, NO_CATEGORY_ID, NO_CATEGORY_NAME, PROJECTS_ID, PROJECTS_NAME } from './files-tree';
+import { AUTO_PREFIX } from './tags';
 
 /** Hard caps, whatever a widget asks for. */
 export const CAPS = {
@@ -93,7 +95,7 @@ export function cut(text: string, chars: number, lines: number | null): { text: 
 type Scope =
   | { by: 'all' }
   | { by: 'root' }
-  | { by: 'folder'; id: string; deep: boolean }
+  | { by: 'folder'; id: string; deep: boolean; virtual?: boolean }
   | { by: 'tag'; tag: string }
   | { by: 'one'; id: string };
 
@@ -111,8 +113,13 @@ function scopeSql(s: Scope, a: string, tagKind: string, isProject = false): stri
       const projects = `SELECT project_id FROM folders WHERE mode = ?1 AND id IN (SELECT id FROM sub) AND project_id IS NOT NULL`;
       return isProject ? `${a}.id IN (${projects})` : `(${a}.folder_id IN (SELECT id FROM sub) OR (${a}.folder_id IS NULL AND ${a}.project_id IN (${projects})))`;
     }
-    case 'tag':
-      return `EXISTS (SELECT 1 FROM tag_links tl WHERE tl.mode = ?1 AND tl.kind = '${tagKind}' AND tl.target_id = ${a}.id AND tl.tag_id IN (SELECT id FROM tags WHERE mode = ?1 AND (id = ?3 OR name = ?3 COLLATE NOCASE)))`;
+    case 'tag': {
+      // A tag of the owner's, or a project's automatic tag (D53: project:<id>, or the project's name).
+      const project = isProject ? `${a}.id` : `${a}.project_id`;
+      const own = `EXISTS (SELECT 1 FROM tag_links tl WHERE tl.mode = ?1 AND tl.kind = '${tagKind}' AND tl.target_id = ${a}.id AND tl.tag_id IN (SELECT id FROM tags WHERE mode = ?1 AND (id = ?3 OR name = ?3 COLLATE NOCASE)))`;
+      const auto = `${project} IN (SELECT id FROM projects WHERE mode = ?1 AND ('${AUTO_PREFIX}' || id = ?3 OR name = ?3 COLLATE NOCASE))`;
+      return `(${own} OR ${auto})`;
+    }
   }
 }
 
@@ -168,7 +175,7 @@ function query(s: Scope, o: QueryOptions): string {
       `SELECT 'project-note' AS kind, p.id AS id, p.name || ' notes' AS title, p.id AS project_id, p.name AS project, COALESCE(n.updated_at, p.updated_at) AS changed,
         COALESCE(substr(n.body, 1, ?4), '') AS body, length(n.body) AS size, NULL AS items, NULL AS open, NULL AS total, NULL AS url
        FROM projects p LEFT JOIN notes n ON n.project_id = p.id
-       WHERE p.mode = ?1 AND ${s.by === 'one' ? '1' : "n.body != ''"} AND ${scopeSql(s, 'p', 'projects', true)}`,
+       WHERE p.mode = ?1 AND ${s.by === 'one' ? '1' : "n.body != ''"} AND ${scopeSql(s, 'p', 'project-notes', true)}`,
     );
   }
   if (o.kinds.includes('whiteboard')) {
@@ -187,14 +194,24 @@ function query(s: Scope, o: QueryOptions): string {
     );
   }
   if (!parts.length) parts.push(`SELECT NULL AS kind, NULL AS id, NULL AS title, NULL AS project_id, NULL AS project, NULL AS changed, NULL AS body, NULL AS size, NULL AS items, NULL AS open, NULL AS total, NULL AS url WHERE ?1 = 0`);
+  // Projects and its category folders (D52) are not rows: they hold the folders of their projects (always all the way down).
+  const start = s.by === 'folder' && s.virtual ? `project_id IN (SELECT id FROM projects WHERE mode = ?1 AND ${virtualProjects(s.id)})` : 'id = ?2';
+  const deep = s.by === 'folder' && (s.deep || s.virtual);
   const sub =
     s.by === 'folder'
-      ? `WITH RECURSIVE sub(id) AS (SELECT id FROM folders WHERE mode = ?1 AND id = ?2${s.deep ? ' UNION SELECT f.id FROM folders f JOIN sub ON f.parent_id = sub.id WHERE f.mode = ?1' : ''}) `
+      ? `WITH RECURSIVE sub(id) AS (SELECT id FROM folders WHERE mode = ?1 AND ${start}${deep ? ' UNION SELECT f.id FROM folders f JOIN sub ON f.parent_id = sub.id WHERE f.mode = ?1' : ''}) `
       : '';
   const order = o.sort === 'name' ? 'title COLLATE NOCASE, changed DESC' : 'changed DESC, title COLLATE NOCASE';
   // ?2 to ?6 are always bound: keep each one in the text so the count matches.
   const keep = ` AND ?2 IS NOT -1 AND ?3 IS NOT -1 AND ?4 > 0 AND ?5 > 0`;
   return `${sub}SELECT * FROM (${parts.join(' UNION ALL ')}) WHERE 1${keep} ORDER BY ${order} LIMIT ?6`;
+}
+
+/** Which projects a virtual folder holds (?2 is its id). */
+function virtualProjects(id: string): string {
+  if (id === PROJECTS_ID) return '1';
+  if (id === NO_CATEGORY_ID) return '(category_id IS NULL OR category_id NOT IN (SELECT id FROM categories WHERE mode = ?1))';
+  return `'${CATEGORY_PREFIX}' || category_id = ?2`;
 }
 
 const ROUTES: Record<Kind, (id: string) => string | null> = {
@@ -277,7 +294,13 @@ const listQuery = z.object({
 export async function widgetFiles(ctx: Ctx, q: z.infer<typeof listQuery>) {
   if (q.folder && q.tag) throw bad('Give a folder or a tag, not both');
   if (q.tag) await requireFeature(ctx, 'tags');
-  const scope: Scope = q.tag ? { by: 'tag', tag: q.tag.trim() } : q.folder === 'root' ? { by: 'root' } : q.folder ? { by: 'folder', id: q.folder, deep: q.deep !== '0' } : { by: 'all' };
+  const scope: Scope = q.tag
+    ? { by: 'tag', tag: q.tag.trim() }
+    : q.folder === 'root'
+      ? { by: 'root' }
+      : q.folder
+        ? { by: 'folder', id: q.folder, deep: q.deep !== '0', virtual: isVirtual(q.folder) }
+        : { by: 'all' };
   const chars = Math.min(q.max ?? 200, CAPS.list.chars);
   const lines = q.lines != null ? Math.min(q.lines, CAPS.list.lines) : null;
   const limit = Math.min(q.limit ?? 20, CAPS.list.files);
@@ -285,14 +308,21 @@ export async function widgetFiles(ctx: Ctx, q: z.infer<typeof listQuery>) {
   const opts: QueryOptions = { kinds: kindsOf(q.kinds), chars: rawChars, items: Math.min(lines ?? CAPS.list.lines, CAPS.list.lines), done: false, sort: q.sort ?? 'changed', limit: limit + 1 };
   const label =
     scope.by === 'folder'
-      ? ctx.db.prepare('SELECT id, name, project_id FROM folders WHERE mode = ? AND id = ?').bind(ctx.mode, scope.id)
+      ? scope.virtual
+        ? ctx.db
+            .prepare(`SELECT ?2 AS id, CASE WHEN ?2 = '${PROJECTS_ID}' THEN '${PROJECTS_NAME}' WHEN ?2 = '${NO_CATEGORY_ID}' THEN '${NO_CATEGORY_NAME}' ELSE (SELECT label FROM categories WHERE mode = ?1 AND '${CATEGORY_PREFIX}' || id = ?2) END AS name, NULL AS project_id`)
+            .bind(ctx.mode, scope.id)
+        : ctx.db.prepare('SELECT id, name, project_id FROM folders WHERE mode = ? AND id = ?').bind(ctx.mode, scope.id)
       : scope.by === 'tag'
-        ? ctx.db.prepare('SELECT id, name, color FROM tags WHERE mode = ? AND (id = ? OR name = ? COLLATE NOCASE)').bind(ctx.mode, scope.tag, scope.tag)
+        ? ctx.db
+            .prepare(`SELECT id, name, color FROM tags WHERE mode = ?1 AND (id = ?2 OR name = ?2 COLLATE NOCASE) UNION ALL SELECT '${AUTO_PREFIX}' || id, name, NULL FROM projects WHERE mode = ?1 AND ('${AUTO_PREFIX}' || id = ?2 OR name = ?2 COLLATE NOCASE)`)
+            .bind(ctx.mode, scope.tag)
         : null;
   const main = ctx.db.prepare(query(scope, opts)).bind(ctx.mode, scope.by === 'folder' ? scope.id : '', scope.by === 'tag' ? scope.tag : '', opts.chars, opts.items, opts.limit);
   const [rows, src] = await ctx.db.batch<any>(label ? [main, label] : [main]);
   const found = (rows.results as Raw[]).filter((r) => r.id != null);
-  const source = scope.by === 'all' ? { by: 'all', name: 'All files' } : scope.by === 'root' ? { by: 'folder', id: 'root', name: 'Files' } : (src?.results[0] as { id: string; name: string } | undefined);
+  const first = src?.results[0] as { id: string; name: string | null } | undefined;
+  const source = scope.by === 'all' ? { by: 'all', name: 'All files' } : scope.by === 'root' ? { by: 'folder', id: 'root', name: 'Files' } : first?.name != null ? first : undefined;
   return {
     mode: ctx.mode,
     source: source ? { by: scope.by === 'tag' ? 'tag' : 'folder', ...source } : null,

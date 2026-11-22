@@ -6,6 +6,11 @@
 // new kind of file can be tagged without changes here. The Files listing gets each file's tags,
 // a `tag` filter and tag names in its search through `fileAddons`. Everything goes through the
 // store, so Undo covers it; deleting a file or a tag removes its links in the same step.
+//
+// Automatic project tags (D53): every file of a project (and the project and its notes) also has
+// a tag with the project's name, id `project:<project id>`. It is worked out when read (from the
+// file's project_id), never stored, so it follows renames and deletion with no rows to keep; it
+// cannot be put on or taken off by hand.
 
 import { z } from 'zod';
 import type { Ctx } from '../core/ctx';
@@ -23,8 +28,29 @@ const MAX_NAME = 40;
 export const TAG_COLOURS = ['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'grey'] as const;
 /** In a filter, "files with no tag". */
 export const NO_TAG = 'none';
+/** The id of a project's automatic tag: this and the project's id. */
+export const AUTO_PREFIX = 'project:';
+/** The kind of row a project's notes are in tag_links (target id: the project's). */
+export const PROJECT_NOTES = 'project-notes';
+const isAuto = (v: unknown) => typeof v === 'string' && v.startsWith(AUTO_PREFIX);
+const autoTag = (p: { id: string; name: string }): TagRow => ({ id: AUTO_PREFIX + p.id, name: p.name, color: null, auto: true, project_id: p.id });
 
-type TagRow = { id: string; name: string; color: string | null };
+/** Every project of the profile, by id (for the automatic tags). */
+async function projectNames(ctx: Ctx): Promise<Map<string, { id: string; name: string; status: string }>> {
+  const r = await ctx.db.prepare('SELECT id, name, status FROM projects WHERE mode = ?').bind(ctx.mode).all<{ id: string; name: string; status: string }>();
+  return new Map(r.results.map((p) => [p.id, p]));
+}
+
+/** A project's automatic tag from a tag's id (project:<id>) or a project's name (any case). */
+async function findAutoTag(ctx: Ctx, given: string): Promise<TagRow | null> {
+  const v = String(given ?? '').trim();
+  const p = isAuto(v)
+    ? await ctx.db.prepare('SELECT id, name FROM projects WHERE mode = ? AND id = ?').bind(ctx.mode, v.slice(AUTO_PREFIX.length)).first<{ id: string; name: string }>()
+    : await ctx.db.prepare('SELECT id, name FROM projects WHERE mode = ? AND name = ? COLLATE NOCASE').bind(ctx.mode, v.replace(/^#+/, '')).first<{ id: string; name: string }>();
+  return p ? autoTag(p) : null;
+}
+
+type TagRow = { id: string; name: string; color: string | null; auto?: true; project_id?: string };
 export type TaggedRef = { kind: string; id: string };
 
 // ---------- names ----------
@@ -54,7 +80,7 @@ export const tagsEntity: Entity = {
   name: 'tags',
   table: 'tags',
   singular: 'tag',
-  desc: 'Free labels on files (notes, lists, to-dos, whiteboards, links, projects). A name is unique in the profile, whatever its case. Use tag_file / untag_file to put them on files.',
+  desc: 'Free labels on files (notes, lists, to-dos, whiteboards, links, projects, a project’s notes). A name is unique in the profile, whatever its case. Use tag_file / untag_file to put them on files. Every file of a project also has an automatic tag (project:<id>, the project’s name) that is not stored here.',
   modeScoped: true,
   sort: 'name COLLATE NOCASE',
   fields: {
@@ -86,15 +112,15 @@ export const tagLinksEntity: Entity = {
   filters: ['tag_id', 'kind', 'target_id'],
   fields: {
     tag_id: { type: 'text', required: true, ref: 'tags', cascade: true },
-    kind: { type: 'text', required: true, desc: 'The kind of row the file is: lists, whiteboards, resources or projects' },
+    kind: { type: 'text', required: true, desc: 'The kind of row the file is: lists, whiteboards, resources, projects or project-notes' },
     target_id: { type: 'text', required: true },
   },
 };
 
 // ---------- which files can be tagged ----------
 
-/** Kinds of rows that can carry tags: every file source's row kind. */
-const taggableKinds = (): Set<string> => new Set(fileSources().map(rowKindOf));
+/** Kinds of rows that can carry tags: every file source's row kind, and projects themselves. */
+const taggableKinds = (): Set<string> => new Set([...fileSources().map(rowKindOf), 'projects']);
 
 /** A file as callers name it, a file type (note, todo, whiteboard, link, project-note ...) or a kind of row (lists, projects ...), as the kind of row it is. */
 export function refOf(type: string, id: string): TaggedRef {
@@ -107,14 +133,16 @@ export function refOf(type: string, id: string): TaggedRef {
 }
 
 async function checkTarget(ctx: Ctx, r: TaggedRef): Promise<void> {
-  const e = entity(r.kind);
+  // A project's notes are the project's (their id is the project's).
+  const e = entity(r.kind === PROJECT_NOTES ? 'projects' : r.kind);
   const row = await getRaw(ctx, e, r.id);
   if (!row || (e.modeScoped && row.mode !== ctx.mode)) throw notFound(e.singular, r.id);
 }
 
 // ---------- reading ----------
 
-/** Every tag of the profile, by name, with how many files carry it. */
+/** Every tag of the profile, by name, with how many files carry it; then the projects' automatic
+ *  tags by name (auto: true, read only, with the project's status; count is not worked out: null). */
 export async function listTags(ctx: Ctx) {
   const r = await ctx.db
     .prepare(
@@ -122,17 +150,29 @@ export async function listTags(ctx: Ctx) {
        FROM tags t LEFT JOIN tag_links l ON l.tag_id = t.id WHERE t.mode = ? GROUP BY t.id ORDER BY t.name COLLATE NOCASE`,
     )
     .bind(ctx.mode)
-    .all<TagRow & { created: string; updated_at: string; count: number }>();
-  return r.results;
+    .all<TagRow & { created: string; updated_at: string; count: number | null }>();
+  const projects = [...(await projectNames(ctx)).values()].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true }));
+  return [...r.results, ...projects.map((p) => ({ ...autoTag(p), status: p.status, count: null }))];
 }
 
-/** The tags on one file, by name. */
+/** The project a tagged row belongs to (for its automatic tag). */
+async function projectOfTarget(ctx: Ctx, r: TaggedRef): Promise<string | null> {
+  if (r.kind === 'projects' || r.kind === PROJECT_NOTES) return r.id;
+  const e = entity(r.kind);
+  if (!('project_id' in e.fields)) return null;
+  const row = await ctx.db.prepare(`SELECT project_id FROM ${e.table} WHERE mode = ? AND id = ?`).bind(ctx.mode, r.id).first<{ project_id: string | null }>();
+  return row?.project_id ?? null;
+}
+
+/** The tags on one file: its project's automatic tag first, then its own by name. */
 export async function tagsOf(ctx: Ctx, r: TaggedRef): Promise<TagRow[]> {
   const res = await ctx.db
     .prepare('SELECT t.id, t.name, t.color FROM tag_links l JOIN tags t ON t.id = l.tag_id WHERE l.mode = ? AND l.kind = ? AND l.target_id = ? ORDER BY t.name COLLATE NOCASE')
     .bind(ctx.mode, r.kind, r.id)
     .all<TagRow>();
-  return res.results;
+  const pid = await projectOfTarget(ctx, r);
+  const p = pid ? await ctx.db.prepare('SELECT id, name FROM projects WHERE mode = ? AND id = ?').bind(ctx.mode, pid).first<{ id: string; name: string }>() : null;
+  return p ? [autoTag(p), ...res.results] : res.results;
 }
 
 /** Every tagged file of the profile: `<kind>:<id>` → its tags (one query). */
@@ -177,6 +217,10 @@ export interface SetTagsInput {
 /** Change one file's tags. One undo step. Answers with the file's tags. */
 export async function setTags(ctx: Ctx, r: TaggedRef, input: SetTagsInput) {
   await checkTarget(ctx, r);
+  // A project's automatic tag comes from the project: it cannot be put on or taken off.
+  const auto = [...(input.add ?? []), ...(input.remove ?? [])].find(isAuto);
+  if (auto) throw bad('A project’s tag is automatic: every file of the project has it. Move the file to another project (or out of it) to change it');
+  input = { ...input, tags: input.tags?.filter((t) => !isAuto(t)) };
   const links = await list(ctx, tagLinksEntity, { where: { kind: r.kind, target_id: r.id }, limit: 500 });
   const has = new Map(links.map((l) => [String(l.tag_id), l]));
   const want = new Set<string>();
@@ -215,28 +259,37 @@ const filesAddon: FileAddon = {
   id: 'tags',
   feature: FLAG,
   async decorate(ctx, files, keyOf) {
-    const tagged = await allTagged(ctx);
-    for (const f of files) f.tags = tagged.get(keyOf(f)) ?? [];
+    const [tagged, projects] = await Promise.all([allTagged(ctx), projectNames(ctx)]);
+    for (const f of files) {
+      const own = tagged.get(keyOf(f)) ?? [];
+      const p = f.project_id ? projects.get(f.project_id) : undefined;
+      f.tags = p ? [autoTag(p), ...own] : own;
+    }
   },
   async search(ctx, like) {
-    const res = await ctx.db
-      .prepare(`SELECT l.kind, l.target_id FROM tag_links l JOIN tags t ON t.id = l.tag_id WHERE l.mode = ? AND t.name LIKE ? ESCAPE '\\'`)
-      .bind(ctx.mode, like)
-      .all<{ kind: string; target_id: string }>();
-    return new Set(res.results.map((r) => `${r.kind}:${r.target_id}`));
+    const [res, projects] = await ctx.db.batch<any>([
+      ctx.db.prepare(`SELECT l.kind, l.target_id FROM tag_links l JOIN tags t ON t.id = l.tag_id WHERE l.mode = ? AND t.name LIKE ? ESCAPE '\\'`).bind(ctx.mode, like),
+      ctx.db.prepare(`SELECT id FROM projects WHERE mode = ? AND name LIKE ? ESCAPE '\\'`).bind(ctx.mode, like),
+    ]);
+    const keys = new Set((res.results as { kind: string; target_id: string }[]).map((r) => `${r.kind}:${r.target_id}`));
+    const ofProject = new Set((projects.results as { id: string }[]).map((r) => r.id));
+    if (!keys.size && !ofProject.size) return null;
+    return (f, key) => keys.has(key) || (!!f.project_id && ofProject.has(f.project_id));
   },
   filter: {
     param: 'tag',
     async apply(ctx, files: FileItem[], value) {
       const asked = value.split(',').map((v) => v.trim()).filter(Boolean);
-      if (asked.some((v) => v.toLowerCase() === NO_TAG)) return files.filter((f) => !f.tags?.length);
-      const ids: string[] = [];
+      // No tag: none of the owner's own (a project's automatic tag does not count).
+      if (asked.some((v) => v.toLowerCase() === NO_TAG)) return files.filter((f) => !f.tags?.some((t) => !t.auto));
+      const ids: string[][] = [];
       for (const a of asked) {
-        const t = await findTag(ctx, a).catch(() => null);
-        if (!t) return [];
-        ids.push(t.id);
+        // A tag of the owner's or a project's automatic tag (by id, or by name: either matches).
+        const found = [await findTag(ctx, a).catch(() => null), await findAutoTag(ctx, a)].filter((t): t is TagRow => !!t);
+        if (!found.length) return [];
+        ids.push(found.map((t) => t.id));
       }
-      return files.filter((f) => ids.every((id) => f.tags?.some((t) => t.id === id)));
+      return files.filter((f) => ids.every((any) => f.tags?.some((t) => any.includes(t.id))));
     },
   },
 };
@@ -272,8 +325,11 @@ export const tagsModule: Module = {
   fileAddons: [filesAddon],
   async beforeDelete(ctx, e: Entity, row: Row) {
     if (!taggableKinds().has(e.name)) return;
-    for (const l of await list(ctx, tagLinksEntity, { where: { kind: e.name, target_id: row.id }, limit: 500 })) {
-      if (await getRaw(ctx, tagLinksEntity, l.id)) await remove(ctx, tagLinksEntity, l.id);
+    // A project's notes go with the project.
+    for (const kind of e.name === 'projects' ? [e.name, PROJECT_NOTES] : [e.name]) {
+      for (const l of await list(ctx, tagLinksEntity, { where: { kind, target_id: row.id }, limit: 500 })) {
+        if (await getRaw(ctx, tagLinksEntity, l.id)) await remove(ctx, tagLinksEntity, l.id);
+      }
     }
   },
   routes(api) {
@@ -326,7 +382,8 @@ export const tagsModule: Module = {
   tools: [
     {
       name: 'list_tags',
-      description: 'List the profile’s tags with their colour and how many files carry each. list_files with tags finds the files.',
+      description:
+        'List the profile’s tags with their colour and how many files carry each, then the projects’ automatic tags (auto: true, id project:<project id>, the project’s name; every file of the project has it; read only). list_files with tags finds the files.',
       readOnly: true,
       feature: FLAG,
       input: z.object({}),
@@ -362,7 +419,8 @@ export const tagsModule: Module = {
     },
     {
       name: 'tag_file',
-      description: 'Put tags on a file (type and id as list_files gives them). A name that is not a tag yet becomes one. Answers with the file’s tags.',
+      description:
+        'Put tags on a file (type and id as list_files gives them; a project’s notes, type project-note, have their own tags). A name that is not a tag yet becomes one. Any file can have several. A project’s automatic tag cannot be added or removed. Answers with the file’s tags.',
       feature: FLAG,
       input: z.object(fileArgs),
       run: (ctx, a) => setTags(ctx, refOf(a.type, a.id), { add: a.tags }),

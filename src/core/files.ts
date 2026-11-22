@@ -30,8 +30,8 @@ export interface FileItem {
   thumbnail?: boolean;
   /** Listed only inside its project's folder (a project's empty notes). */
   quiet?: boolean;
-  /** Its tags (src/modules/tags.ts, while the tags flag is on). */
-  tags?: { id: string; name: string; color: string | null }[];
+  /** Its tags (src/modules/tags.ts, while the tags flag is on); a project's automatic tag first (auto: true). */
+  tags?: { id: string; name: string; color: string | null; auto?: true; project_id?: string }[];
 }
 
 export interface FileSource {
@@ -44,7 +44,7 @@ export interface FileSource {
   /** The entity whose rows these are; it has a folder_id field, so they can be moved. None: fixed in place. */
   entity?: string;
   /** The kind of row a file of this type is, for what is attached to files (tags): `entity` when
-   *  not given. A project's notes are the project's row ('projects'). */
+   *  not given. A project's notes are 'project-notes' (their id is the project's). */
   rowKind?: string;
   /** Only listed while this flag is on. */
   feature?: string;
@@ -78,8 +78,9 @@ export interface FileAddon {
   feature?: string;
   /** Add fields to each listed file (its tags). Runs on every file found, before filtering. */
   decorate?(ctx: Ctx, files: FileItem[], keyOf: (f: FileItem) => string): Promise<void>;
-  /** Files that match a search some other way (a tag's name): their keys. */
-  search?(ctx: Ctx, like: string): Promise<Set<string>>;
+  /** Files that match a search some other way (a tag's name): a test for a file and its key, or
+   *  null when nothing can match. */
+  search?(ctx: Ctx, like: string): Promise<((f: FileItem, key: string) => boolean) | null>;
   /** A query parameter of GET /api/files (and list_files) that narrows the files; given a value,
    *  the listing looks in the folder and everything inside it, as a search does. */
   filter?: { param: string; apply(ctx: Ctx, files: FileItem[], value: string): Promise<FileItem[]> };

@@ -17,10 +17,11 @@ describe('files and folders', () => {
   it('gives every project a folder that follows its name and goes with it', async () => {
     const m = await freshMode('files-project');
     const p = await call('POST', '/projects', { name: 'Garden' }, m);
+    // The top level shows Projects; the project's folder is in No category inside it (D52).
     let root = await call('GET', '/files', undefined, m);
-    expect(root.folders).toHaveLength(1);
-    expect(root.folders[0]).toMatchObject({ name: 'Garden', project_id: p.id, status: 'active' });
-    const folder = root.folders[0];
+    expect(names(root.folders)).toEqual(['Projects']);
+    const folder = (await call('GET', '/files?folder=vf:nocat', undefined, m)).folders[0];
+    expect(folder).toMatchObject({ name: 'Garden', project_id: p.id, status: 'active', parent_id: 'vf:nocat' });
 
     // Renaming the project renames its folder, and renaming the folder renames the project.
     await call('PATCH', `/projects/${p.id}`, { name: 'Garden shed' }, m);
@@ -40,12 +41,13 @@ describe('files and folders', () => {
     expect(board.folder_id).toBe(folder.id);
     await call('DELETE', `/projects/${p.id}`, undefined, m);
     root = await call('GET', '/files', undefined, m);
-    expect(names(root.folders)).toEqual(['Ideas']);
+    expect(names(root.folders)).toEqual(['Projects', 'Ideas']);
     expect(names(root.files)).toEqual(['Loose note']);
     expect(root.files[0].project_id).toBeNull();
     await call('POST', '/undo', {}, m);
     root = await call('GET', '/files', undefined, m);
-    expect(names(root.folders)).toEqual(['Shed']);
+    expect(names(root.folders)).toEqual(['Projects']);
+    expect(names((await call('GET', '/files?folder=vf:nocat', undefined, m)).folders)).toEqual(['Shed']);
     expect(root.files).toEqual([]);
     const inside = await call('GET', `/files?folder=${folder.id}`, undefined, m);
     expect(names(inside.folders)).toEqual(['Ideas']);
@@ -115,13 +117,13 @@ describe('files and folders', () => {
     await call('POST', '/resources', { title: 'Plumber', value: '+44 7700 900123', type: 'phone', project_id: p.id }, m);
 
     const root = await call('GET', '/files', undefined, m);
-    expect(names(root.folders)).toEqual(['Alpha', 'Kitchen']);
+    expect(names(root.folders)).toEqual(['Projects', 'Alpha']);
     expect(names(root.files)).toEqual(['Zebra note']);
     expect(root.files[0]).toMatchObject({ type: 'note', preview: 'Paint the **fence** blue' });
     expect(root.path).toEqual([]);
 
     const kitchen = await call('GET', `/files?project=${p.id}`, undefined, m);
-    expect(kitchen.path.map((x: any) => x.name)).toEqual(['Kitchen']);
+    expect(kitchen.path.map((x: any) => x.name)).toEqual(['Projects', 'No category', 'Kitchen']);
     // An empty project note shows in its own folder only.
     expect(names(kitchen.files)).toEqual(['Fence plan', 'Kitchen notes', 'Spec']);
     expect(kitchen.files.find((f: any) => f.type === 'link')).toMatchObject({ kind: 'doc', url: expect.stringContaining('docs.google.com') });
@@ -130,7 +132,7 @@ describe('files and folders', () => {
     // Search: names and note text, everywhere below, with where each one is.
     const s = await call('GET', '/files?q=fence', undefined, m);
     expect(names(s.files)).toEqual(['Fence plan', 'Zebra note']);
-    expect(s.files[0].location).toBe('Kitchen');
+    expect(s.files[0].location).toBe('Projects › No category › Kitchen');
     expect((await call('GET', '/files?q=bet', undefined, m)).folders.map((f: any) => [f.name, f.location])).toEqual([['beta', 'Alpha']]);
     expect(names((await call('GET', `/files?folder=${a.id}&q=e`, undefined, m)).files)).toEqual(['Apple list']);
     expect(names((await call('GET', '/files?type=whiteboards,links', undefined, m)).files)).toEqual(['Fence plan', 'Spec']);
@@ -153,7 +155,9 @@ describe('files and folders', () => {
     const w = await call('POST', '/whiteboards', { name: 'Deep board', folder_id: inner.id }, m);
     const p = await call('POST', '/projects', { name: 'Nested project' }, m);
     const pf = (await call('GET', `/files?project=${p.id}`, undefined, m)).folder;
-    await call('PATCH', `/folders/${pf.id}`, { parent_id: inner.id }, m);
+    // A project's folder stays in its category's folder (D52); one left inside a folder from before (the migration puts it back) still counts.
+    await call('PATCH', `/folders/${pf.id}`, { parent_id: inner.id }, { ...m, expect: 400 });
+    await env.DB.prepare('UPDATE folders SET parent_id = ? WHERE id = ?').bind(inner.id, pf.id).run();
     expect(await call('GET', `/folders/${mid.id}/count`, undefined, m)).toEqual({ folders: 2, files: 2, projects: 1 });
 
     await call('DELETE', `/folders/${mid.id}`, undefined, m);
@@ -167,11 +171,11 @@ describe('files and folders', () => {
     expect(r.items_deleted).toBe(3); // the note, the board and Inner
     await call('GET', `/lists/${n.id}`, undefined, { ...m, expect: 404 });
     await call('GET', `/whiteboards/${w.id}`, undefined, { ...m, expect: 404 });
-    // A project's folder inside is not deleted: it moves up, with the project.
-    expect((await call('GET', `/folders/${pf.id}`, undefined, m)).parent_id).toBe(top.id);
+    // A project's folder inside is not deleted: it stays in its category's folder, with the project.
+    expect(await env.DB.prepare('SELECT parent_id FROM folders WHERE id = ?').bind(pf.id).first('parent_id')).toBeNull();
+    expect((await call('GET', `/folders/${pf.id}`, undefined, m)).parent_id).toBe('vf:nocat');
     await call('POST', '/undo', {}, m);
     expect((await call('GET', `/whiteboards/${w.id}`, undefined, m)).folder_id).toBe(inner.id);
-    expect((await call('GET', `/folders/${pf.id}`, undefined, m)).parent_id).toBe(inner.id);
   });
 
   it('serves a whiteboard’s preview as an image', async () => {
@@ -238,7 +242,7 @@ describe('files and folders', () => {
     await tool('move_files', { items: [{ type: 'list', id: l.id }], folder_id: sub.id, mode: m });
     await tool('move_folder', { id: sub.id, parent_id: null, mode: m });
     listed = await tool('list_files', { mode: m });
-    expect(names(listed.folders)).toEqual(['Archive', 'Research']);
+    expect(names(listed.folders)).toEqual(['Projects', 'Archive', 'Research']);
     await tool('delete_folder', { id: sub.id, mode: m });
     listed = await tool('list_files', { mode: m });
     expect(names(listed.files)).toEqual(['Mind map', 'Reading list']);
