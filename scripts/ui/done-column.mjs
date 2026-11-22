@@ -73,6 +73,12 @@ async function view(theme, vname, vp, act) {
   ok((await page.locator('.done-strip').count()) === 1 && (await page.textContent('.done-strip-count')).trim() === String(n), `${name}: Hide done folds Done into a strip with its count (${n})`);
   ok((await page.textContent('.board-tools')).includes(`Show done (${n})`), `${name}: the button says Show done (${n})`);
   await sideways(page, vp.width, `${name} folded`);
+  // The strip sits at the far right of the board, pinned to its right edge, also while the columns scroll.
+  const edge = () => page.$eval('.board.horizontal', (b) => { const s = b.querySelector('.done-strip').getBoundingClientRect(); const r = b.getBoundingClientRect(); return Math.round(r.right - s.right); });
+  ok((await edge()) <= 2, `${name}: the folded strip is at the board's right edge (${await edge()}px)`);
+  await page.$eval('.board.horizontal', (b) => (b.scrollLeft = 0));
+  await settle(page, 150);
+  ok((await edge()) <= 2, `${name}: and stays there with the board scrolled to the start`);
   await page.waitForTimeout(500);
   ok((await api.get(`/projects/${p1.id}/full`)).hide_done === true, `${name}: Hide done is saved on the project`);
   await page.locator('.board-wrap').screenshot({ path: `${OUT}/done-column-${name}-folded.png` });

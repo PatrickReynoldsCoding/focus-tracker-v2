@@ -104,6 +104,9 @@ async function desktop() {
   // A project's notes, from its folder (the path takes you back).
   await page.click('.pl-add');
   await page.click('dialog[open] .ap-file');
+  // Files › Projects › Coding › Focus Tracker v2 (D52).
+  await page.click('dialog[open] .ap-row:has-text("Projects")');
+  await page.click('dialog[open] .ap-row:has-text("Coding")');
   await page.click('dialog[open] .ap-row:has-text("Focus Tracker v2"):has-text("Project folder")');
   await page.waitForSelector('dialog[open] .ap-crumbs button:has-text("Focus Tracker v2")');
   await settle(page);

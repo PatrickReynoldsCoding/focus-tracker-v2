@@ -1,5 +1,6 @@
 // Browser check for the Files tab (D31, flag files-tab): it replaces the Notes and Whiteboards
-// tabs; old addresses (#/notes, #/whiteboards) land in Files; folders and project folders; type
+// tabs; old addresses (#/notes, #/whiteboards) land in Files; folders and project folders (under
+// Projects › category, D52; files-tree.mjs checks that tree more closely); type
 // chips, search (names and note text, everywhere below), sort, grid and list; New (folder, note,
 // whiteboard, link) in the folder on screen; Rename, Move… (the folder picker), drag onto a folder
 // and onto the path, deleting a folder that is not empty (move up, or everything) with Undo; a
@@ -77,12 +78,12 @@ try {
       ok(!(await page.evaluate(() => location.hash)).startsWith('#/notes'), 'Back does not go to the old #/notes address');
     }
 
-    // The top level: folders (projects too) and loose files, as a grid.
+    // The top level: one Projects folder, the owner's folders and loose files, as a grid.
     await page.goto(`${B}/#/files`);
     await page.waitForSelector('.folder-tile');
     ok(!(await page.$('.files-crumbs')), 'no path at the top level');
     const top = await folderNames(page);
-    ok(['Focus Tracker v2', 'Garden shed', 'Reading'].every((n) => top.includes(n)), `folders at the top: ${top.join(', ')}`);
+    ok(top[0] === 'Projects' && top.includes('Reading') && !top.includes('Focus Tracker v2') && !top.includes('Garden shed'), `folders at the top: Projects and the owner's (${top.join(', ')})`);
     const loose = await fileNames(page);
     ok(loose.includes('Ideas') && !loose.includes('Paper notes') && !loose.includes('Spec doc'), 'files at the top level only');
     await shot(page, 'desk-root');
@@ -90,7 +91,7 @@ try {
     // Chips and search.
     await page.click('.files-chips .chip:has-text("Links")');
     await page.waitForFunction(() => [...document.querySelectorAll('.file-card .files-name')].map((e) => e.textContent).join() === 'Spec doc');
-    ok((await page.textContent('.file-card .files-sub')).includes('Focus Tracker v2'), 'a link found with where it is');
+    ok((await page.textContent('.file-card .files-sub')).includes('Projects › Coding › Focus Tracker v2'), 'a link found with where it is');
     ok(!!(await page.$('.file-card .kind-icon.kind-doc')), 'a Google Doc shows its icon');
     await page.click('.files-chips .chip:has-text("All")');
     await page.fill('.files-search', 'widget');
@@ -102,10 +103,14 @@ try {
     await shot(page, 'desk-search');
     await page.fill('.files-search', '');
 
-    // A project's folder.
+    // A project's folder: Projects › its category › the project.
+    await page.click('.folder-tile .files-open:has-text("Projects")');
+    await page.waitForSelector('.folder-tile:has-text("Coding")');
+    await page.click('.folder-tile .files-open:has-text("Coding")');
+    await page.waitForSelector('.folder-tile:has-text("Focus Tracker v2")');
     await page.click('.folder-tile .files-open:has-text("Focus Tracker v2")');
-    await page.waitForSelector('.files-crumbs');
-    ok((await names(page, '.files-crumbs .crumb')).join() === 'Files,Focus Tracker v2', 'the path shows Files › Focus Tracker v2');
+    await page.waitForSelector('.files-crumbs .crumb:has-text("Focus Tracker v2")');
+    ok((await names(page, '.files-crumbs .crumb')).join() === 'Files,Projects,Coding,Focus Tracker v2', 'the path shows Files › Projects › Coding › Focus Tracker v2');
     await page.waitForFunction(() => document.querySelectorAll('.file-card').length >= 3);
     const inP1 = await fileNames(page);
     ok(['Focus Tracker v2 notes', 'Schema sketch', 'Spec doc'].every((n) => inP1.includes(n)), `the project's notes, board and link are in its folder (${inP1.join(', ')})`);
@@ -215,6 +220,10 @@ try {
     await shot(page, 'phone-menu', false); // a full-page shot resizes the page, which would close the menu
     await page.click('.files-menu-item:has-text("Move")');
     await page.waitForSelector('dialog .files-move-row');
+    await page.click('dialog .files-move-row:has-text("Projects")');
+    await page.waitForSelector('dialog .files-move-row:has-text("No category")');
+    ok(await page.$eval('dialog button:has-text("Move here")', (b) => b.disabled), 'Move here is off in Projects (files go in a project’s folder)');
+    await page.click('dialog .files-move-row:has-text("No category")');
     await page.click('dialog .files-move-row:has-text("Garden shed")');
     await page.waitForSelector('dialog .files-crumbs .crumb:has-text("Garden shed")');
     await shot(page, 'phone-move');
