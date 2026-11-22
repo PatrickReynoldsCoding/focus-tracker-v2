@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { change, del, logout, mode, patch, post, put, say } from '../../core/api';
-import { featureList, setFeature } from '../../core/features';
+import { featureList, loadFeatures, setFeature } from '../../core/features';
+import { OwnValue, scopedChange, ScopeChoice, useScopeStates } from '../../core/scope';
 import { profileOf, profiles } from '../../core/profiles';
 import { Panels, registerPanel, registerTab, type SettingsScope } from '../../core/registry';
 import { useSignal } from '../../core/signal';
@@ -166,18 +167,30 @@ function General() {
 
 function Features() {
   const list = useSignal(featureList);
+  const { states, of, reload } = useScopeStates();
+  const flip = async (id: string, enabled: boolean, box: HTMLInputElement) => {
+    const done = await scopedChange('features', [`features.${id}`], states, (scope) => setFeature(id, enabled, scope).then(() => scope)).catch((err) => {
+      say(err.message, 'error');
+      return false as const;
+    });
+    if (done === false) box.checked = !enabled;
+    else reload();
+    if (done === 'all') say(`${enabled ? 'On' : 'Off'} in every profile`);
+  };
   return (
     <section class="card">
       <h2>Features</h2>
-      <p class="muted small">Turn parts of the tracker on or off in this profile, on every device and for Claude. Each profile has its own switches.</p>
+      <p class="muted small">Turn parts of the tracker on or off, on every device and for Claude. Each profile has its own switches; choose All profiles to change a switch in every profile at once.</p>
+      <ScopeChoice section="features" />
       {list.length ? (
         <ul class="plain">
           {list.map((f) => (
             <li key={f.id}>
               <label class="inline feature-row">
-                <input type="checkbox" checked={f.enabled} onChange={(e) => setFeature(f.id, (e.target as HTMLInputElement).checked).catch((err) => say(err.message, 'error'))} />
+                <input type="checkbox" checked={f.enabled} onChange={(e) => flip(f.id, (e.target as HTMLInputElement).checked, e.target as HTMLInputElement)} />
                 <span>
                   <strong>{f.label}</strong> {f.experimental && <span class="tag">Experimental</span>}
+                  <OwnValue state={of(`features.${f.id}`)} section="features" onDone={() => void loadFeatures()} />
                   <span class="muted small" style="display:block">{f.description}</span>
                 </span>
               </label>
@@ -219,7 +232,7 @@ function useSections(root: { current: HTMLElement | null }): SectionLink[] {
 }
 
 const SCOPES: Record<SettingsScope, { text: string; hint: (profile: string) => string }> = {
-  profile: { text: 'This profile', hint: (p) => `Kept for ${p} only: each profile has its own` },
+  profile: { text: 'This profile', hint: (p) => `Kept for ${p}: each profile has its own. Where a section has “All profiles”, a change can go to every profile.` },
   all: { text: 'Every profile', hint: () => 'The same in every profile' },
   device: { text: 'This device', hint: () => 'Kept in this browser or app only' },
 };
@@ -259,7 +272,7 @@ export function Settings() {
           <h1>Settings</h1>
           <span class="tag">{name}</span>
         </div>
-        <p class="muted small">Each section says whom it is for: this profile ({name}; other profiles have their own), every profile, or this device only.</p>
+        <p class="muted small">Each section says whom it is for: this profile ({name}; other profiles have their own), every profile, or this device only. In a section with “{name} only | All profiles”, choose where your next changes go.</p>
       </div>
       <div class="settings-layout">
         <nav class="settings-nav" aria-label="Settings sections">

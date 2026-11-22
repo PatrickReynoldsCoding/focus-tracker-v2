@@ -29,8 +29,9 @@ export async function loadFeatures(forMode?: string): Promise<void> {
   }
 }
 
-export async function setFeature(id: string, enabled: boolean): Promise<void> {
-  apply(await api<FeatureInfo[]>('PUT', `/features/${id}`, { enabled }));
+/** Switch a flag in the open profile, or in every profile with scope 'all' (D46). */
+export async function setFeature(id: string, enabled: boolean, scope: 'profile' | 'all' = 'profile'): Promise<void> {
+  apply(await api<FeatureInfo[]>('PUT', `/features/${id}`, { enabled, scope }));
 }
 
 mode.subscribe(() => {
