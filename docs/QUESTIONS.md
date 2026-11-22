@@ -94,3 +94,13 @@ Questions the owner could not be asked while an item was built. Each gives the d
 1. "Computer" means any width above a phone (760 px and up), where the pills showed before; a tablet between 760 and 899 px gets the same stacked page as before, now without the row. Default: 760 px.
 2. With the flag off, Today settings on a computer hides the pill editor and says where the pills are; the focus card size stays. Pills can still be edited on a phone or by Claude. Default: hidden.
 3. The "Show the All pill" switch is ignored while the computer has no pills (All is the whole page). Default: ignored.
+
+## 0.34.0 (lists, to-dos and projects are one board engine, stage 1)
+
+1. Projects keep their boards on the project (`columns.project_id`) and share the engine's code, instead of each project owning a to-do row in `lists`. Default: kept where they are (far less to migrate; same rules). Say if a project should also show up as a to-do file on the Files tab.
+2. Unticking a to-do puts it back in the group it was ticked in; unticking a project card still puts it in the first column (To do), as D34 says. Default: as now. Should a project card go back to the column it came from too (the card now remembers it)?
+3. A to-do ticked from its list keeps its place in the List view (and so sits in that order in the Done column); a project card ticked goes to the end of Done. Default: as now. In stage 2's Board view, should Done be ordered by when things were ticked instead?
+4. Plain lists still accept a day on an item in this stage, so the app behaves as before (production has none). Default: stage 2 removes the day picker for plain lists and the server refuses a day there. Should converting a list to a to-do be offered when someone tries to give a list item a day?
+5. Undo history was cleared by the migration (14 days of steps), because older steps named the old to-dos table. Default: cleared once.
+6. Deleting a to-do's group deletes the open to-dos in it (as deleting a board column always did); done ones stay in Done and go back to the first group when unticked. Default: as now. Should deleting a group move its to-dos to another group instead?
+7. A to-do *about* a project (old `todos.project_id`, now `tasks.about_project_id`) is kept but is not on that project's board. Production has none. Default: kept for the old API. Drop it in stage 2?
