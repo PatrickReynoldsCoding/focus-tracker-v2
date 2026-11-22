@@ -44,10 +44,10 @@ const FOLLOW_KEY = 'profiles.follow_open';
 
 export const modeTables = (): string[] => [...new Set([...allEntities().filter((e) => e.modeScoped).map((e) => e.table), ...OTHER_MODE_TABLES])];
 
-export type Profile = { id: string; label: string; color: string | null; ord: number };
+export type Profile = { id: string; label: string; color: string | null; theme: string | null; ord: number };
 type Deleted = { id: string; label: string; color: string | null; deleted_at: string; restore_until: string };
 
-const shape = (r: Record<string, unknown>): Profile => ({ id: String(r.id), label: String(r.label), color: (r.color as string) || null, ord: Number(r.ord) });
+const shape = (r: Record<string, unknown>): Profile => ({ id: String(r.id), label: String(r.label), color: (r.color as string) || null, theme: (r.theme as string) || null, ord: Number(r.ord) });
 
 async function liveProfiles(ctx: Ctx): Promise<Profile[]> {
   return (await list(ctx, modesEntity)).map(shape);
@@ -135,6 +135,14 @@ function checkLabel(raw: unknown): string {
   return label;
 }
 
+const THEME_ID = /^[a-z][a-z0-9-]{1,19}$/;
+/** A profile's own colour theme: an id such as "forest" (the web app knows which exist; an unknown one is ignored there), or null for "same as the app". */
+function checkTheme(raw: unknown): string | null {
+  const theme = raw == null || raw === '' ? null : String(raw);
+  if (theme && !THEME_ID.test(theme)) throw bad('theme must be a short lowercase id such as forest, or empty for the same as the app');
+  return theme;
+}
+
 function checkColour(raw: unknown): string | null {
   const color = raw == null || raw === '' ? null : String(raw);
   if (color && !COLOUR.test(color)) throw bad('color must look like #3366cc');
@@ -153,10 +161,11 @@ export async function createProfile(ctx: Ctx, input: { label?: unknown; color?: 
   return { profile: shape(row), copied_from: from, settings_copied: copied.length };
 }
 
-export async function updateProfile(ctx: Ctx, id: string, input: { label?: unknown; color?: unknown; position?: unknown }) {
+export async function updateProfile(ctx: Ctx, id: string, input: { label?: unknown; color?: unknown; theme?: unknown; position?: unknown }) {
   const patch: Record<string, unknown> = {};
   if (input.label !== undefined) patch.label = checkLabel(input.label);
   if (input.color !== undefined) patch.color = checkColour(input.color) ?? '';
+  if (input.theme !== undefined) patch.theme = checkTheme(input.theme) ?? '';
   let row = Object.keys(patch).length ? await update(ctx, modesEntity, id, patch) : await get(ctx, modesEntity, id);
   if (input.position !== undefined) {
     if (typeof input.position !== 'number' || !Number.isInteger(input.position) || input.position < 1) throw bad('position is a whole number from 1 (first)');
@@ -236,7 +245,7 @@ export async function restoreProfile(ctx: Ctx, id: string) {
   // A profile made since with the same name: this one comes back as "Name (restored)".
   const clash = await ctx.db.prepare('SELECT 1 FROM modes WHERE lower(trim(label)) = lower(trim(?))').bind(String(row.label)).first();
   if (clash) row.label = `${String(row.label).slice(0, LABEL_MAX - 11)} (restored)`;
-  const cols = ['id', 'label', 'color', 'ord', 'created', 'updated_at'];
+  const cols = ['id', 'label', 'color', 'theme', 'ord', 'created', 'updated_at'];
   row.updated_at = ctx.now();
   await ctx.db.batch([
     ctx.db.prepare(`INSERT INTO modes (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`).bind(...cols.map((c) => row[c] ?? null)),
@@ -316,8 +325,8 @@ export const profilesModule: Module = {
     },
     {
       name: 'update_profile',
-      description: 'Rename a profile, change its colour ("" for the usual one) or its place in the list (1 = first).',
-      input: z.object({ id: idArg, label: z.string().optional(), color: z.string().optional(), position: z.number().int().min(1).optional() }),
+      description: 'Rename a profile, change its colour ("" for the usual one), its colour theme (a theme id such as midnight, paper, forest, ocean, sunset, berry, sand, slate; "" for the same as the app) or its place in the list (1 = first).',
+      input: z.object({ id: idArg, label: z.string().optional(), color: z.string().optional(), theme: z.string().optional(), position: z.number().int().min(1).optional() }),
       run: async (ctx, a) => updateProfile(ctx, await profileIdOf(ctx.db, a.id), a),
     },
     {

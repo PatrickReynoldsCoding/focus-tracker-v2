@@ -1,13 +1,12 @@
 /* Settings → Appearance */
-.theme-options { display: flex; flex-direction: column; gap: 8px; }
-.theme-option { flex-direction: row; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--fg); cursor: pointer; min-height: 56px; }
-.theme-option.on { border-color: var(--accent); background: var(--accent-soft); }
-.theme-option input { flex: none; width: 22px; height: 22px; min-height: 0; margin: 0; }
-.theme-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-.theme-text strong { font-weight: 600; }
-.theme-swatch { flex: none; width: 52px; height: 36px; border-radius: 8px; display: grid; place-items: center; font-weight: 700; border: 1px solid #8884; }
-/* previews show each theme whatever the app is showing now */
-.theme-swatch.sw-light { background: #f6f5f1; color: #1e1f1c; }
-.theme-swatch.sw-dark { background: #151514; color: #ebeae5; }
-.theme-swatch.sw-eink { background: #fff; color: #000; border: 3px solid #000; }
-.theme-swatch.sw-system { background: linear-gradient(105deg, #f6f5f1 50%, #151514 50%); color: #7a7a72; }
+.theme-swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.theme-swatch-btn { display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; aspect-ratio: 1.15; padding: 7px; border-radius: 10px; border: 2px solid var(--sw-line); min-height: 64px; text-align: left; }
+.theme-swatch-btn.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.theme-swatch-btn .sw-bar { height: 7px; border-radius: 4px; display: block; }
+.theme-swatch-btn .sw-panel { height: 14px; border-radius: 4px; border: 1px solid; display: block; }
+.theme-swatch-btn .sw-name { font-size: 0.78rem; font-weight: 600; }
+.theme-follow-pick { margin-left: 28px; }
+.theme-eink { align-items: flex-start; }
+.theme-profile-note { margin: 0; }
+.profile-theme { width: auto; min-height: 34px; padding: 4px 8px; }
+@media (max-width: 380px) { .theme-swatches { grid-template-columns: repeat(2, 1fr); } }

@@ -15,6 +15,8 @@
 .profile-moves { flex: none; }
 .profile-row-more { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding-left: 44px; }
 .profile-row-more > .muted { margin-right: auto; }
+.profile-theme-pick { color: var(--fg); margin-right: auto; }
+.profile-theme-pick + .muted { margin-right: 0; }
 .profile-row-colour { padding-left: 44px; }
 .profile-follow { align-items: flex-start; }
 .profile-deleted h3 { margin: 6px 0 0; font-size: 0.95rem; }

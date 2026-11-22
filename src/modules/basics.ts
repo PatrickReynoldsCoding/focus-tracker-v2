@@ -40,6 +40,7 @@ export const modesEntity: Entity = {
   fields: {
     label: { type: 'text', required: true },
     color: { type: 'text', desc: 'Colour theme as #rrggbb, used by the web app while this profile is open' },
+    theme: { type: 'text', desc: 'Look of the web app while this profile is open (a theme id such as forest); empty = same as the app' },
   },
   async beforeUpdate(ctx, before, patch) {
     checkColour(patch.color);

@@ -5,7 +5,7 @@ import { loadFeatures } from './features';
 import { signal } from './signal';
 import { go, route } from './ui';
 
-export type Profile = { id: string; label: string; color: string | null; ord: number };
+export type Profile = { id: string; label: string; color: string | null; theme?: string | null; ord: number };
 export type DeletedProfile = { id: string; label: string; color: string | null; deleted_at: string; restore_until: string };
 export type ProfileList = { default: string; follow_open: boolean; profiles: Profile[]; deleted: DeletedProfile[] };
 

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { change, get, HttpError, mode, patch, post, put, say, version } from '../../core/api';
 import { loadProfiles, profiles, switchProfile, type DeletedProfile, type Profile } from '../../core/profiles';
 import { useSignal } from '../../core/signal';
+import { COLOUR_THEMES } from '../../core/theme';
 import { Dialog, InlineEdit, Loading } from '../../core/ui';
 import { ColourChoice } from './ColourChoice';
 import { USUAL_COLOUR } from './colours';
@@ -208,6 +209,17 @@ export function ProfileList() {
               </span>
             </div>
             <div class="profile-row-more">
+              <label class="inline profile-theme-pick">
+                <span class="muted small">Theme</span>
+                <select class="profile-theme" aria-label={`Theme of ${p.label}`} value={p.theme ?? ''} onChange={(e) => edit(p, { theme: (e.target as HTMLSelectElement).value }, 'Saved')}>
+                  <option value="">Same as app</option>
+                  {COLOUR_THEMES.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <span class="muted small">
                 id <code>{p.id}</code>
               </span>

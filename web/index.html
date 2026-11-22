@@ -6,15 +6,29 @@
     <meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#151514" media="(prefers-color-scheme: dark)" />
     <script>
-      // The theme chosen on this device (Settings → Appearance), applied before the first paint so there is no flash.
-      // Same as computer = no attribute. Keep in step with web/src/core/theme.ts.
+      // The theme on this device (Settings → Appearance) and the open profile's own, applied before the first paint so there is no flash.
+      // Keep in step with currentThemeId() in web/src/core/theme.ts, which also keeps the saved rule for each theme (ft.tcss.<id>).
       try {
-        var t = localStorage.getItem('ft.theme');
-        if (t === 'light' || t === 'dark' || t === 'eink') {
-          document.documentElement.setAttribute('data-theme', t);
-          var bar = { light: '#f6f5f1', dark: '#151514', eink: '#ffffff' }[t];
+        var g = function (k) { return localStorage.getItem(k); };
+        var old = g('ft.theme');
+        var raw = old === 'light' ? 'paper' : old === 'dark' ? 'midnight' : old === 'eink' ? null : old;
+        var fl = g('ft.follow');
+        var follow = fl === '1' ? true : fl === '0' ? false : !raw;
+        var night = matchMedia('(prefers-color-scheme: dark)').matches;
+        var id = g('ft.eink') === '1' || old === 'eink' ? 'eink'
+          : g('ft.ptheme.' + (g('ft.mode') || 'personal'))
+            || (follow ? g(night ? 'ft.theme.dark' : 'ft.theme.light') || (night ? 'midnight' : 'paper') : raw || 'paper');
+        var css = id === 'eink' ? '' : g('ft.tcss.' + id);
+        if (css || id === 'eink') {
+          var st = document.createElement('style');
+          st.id = 'ft-theme';
+          st.textContent = css;
+          document.head.appendChild(st);
+          document.documentElement.setAttribute('data-theme', id);
+          document.documentElement.setAttribute('data-kind', /color-scheme:dark/.test(css) ? 'dark' : 'light');
+          var hit = /--bg:(#[0-9a-f]{6})/.exec(css);
           var m = document.querySelectorAll('meta[name="theme-color"]');
-          for (var i = 0; i < m.length; i++) m[i].setAttribute('content', bar);
+          for (var i = 0; i < m.length; i++) m[i].setAttribute('content', hit ? hit[1] : '#ffffff');
         }
       } catch (e) {}
     </script>

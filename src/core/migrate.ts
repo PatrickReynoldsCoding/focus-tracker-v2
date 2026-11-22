@@ -20,6 +20,7 @@ import m0024 from '../../migrations/0024_setting_scope.sql';
 import m0025 from '../../migrations/0025_projects_tree.sql';
 import m0026 from '../../migrations/0026_habit_notes.sql';
 import m0027 from '../../migrations/0027_subtasks.sql';
+import m0028 from '../../migrations/0028_profile_theme.sql';
 
 /** Every migration, in order. A new file in migrations/ needs a line here (a test checks). */
 export const MIGRATIONS: [name: string, sql: string][] = [
@@ -41,6 +42,7 @@ export const MIGRATIONS: [name: string, sql: string][] = [
   ['0025_projects_tree.sql', m0025],
   ['0026_habit_notes.sql', m0026],
   ['0027_subtasks.sql', m0027],
+  ['0028_profile_theme.sql', m0028],
 ];
 
 let done = false;

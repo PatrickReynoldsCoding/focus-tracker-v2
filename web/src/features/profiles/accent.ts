@@ -1,7 +1,7 @@
 // The accent colour of the open profile is applied to the whole app (CSS variable --accent).
 
 import { localStorageSet, mode } from '../../core/api';
-import { resolvedTheme } from '../../core/theme';
+import { profileAccentOn, resolvedTheme } from '../../core/theme';
 import { profiles } from '../../core/profiles';
 
 function readable(hex: string): string {
@@ -22,7 +22,7 @@ let current: string | null | undefined;
 export function setAccent(color: string | null | undefined) {
   current = color;
   const s = document.documentElement.style;
-  if (color && /^#[0-9a-fA-F]{6}$/.test(color)) {
+  if (color && profileAccentOn.value && /^#[0-9a-fA-F]{6}$/.test(color)) {
     // On a dark background the profile's colour is lightened until it can be read as text and as a button.
     const shown = shownColour(color);
     s.setProperty('--accent', shown);
@@ -36,6 +36,7 @@ export function setAccent(color: string | null | undefined) {
 
 // Light, Dark or E-ink changed (E-ink ignores the colour in its stylesheet): redo the accent for it.
 resolvedTheme.subscribe(() => setAccent(current));
+profileAccentOn.subscribe(() => setAccent(current));
 
 function fromStorage() {
   try {

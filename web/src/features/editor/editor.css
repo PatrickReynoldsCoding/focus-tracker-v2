@@ -177,7 +177,7 @@
   :root:not([data-theme]) .ed.paper-grid { --ed-rule: rgb(140 170 220 / 0.1); }
   :root:not([data-theme]) .ed.paper-dot { --ed-dot: rgb(230 230 220 / 0.2); }
 }
-:root[data-theme='dark'] .ed.paper-legal { --ed-bg: #2a2716; --ed-rule: rgb(120 160 220 / 0.2); --ed-margin: rgb(230 100 100 / 0.35); }
-:root[data-theme='dark'] .ed.paper-legal .ed-scroll, :root[data-theme='dark'] .ed.paper-legal.ed-view { color: var(--fg); }
-:root[data-theme='dark'] .ed.paper-grid { --ed-rule: rgb(140 170 220 / 0.1); }
-:root[data-theme='dark'] .ed.paper-dot { --ed-dot: rgb(230 230 220 / 0.2); }
+:root[data-kind='dark'] .ed.paper-legal { --ed-bg: #2a2716; --ed-rule: rgb(120 160 220 / 0.2); --ed-margin: rgb(230 100 100 / 0.35); }
+:root[data-kind='dark'] .ed.paper-legal .ed-scroll, :root[data-kind='dark'] .ed.paper-legal.ed-view { color: var(--fg); }
+:root[data-kind='dark'] .ed.paper-grid { --ed-rule: rgb(140 170 220 / 0.1); }
+:root[data-kind='dark'] .ed.paper-dot { --ed-dot: rgb(230 230 220 / 0.2); }
