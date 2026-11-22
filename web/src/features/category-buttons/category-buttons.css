@@ -1,0 +1,29 @@
+/* Strong variants of the category colours: white text on each reaches 4.5:1 in light and dark. */
+.cat-buttons {
+  --kb-red: #b83a2b; --kb-orange: #a35400; --kb-yellow: #7f6200; --kb-green: #2b7339; --kb-teal: #17726c;
+  --kb-blue: #2f5fc0; --kb-purple: #7446ad; --kb-pink: #b0336f; --kb-grey: #55555a;
+  display: flex; gap: 8px; overflow-x: auto; padding: 4px 4px 10px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch;
+}
+.cat-btn {
+  flex: 0 0 auto; scroll-snap-align: start; display: inline-flex; align-items: center; gap: 8px;
+  border: 3px solid transparent; border-radius: 999px; padding: 10px 18px; min-height: 44px;
+  font: inherit; font-weight: 700; font-size: 1rem; cursor: pointer;
+  background: var(--kb, var(--kb-grey)); color: var(--kb-fg, #fff);
+}
+.cat-btn[data-color='none'] { --kb: var(--fg); --kb-fg: var(--bg); }
+.cat-btn[data-color='red'] { --kb: var(--kb-red); } .cat-btn[data-color='orange'] { --kb: var(--kb-orange); }
+.cat-btn[data-color='yellow'] { --kb: var(--kb-yellow); } .cat-btn[data-color='green'] { --kb: var(--kb-green); }
+.cat-btn[data-color='teal'] { --kb: var(--kb-teal); } .cat-btn[data-color='blue'] { --kb: var(--kb-blue); }
+.cat-btn[data-color='purple'] { --kb: var(--kb-purple); } .cat-btn[data-color='pink'] { --kb: var(--kb-pink); }
+.cat-btn[data-color='grey'] { --kb: var(--kb-grey); }
+.cat-btn.dim { opacity: 0.5; }
+.cat-btn.on { border-color: var(--fg); box-shadow: 0 0 0 2px var(--bg) inset; }
+.cat-btn:focus-visible { outline: 3px solid var(--fg); outline-offset: 2px; }
+.cat-btn-n { background: rgb(255 255 255 / 0.28); border-radius: 999px; padding: 0 9px; font-size: 0.85rem; }
+.cat-btn[data-color='none'] .cat-btn-n { background: rgb(128 128 128 / 0.35); }
+
+/* E-ink: white with a black outline; chosen = solid black with a tick; never colour alone. */
+html[data-theme='eink'] .cat-btn, html[data-theme='eink'] .cat-btn[data-color] { background: #fff; color: #000; border: 2px solid #000; --kb: #fff; opacity: 1; box-shadow: none; }
+html[data-theme='eink'] .cat-btn.on { background: #000; color: #fff; }
+html[data-theme='eink'] .cat-btn.dim { opacity: 1; border-style: dashed; }
+html[data-theme='eink'] .cat-btn-n { background: none; border: 1px solid currentColor; }

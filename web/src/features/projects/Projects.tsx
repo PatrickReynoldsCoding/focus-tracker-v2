@@ -1,5 +1,7 @@
 import { useState } from 'preact/hooks';
 import { change, del, localStorageSet, post } from '../../core/api';
+import { useFlag } from '../../core/features';
+import { CategoryButtons, FLAG as CAT_BUTTONS, loadChoice, NONE, saveChoice } from '../category-buttons/CategoryButtons';
 import { Panels, type ProjectsPanelProps } from '../../core/registry';
 import { AddInput, daysAgo, go, Linkify, Loading, todayLocal, useData } from '../../core/ui';
 
@@ -24,7 +26,12 @@ export function Projects() {
   const { data: backlog } = useData<Backlog[]>('/backlog');
   const [prefs, setPrefsState] = useState(loadPrefs);
   const [q, setQ] = useState('');
-  const [cat, setCat] = useState('');
+  const buttons = useFlag(CAT_BUTTONS);
+  const [picked, setCat] = useState<string | null>(null);
+  // The saved choice (per device and profile) is read once the flag is known to be on.
+  const chosen = picked ?? (buttons ? loadChoice() : '');
+  // A saved category that has been deleted since shows everything.
+  const cat = buttons && chosen && chosen !== NONE && cats && !cats.some((c) => c.id === chosen) ? '' : chosen;
   const setPrefs = (p: typeof prefs) => {
     setPrefsState(p);
     localStorageSet('ft.projects', JSON.stringify(p));
@@ -34,12 +41,20 @@ export function Projects() {
   const today = todayLocal();
   const rows = projects
     .filter((p) => prefs.status.includes(p.status))
-    .filter((p) => !cat || p.category_id === cat)
+    .filter((p) => !cat || (cat === NONE ? !p.category_id : p.category_id === cat))
     .filter((p) => !q || p.name.toLowerCase().includes(q.toLowerCase()))
     .sort((a, b) => {
       const v = (p: Project) => (prefs.sort === 'category' ? catName(p.category_id) : String((p as any)[prefs.sort] ?? ''));
       return v(a).localeCompare(v(b)) * prefs.dir;
     });
+  // Button counts follow the list: the status chips and the search, not the category itself.
+  const inView = projects.filter((p) => prefs.status.includes(p.status) && (!q || p.name.toLowerCase().includes(q.toLowerCase())));
+  const counts: Record<string, number> = {};
+  for (const p of inView) if (p.category_id) counts[p.category_id] = (counts[p.category_id] ?? 0) + 1;
+  const pickCat = (id: string) => {
+    setCat(id);
+    saveChoice(id);
+  };
   const sortBy = (k: SortKey) => setPrefs({ ...prefs, sort: k, dir: prefs.sort === k ? ((-prefs.dir) as 1 | -1) : 1 });
   const arrow = (k: SortKey) => (prefs.sort === k ? (prefs.dir === 1 ? ' ↑' : ' ↓') : '');
 
@@ -50,14 +65,14 @@ export function Projects() {
       </div>
       <div class="filters">
         <input type="search" placeholder="Search" value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} aria-label="Search projects" />
-        <select value={cat} onChange={(e) => setCat((e.target as HTMLSelectElement).value)} aria-label="Category">
+        {!buttons && <select value={cat} onChange={(e) => setCat((e.target as HTMLSelectElement).value)} aria-label="Category">
           <option value="">All categories</option>
           {cats?.map((c) => (
             <option key={c.id} value={c.id}>
               {c.label}
             </option>
           ))}
-        </select>
+        </select>}
         <div class="chips">
           {STATUSES.map((s) => (
             <button
@@ -71,10 +86,13 @@ export function Projects() {
           ))}
         </div>
       </div>
+      {buttons && cats && (
+        <CategoryButtons cats={cats} counts={counts} noneCount={inView.filter((p) => !p.category_id).length} total={inView.length} value={cat} onPick={pickCat} />
+      )}
       <AddInput
         placeholder="New project"
         onAdd={async (name) => {
-          const p = await change(() => post<Project>('/projects', { name, category_id: cat || undefined }));
+          const p = await change(() => post<Project>('/projects', { name, category_id: cat && cat !== NONE ? cat : undefined }));
           if (p) go(`/p/${p.id}`);
         }}
       />

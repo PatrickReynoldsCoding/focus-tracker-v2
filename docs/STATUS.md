@@ -25,6 +25,7 @@ Updated 2026-11-22. Phases from the spec (`SPEC.md` §7).
 | Owner's item, 21 Nov (5) | v0.33.1: the small note keeps its line breaks and blank lines and scrolls in a box of its own instead of growing; Files card previews keep them too (D39). |
 | Owner's item, 22 Nov | v0.34.0: lists, to-dos and projects are one board engine, stage 1 (data and server): to-dos are cards with a fixed Done column, a list can become a to-do (one way, `convert_list_to_todo`), the old to-do API and every screen unchanged (D40). Stage 2 (one screen with Board and List views, dragging between groups, Convert) is next. |
 | Owner's item, 22 Nov (2) | v0.35.0: stage 2: one to-do screen for to-dos, plain lists and project boards, with Board and List views (remembered per device), tick into Done, drag between groups, Convert to to-do on a plain list, no days on plain lists; flag `unified-board` (D41). |
+| Owner's item, 22 Nov (3) | v0.36.0: category buttons on the Projects tab (design B), flag `category-buttons`, off by default, per profile (D42). |
 | 9 Stretch | Parked: **export all data** button (wanted later), Work-mode PRs tab, fitness view. |
 
 ## Waiting for the owner

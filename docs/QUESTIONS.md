@@ -114,3 +114,6 @@ Questions the owner could not be asked while an item was built. Each gives the d
 5. A plain list has no switch and keeps its board look. Default: as now. Should a plain list have a List view too (without ticks)?
 6. The small version of a to-do on Today cannot be dragged (a long press arranges the panel). Default: as now; drag on the to-do's page.
 7. The old to-do page's date box on each row is gone: a to-do's day is set in its dialog (Today, Tomorrow or a date) and shows as a tag. Default: as now.
+8. Category buttons (D42): a category with no projects in the current status view is hidden, and counts follow the status chips and search. Default: as described. Should hidden categories always show, or counts ignore the status chips?
+9. Category buttons replace the Category drop-down while the flag is on. Default: replace. Keep both?
+
