@@ -642,3 +642,10 @@ Code: web `themes/` (one small file per theme; `define.ts`, `index.ts`), `core/t
 - Summary in Settings: "Forest · follows phone off".
 
 Why: more looks, and a quick sign of which profile is open.
+
+## D62. Sticky notes on Today reuse the project-page notes (owner, 2026-11-22: mockup docs/mockups/sticky-notes.html is a look reference only)
+- The same component (`features/stickies`, D23), colours, saving, offline queue and E-ink look; a note with `project_id` empty belongs to the profile and floats over Today. Project pages keep their own notes; each place lists only its own (`GET /api/stickies?project_id=null` for Today).
+- Migration 0029 rebuilds `stickies` with `project_id` nullable (SQLite cannot drop NOT NULL); the rows are copied as they are. Production was backed up first.
+- The frame is Today's page (`.pl-page` / `.lg-page`); x stays a percentage of its width and the width is clamped as on project pages. The layer sits above the sticky pill bar so a note's ⋯ menu can be reached.
+- Buttons: the floating "＋ Sticky" and "Hide notes / Show notes" (hide is per device, separate for Today and for project pages). The Add panel type "Sticky notes" is a small card with the same two buttons, not a boxed copy of the notes (one set of notes, one place).
+- Same flag as before (`stickies`, per profile). Claude: `create_item` / `list_items` / `update_item` with kind `stickies`, no project_id for Today, `filters: {"project_id": null}` to list them, `mode` takes a profile name or id. No new tools.

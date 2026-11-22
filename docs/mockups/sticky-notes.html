@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sticky notes mockups</title>
+<style>
+:root{--bg:#14171d;--card:#1d222b;--ink:#e8ebf2;--mute:#8d96a8;--line:#2b323f;--acc:#6b93ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,sans-serif;padding:16px;max-width:900px;margin-inline:auto}
+h1{font-size:20px}h2{font-size:17px;margin:28px 0 2px}.hint{color:var(--mute);font-size:13.5px;margin:4px 0 10px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
+.ph{display:flex;justify-content:space-between;font-weight:700;margin-bottom:10px}.ph span{color:var(--mute);font-weight:400}
+.s{--c:#f2e08a;background:var(--c);color:#2e2a10;border-radius:3px 3px 10px 3px;padding:12px 12px 14px;box-shadow:0 6px 14px rgba(0,0,0,.35);font:500 15px/1.3 'Segoe Print','Comic Sans MS',system-ui,sans-serif;position:relative}
+.s.pink{--c:#f4b6c8}.s.blue{--c:#a9d3f5}.s.green{--c:#b7e3b0}.s.orange{--c:#f7c58a}.s.lilac{--c:#d4c2f2}
+.s small{display:block;margin-top:8px;font:12px system-ui;opacity:.6}
+.s .pin{position:absolute;top:-6px;left:50%;width:12px;height:12px;border-radius:50%;background:#d6453d;box-shadow:0 2px 3px rgba(0,0,0,.4)}
+.add{border:2px dashed var(--line);border-radius:10px;color:var(--mute);display:grid;place-items:center;min-height:90px;font-size:14px}
+/* A: free board */
+.A{position:relative;height:300px;background:repeating-linear-gradient(0deg,transparent 0 29px,rgba(255,255,255,.03) 29px 30px)}
+.A .s{position:absolute;width:150px}
+/* B: grid */
+.B{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;padding:6px}
+/* C: strip */
+.C{display:flex;gap:12px;overflow:hidden;padding:8px 4px}.C .s{flex:none;width:170px}
+/* D: list rows */
+.D .s{margin-bottom:10px;display:flex;gap:10px;align-items:center;font-size:14px;padding:9px 12px}
+.D .s i{width:10px;height:10px;border-radius:50%;background:rgba(0,0,0,.25);flex:none}
+.tools{display:flex;gap:8px;margin-top:10px;font-size:12.5px;color:var(--mute);align-items:center}
+.dot{width:16px;height:16px;border-radius:50%;display:inline-block}
+.rules{display:grid;gap:6px;font-size:14px}
+</style></head><body>
+<h1>Sticky notes on Today — mockups</h1>
+<p class="hint">A sticky is a tiny note: a few words, a colour, optional "until" day. Reply with a letter, e.g. "B".</p>
+
+<h2>A · Free board (drag them anywhere)</h2>
+<div class="panel"><div class="ph">📌 Sticky notes <span>5</span></div>
+<div class="A">
+<div class="s" style="left:6px;top:14px;transform:rotate(-2deg)"><span class="pin"></span>Call the dietitian back<small>today</small></div>
+<div class="s pink" style="left:190px;top:4px;transform:rotate(1.5deg)"><span class="pin"></span>Pick up parcel before 5<small>today</small></div>
+<div class="s blue" style="left:380px;top:20px;transform:rotate(-1deg)"><span class="pin"></span>Idea: human curated lists site</div>
+<div class="s green" style="left:60px;top:150px;transform:rotate(1deg)"><span class="pin"></span>Drink water!</div>
+<div class="s orange" style="left:260px;top:160px;transform:rotate(-2.5deg)"><span class="pin"></span>Ask Sam about rota<small>until Fri</small></div>
+</div>
+<div class="tools"><span class="dot" style="background:#f2e08a"></span><span class="dot" style="background:#f4b6c8"></span><span class="dot" style="background:#a9d3f5"></span><span class="dot" style="background:#b7e3b0"></span><span>＋ New sticky</span></div></div>
+<p class="hint">Most like real stickies. Positions stay put; needs room, so best on desktop or a tall panel.</p>
+
+<h2>B · Neat grid</h2>
+<div class="panel"><div class="ph">📌 Sticky notes <span>5</span></div>
+<div class="B">
+<div class="s"><span class="pin"></span>Call the dietitian back<small>today</small></div>
+<div class="s pink"><span class="pin"></span>Pick up parcel before 5<small>today</small></div>
+<div class="s blue"><span class="pin"></span>Idea: human curated lists site</div>
+<div class="s green"><span class="pin"></span>Drink water!</div>
+<div class="s orange"><span class="pin"></span>Ask Sam about rota<small>until Fri</small></div>
+<div class="add">＋ New sticky</div>
+</div></div>
+<p class="hint">Tidy, works on phone (2 columns). Order set by drag. My recommendation.</p>
+
+<h2>C · One-row strip (swipe sideways)</h2>
+<div class="panel"><div class="ph">📌 Sticky notes <span>5</span></div>
+<div class="C">
+<div class="s"><span class="pin"></span>Call the dietitian back</div>
+<div class="s pink"><span class="pin"></span>Pick up parcel before 5</div>
+<div class="s blue"><span class="pin"></span>Idea: human curated lists site</div>
+<div class="s green"><span class="pin"></span>Drink water!</div></div></div>
+<p class="hint">Takes very little height. Good as a thin panel above the Today list.</p>
+
+<h2>D · Compact rows</h2>
+<div class="panel D"><div class="ph">📌 Sticky notes <span>5</span></div>
+<div class="s"><i></i>Call the dietitian back</div>
+<div class="s pink"><i></i>Pick up parcel before 5</div>
+<div class="s blue"><i></i>Idea: human curated lists site</div></div>
+<p class="hint">Like a list but colourful. Least "sticky", most compact.</p>
+
+<h2>Rules I would use</h2>
+<div class="panel rules">
+<div>✓ New panel type "Sticky notes" in the Add panel; also quick-add button on Today.</div>
+<div>✓ Tap a sticky to edit text, colour (6 colours), and optional "show until" date; expired ones fold into "Old stickies".</div>
+<div>✓ A sticky can be turned into a to-do or a full note (one tap).</div>
+<div>✓ Per profile, no project link. Claude can add and read stickies. E-ink shows them as white boxes with a black edge.</div>
+</div>
+</body></html>

@@ -34,3 +34,8 @@
   .sticky-btn { min-width: 40px; min-height: 34px; font-size: 18px; }
 }
 @media (min-width: 900px) { .sticky-fab { bottom: max(16px, env(safe-area-inset-bottom)); } }
+/* On Today the frame is the page (Today's pills page); room for ＋ Sticky under the last panel. */
+.pl-page, .lg-page { position: relative; }
+.sticky-fab.today { z-index: 36; }
+.sticky-card .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.pl-page .sticky-layer, .lg-page .sticky-layer { z-index: 5; } /* above the sticky pill bar (4) */

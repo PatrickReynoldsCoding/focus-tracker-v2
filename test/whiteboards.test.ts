@@ -206,6 +206,19 @@ describe('sticky notes', () => {
     expect(await call('GET', `/stickies/${s.id}`)).toMatchObject({ color: 'mint', x: 10.12 });
   });
 
+  it('can float on Today with no project, per profile (D62)', async () => {
+    const s = await tool('create_item', { kind: 'stickies', fields: { text: 'Buy milk' } });
+    expect(s.project_id ?? null).toBeNull();
+    const p = await call('POST', '/projects', { name: 'Has a sticky' });
+    await call('POST', '/stickies', { project_id: p.id, text: 'On the project' });
+    const today = await call('GET', '/stickies?project_id=null');
+    expect(today.map((n: { text: string }) => n.text)).toEqual(['Buy milk']);
+    const viaClaude = await tool('list_items', { kind: 'stickies', filters: { project_id: null } });
+    expect(viaClaude).toHaveLength(1);
+    const other = await call('POST', '/modes', { label: 'Sticky other' });
+    expect(await call('GET', '/stickies?project_id=null', undefined, { mode: other.id })).toHaveLength(0);
+  });
+
   it('refuses unknown colours and places out of range', async () => {
     const p = await call('POST', '/projects', { name: 'Sticky limits' });
     await call('POST', '/stickies', { project_id: p.id, color: 'neon' }, { expect: 400 });

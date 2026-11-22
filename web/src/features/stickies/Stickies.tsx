@@ -9,14 +9,18 @@ import { api, del, mode, newId, optimistic, post, say } from '../../core/api';
 import { useData } from '../../core/ui';
 import { clamp, LIMITS, patternOf, shadeOf, STICKY_SHADES } from './colours';
 
-type Note = { id: string; project_id: string; text: string | null; color: string | null; opacity: number | null; x: number | null; y: number | null; w: number | null; h: number | null; created?: string };
+type Note = { id: string; project_id: string | null; text: string | null; color: string | null; opacity: number | null; x: number | null; y: number | null; w: number | null; h: number | null; created?: string };
 type Place = { left: number; top: number; w: number; h: number };
 
 const SAVE_MS = 800;
-const HIDDEN_KEY = 'ft.stickies.hidden';
-const readHidden = () => {
+// Hide / show is per device, and separate for Today and for the project pages.
+const hiddenKey = (projectId: string | null) => (projectId ? 'ft.stickies.hidden' : 'ft.stickies.hidden.today');
+export const stickiesUrl = (projectId: string | null) => `/stickies?project_id=${projectId ? encodeURIComponent(projectId) : 'null'}`;
+/** The Sticky notes panel on Today asks the layer to add a note or to hide / show them. */
+export const STICKY_EVENT = 'ft:sticky';
+const readHidden = (projectId: string | null) => {
   try {
-    return localStorage.getItem(HIDDEN_KEY) === '1';
+    return localStorage.getItem(hiddenKey(projectId)) === '1';
   } catch {
     return false;
   }
@@ -32,10 +36,11 @@ const norm = (n: Note) => ({
 });
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-export function StickyLayer({ projectId }: { projectId: string }) {
-  const { data, setData } = useData<Note[]>(`/stickies?project_id=${encodeURIComponent(projectId)}`);
+/** A project page's notes (projectId) or the profile's notes on Today (projectId null). */
+export function StickyLayer({ projectId }: { projectId: string | null }) {
+  const { data, setData } = useData<Note[]>(stickiesUrl(projectId));
   const layer = useRef<HTMLDivElement>(null);
-  const [hidden, setHiddenState] = useState(readHidden);
+  const [hidden, setHiddenState] = useState(() => readHidden(projectId));
   const [menu, setMenu] = useState<{ id: string; alignLeft: boolean } | null>(null);
   // A note being dragged, resized or pinched: drawn from here (pixels) until it is let go.
   const [live, setLive] = useState<{ id: string } & Place | null>(null);
@@ -126,6 +131,16 @@ export function StickyLayer({ projectId }: { projectId: string }) {
     setFocusId(null);
   }, [focusId, data]);
 
+  useEffect(() => {
+    const ask = (e: Event) => {
+      const what = (e as CustomEvent).detail;
+      if (what === 'add') add();
+      if (what === 'toggle') setHidden(!hidden);
+    };
+    window.addEventListener(STICKY_EVENT, ask);
+    return () => window.removeEventListener(STICKY_EVENT, ask);
+  });
+
   const width = () => layer.current?.clientWidth || window.innerWidth;
 
   /** Where a new note goes: in view, at the right, stepping past notes already there. */
@@ -182,7 +197,7 @@ export function StickyLayer({ projectId }: { projectId: string }) {
     setHiddenState(on);
     setMenu(null);
     try {
-      localStorage.setItem(HIDDEN_KEY, on ? '1' : '0');
+      localStorage.setItem(hiddenKey(projectId), on ? '1' : '0');
     } catch {
       /* private mode */
     }
@@ -351,14 +366,14 @@ export function StickyLayer({ projectId }: { projectId: string }) {
             );
           })}
       </div>
-      <div class="sticky-fab">
+      <div class={`sticky-fab ${projectId ? '' : 'today'}`}>
         {(notes.length > 0 || hidden) && (
           <button onClick={() => setHidden(!hidden)} aria-label={hidden ? `Show ${notes.length} sticky notes` : 'Hide sticky notes'}>
-            {hidden ? `Show notes` : 'Hide notes'}
+            {hidden ? 'Show notes' : 'Hide notes'}
             {hidden && notes.length > 0 && <span class="badge">{notes.length}</span>}
           </button>
         )}
-        <button onClick={add}>+ Note</button>
+        <button onClick={add}>{projectId ? '+ Note' : '＋ Sticky'}</button>
       </div>
     </>
   );

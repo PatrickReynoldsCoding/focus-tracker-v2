@@ -21,6 +21,7 @@ import m0025 from '../../migrations/0025_projects_tree.sql';
 import m0026 from '../../migrations/0026_habit_notes.sql';
 import m0027 from '../../migrations/0027_subtasks.sql';
 import m0028 from '../../migrations/0028_profile_theme.sql';
+import m0029 from '../../migrations/0029_today_stickies.sql';
 
 /** Every migration, in order. A new file in migrations/ needs a line here (a test checks). */
 export const MIGRATIONS: [name: string, sql: string][] = [
@@ -43,6 +44,7 @@ export const MIGRATIONS: [name: string, sql: string][] = [
   ['0026_habit_notes.sql', m0026],
   ['0027_subtasks.sql', m0027],
   ['0028_profile_theme.sql', m0028],
+  ['0029_today_stickies.sql', m0029],
 ];
 
 let done = false;

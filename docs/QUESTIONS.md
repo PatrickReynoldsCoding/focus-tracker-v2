@@ -313,3 +313,8 @@ My suggestion: 1.
 3. Midnight and Paper keep the profile colour as accent; the six new themes use their own. Options: (a) now; (b) always tint with the profile colour. My suggestion: (a).
 4. The Android app's status bar stays the fixed colour. Options: (a) leave; (b) set it from the theme in the app (needs an APK). My suggestion: (a) until you notice it.
 5. A new device starts with "follow my phone" on (Paper by day, Midnight by night). Options: (a) on (now); (b) off with Paper. My suggestion: (a).
+
+## Sticky notes on Today (D62)
+1. Should the Add panel's "Sticky notes" be a boxed view that holds the notes inside the panel (scrolling inside it) instead of a small card with buttons? Options: (a) card with buttons, notes float over the page (now); (b) a boxed panel, and the page layer hides while it is on Today. My suggestion: (a).
+2. Should each pill have its own notes? Options: (a) one set per profile for the whole of Today (now); (b) per pill. My suggestion: (a).
+3. Should notes also show in pop-out windows of Today? Options: (a) no (now); (b) yes. My suggestion: (a).

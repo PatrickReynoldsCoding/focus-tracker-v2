@@ -27,11 +27,11 @@ export const stickiesEntity: Entity = {
   name: 'stickies',
   table: 'stickies',
   singular: 'sticky note',
-  desc: 'Sticky notes floating on a project’s page. Only project_id and text are needed; a new note goes near the top right.',
+  desc: 'Sticky notes floating on a project’s page, or on Today when project_id is empty (list them with filters {"project_id": null}; mode takes a profile name or id). Only text is needed; a new note goes near the top right.',
   modeScoped: true,
   filters: ['project_id'],
   fields: {
-    project_id: { type: 'text', required: true, ref: 'projects', cascade: true },
+    project_id: { type: 'text', ref: 'projects', cascade: true, desc: 'The project whose page the note floats on; leave empty for a note on Today (the profile’s own)' },
     text: { type: 'text', default: '' },
     color: { type: 'text', enum: STICKY_COLORS, default: 'yellow', desc: `One of ${STICKY_COLORS.join(', ')}` },
     opacity: { type: 'real', default: 1, desc: 'How solid the paper is, 0.4 to 1 (the text stays solid)' },
@@ -50,7 +50,7 @@ export const stickiesEntity: Entity = {
 
 export const stickiesModule: Module = {
   id: 'stickies',
-  description: 'Sticky notes on project pages.',
+  description: 'Sticky notes on project pages and on Today.',
   entities: [stickiesEntity],
   routes(api) {
     // The generic routes, with readable undo labels.
@@ -72,5 +72,5 @@ export const stickiesModule: Module = {
       return c.json({ deleted: c.req.param('id') });
     });
   },
-  features: [{ id: 'stickies', label: 'Sticky notes', description: 'Floating sticky notes on project pages (“+ Note” at the bottom right).', default: true }],
+  features: [{ id: 'stickies', label: 'Sticky notes', description: 'Floating sticky notes on project pages and on Today (“+ Note” / “＋ Sticky” buttons).', default: true }],
 };
