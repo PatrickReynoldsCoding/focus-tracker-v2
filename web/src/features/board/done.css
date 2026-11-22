@@ -17,3 +17,6 @@
 .column.done-strip ul.cards > li:not(.drag-ghost) { display: none; }
 .column-move { opacity: 0.7; }
 .board.vertical .column.done-strip ul.cards { min-height: 6px; }
+/* The folded strip sits at the far right of the board, pinned to its right edge while the columns
+   scroll under it (owner, 2026-11-22; phones too). */
+.board.horizontal .column.done-strip { margin-left: auto; position: sticky; right: 0; z-index: 2; box-shadow: -6px 0 8px -6px var(--line); }
