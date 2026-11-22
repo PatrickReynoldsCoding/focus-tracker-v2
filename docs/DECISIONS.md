@@ -611,3 +611,17 @@ Code: web `features/today-panels/OneAtATime.tsx` (`dotsFor`, the fit hook), `tod
 - **Moving on**: no big ‹ › buttons. Swipe left or right (40 px, mostly sideways), tap the left half (back) or right half (on) of the quote (a tap on a link does nothing), or the arrow keys when the quote has focus. Two hidden buttons ("Previous item", "Next item", shown when focused) keep it reachable for screen readers and Tab. The quote is a labelled carousel group.
 - **Dots**: one per item, the current one a short bar in the list's colour; more than nine items show a window of nine around the current one with smaller end dots. They are not buttons (too small to tap safely). The small "2 / 12" counter, the title (opens the list), ⚙ and ✕ stay in the head, quieter.
 - Timer and E-ink rules unchanged (it still does not turn by itself on E-ink).
+
+
+## D60. Settings on a phone is a drill-down list (owner, 2026-11-22: mockup B in docs/mockups/mobile-settings.html)
+
+Code: web `features/settings/Settings.tsx` (`Settings`, `SectionRow`, `usePhone`), `settings.css`, `summaries.ts`; `PanelDef.summary` in `core/registry.tsx`.
+
+- **Phone (under 900 px)**: Settings first shows a search box and a list of sections: icon, name, one-line summary, ›. A tap opens that section with a ‹ in the header (the section's own heading is not repeated; its "This profile / Every profile / This device" tag sits in the header). ‹ uses the browser's Back when you came from the list, else goes to the list. Sign out and the long intro are only on a computer or the list's end.
+- **One address per section**: `#/settings/<section id>` (for example `#/settings/features`), so the phone's Back button and a reload work. An unknown id shows the list. `#/settings/all` shows every section on one page (also used by the browser checks). On a computer the same address scrolls to that section; the sidebar is unchanged.
+- **Search** works across all sections as before: typing replaces the list with the matching sections' full content (and chips that open one).
+- **Still the same sections**: every section is still drawn by the registry (`registerPanel('settings', …)`), just hidden while not open, so "Applies to: This profile / All profiles" (`ScopeChoice`), flags and loading behave as before. A section that draws nothing (Android app outside the app) is left out of the list.
+- **Plugging in**: a section adds `icon` and `summary` to its registration. `summary` is a function called while the list draws (hooks allowed) and works the line out from current settings: Profiles "Personal, Work + 1", Appearance the theme, Features "3 of 12 on", Categories, Notifications, Subtasks, Time zone, devices, connected apps. No summary: the section's `description`, else whom it is for. The colour-theme task should set Appearance's `summary` (for example "Midnight · Dark") in `features/theme/index.tsx`.
+- Browser checks that needed every section on a phone now open `#/settings/all`.
+
+Why: one long page with a chip row was tiring on a phone.

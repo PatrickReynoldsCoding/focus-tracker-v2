@@ -52,7 +52,7 @@ const featureBox = (page) => featureRow(page).locator('input[type=checkbox]');
 // 1. Computer, light: Features for All profiles, with the question.
 {
   const { page, ctx } = await open(browser, { width: 1280, height: 900 }, errors, { name: 'desk-light' });
-  await page.goto(`${new URL(page.url()).origin}/#/settings`);
+  await page.goto(`${new URL(page.url()).origin}/#/settings/all`);
   await page.waitForSelector('#set-features .scope-choice');
   await settle(page);
   const choice = page.locator('#set-features .scope-choice');
@@ -169,7 +169,7 @@ for (const [vname, viewport] of [
       colorScheme: theme === 'dark' ? 'dark' : 'light',
       init: theme === 'eink' ? () => localStorage.setItem('ft.theme', 'eink') : theme === 'dark' ? () => localStorage.setItem('ft.theme', 'dark') : undefined,
     });
-    await page.goto(`${new URL(page.url()).origin}/#/settings`);
+    await page.goto(`${new URL(page.url()).origin}/#/settings/all`);
     await page.waitForSelector('#set-features .scope-choice');
     await settle(page);
     await featureRow(page).scrollIntoViewIfNeeded();

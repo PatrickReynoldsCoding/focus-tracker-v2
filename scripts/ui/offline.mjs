@@ -197,7 +197,7 @@ const shot = (page, n) => page.screenshot({ path: `${OUT}/offline-${n}.png` });
   await page.waitForTimeout(800);
   const merged = (await api.get(`/notes/of/project/${p1.id}`)).body;
   ok(merged.includes('Laptop line.') && merged.includes('Phone line.'), 'note conflict: Keep both keeps both texts');
-  const settings = await page.goto(`${B}/#/settings`);
+  const settings = await page.goto(`${B}/#/settings/all`);
   void settings;
   await page.waitForSelector('.offline-settings >> text=Not applied');
   await page.locator('.offline-settings').scrollIntoViewIfNeeded();

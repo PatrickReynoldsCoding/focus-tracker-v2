@@ -149,7 +149,7 @@ try {
   {
     const errs = [];
     const { page, ctx } = await open(browser, DESK, errs, { name: 'settings' });
-    await page.goto(`${B}/#/settings`);
+    await page.goto(`${B}/#/settings/all`);
     await page.waitForSelector('text=Subtasks open by default');
     const box = page.locator('label:has-text("Subtasks open by default") input[type=checkbox]');
     ok(await box.isChecked(), 'Settings: open by default is on to start with');

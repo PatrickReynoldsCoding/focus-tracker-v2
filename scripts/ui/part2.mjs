@@ -106,20 +106,20 @@ for (const [tname, t] of themes) {
     page.on('response', (r) => r.status() === 404 && console.log('404', r.url()));
     // During the session started above the app opens on the project's page (Settings → When the app opens);
     // switch profiles from Settings, so the Personal project is not asked for in Work (a 404).
-    await page.goto(`${B}/#/settings`);
+    await page.goto(`${B}/#/settings/all`);
     await page.waitForTimeout(300);
     await page.selectOption('.profile-switch', { label: 'Work' });
     await page.waitForTimeout(800);
     const acc = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim());
     console.log('work accent in', th, acc);
-    await page.goto(`${B}/#/settings`);
+    await page.goto(`${B}/#/settings/all`);
     await page.waitForTimeout(500);
     await page.screenshot({ path: `${OUT}/p2-accent-${th}-settings.png`, fullPage: true });
     await page.goto(`${B}/#/files`);
     await page.waitForTimeout(500);
     await page.screenshot({ path: `${OUT}/p2-accent-${th}-files.png` });
     // change theme through the UI
-    await page.goto(`${B}/#/settings`);
+    await page.goto(`${B}/#/settings/all`);
     await page.click('.theme-option >> text=E-ink');
     await page.waitForTimeout(300);
     const eink = await page.evaluate(() => [document.documentElement.dataset.theme, localStorage.getItem('ft.theme'), getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()]);

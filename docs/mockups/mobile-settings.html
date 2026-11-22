@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mobile settings mockups</title>
+<style>
+:root{--bg:#0f1217;--card:#1d222b;--ink:#e8ebf2;--mute:#8d96a8;--line:#2b323f;--acc:#6b93ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,sans-serif;padding:16px;max-width:1100px;margin-inline:auto}
+h1{font-size:20px}h2{font-size:17px;margin:28px 0 2px}p.n,.hint{color:var(--mute);font-size:13.5px;margin:4px 0 10px}
+.row{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
+.ph{width:300px;height:560px;border:2px solid #3a4254;border-radius:26px;background:#14171d;overflow:hidden;position:relative;display:flex;flex-direction:column;flex:none}
+.cap{width:300px;font-size:12.5px;color:var(--mute);margin-top:6px;text-align:center}
+.top{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);font-weight:700}
+.top .b{font-size:20px;color:var(--mute);width:26px}
+.srch{margin:10px 14px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 12px;color:var(--mute);font-size:14px}
+.li{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line)}
+.li .ic{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-size:16px;background:var(--card)}
+.li .s{color:var(--mute);font-size:12.5px;display:block}.li .go{margin-left:auto;color:var(--mute)}
+.set{display:flex;justify-content:space-between;align-items:center;padding:13px 16px;border-bottom:1px solid var(--line)}
+.set small{display:block;color:var(--mute);font-size:12px}
+.tg{width:40px;height:23px;border-radius:99px;background:var(--acc);position:relative;flex:none}.tg::after{content:"";position:absolute;right:3px;top:3px;width:17px;height:17px;border-radius:50%;background:#fff}.tg.off{background:#3a4254}.tg.off::after{right:auto;left:3px}
+.sc{display:flex;gap:6px;padding:8px 16px;font-size:12.5px;color:var(--mute)}.sc b{color:var(--acc);font-weight:600}
+.dim{position:absolute;inset:0;background:rgba(0,0,0,.55);z-index:3}
+.drawer{position:absolute;left:0;top:0;bottom:0;width:78%;background:#1a1e26;z-index:4;border-right:1px solid var(--line);display:flex;flex-direction:column}
+.dr{padding:11px 16px;display:flex;gap:10px;align-items:center;font-size:14.5px}
+.dr.on{background:rgba(107,147,255,.16);color:var(--acc);border-left:3px solid var(--acc);padding-left:13px}
+.grp{padding:12px 16px 4px;color:var(--mute);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+.acc{border-bottom:1px solid var(--line)}.acc>.h{display:flex;justify-content:space-between;padding:14px 16px;font-weight:600}
+.acc.open>.h{color:var(--acc)}
+.sel{margin:10px 14px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 14px;display:flex;justify-content:space-between;font-weight:600}
+.menu{margin:-6px 14px 8px;background:#242a35;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.menu div{padding:10px 14px;font-size:14px;border-bottom:1px solid var(--line)}.menu div:last-child{border:0}
+.chips{display:flex;gap:6px;overflow:hidden;padding:10px 14px;border-bottom:1px solid var(--line)}
+.chip{padding:6px 12px;border-radius:99px;background:var(--card);border:1px solid var(--line);font-size:13px;white-space:nowrap}.chip.on{background:var(--acc);color:#0f1217;border-color:var(--acc);font-weight:700}
+</style></head><body>
+<h1>Mobile settings — mockups</h1>
+<p class="n">Phone-sized screens. Every option keeps the search box and the "This profile / All profiles" choice. Reply with a letter, e.g. "A".</p>
+
+<h2>A · Slide-out sidebar (☰)</h2>
+<p class="hint">Conventional app menu. Sidebar is hidden until you tap ☰, grouped with headings, current section highlighted. Closes itself after you pick.</p>
+<div class="row">
+<div><div class="ph">
+<div class="top"><span class="b">☰</span>Today</div>
+<div class="srch">🔍 Search settings</div>
+<div class="sc">Applies to: <b>This profile ▾</b></div>
+<div class="set"><div>Show Today list<small>Habits and to-dos together</small></div><div class="tg"></div></div>
+<div class="set"><div>Pills on desktop<small>Named tabs</small></div><div class="tg off"></div></div>
+<div class="set"><div>Day starts at<small>Before this, still "yesterday"</small></div><span style="color:var(--mute)">04:00</span></div>
+<div class="set"><div>Subtasks open by default</div><div class="tg"></div></div>
+</div><div class="cap">Closed: normal settings page</div></div>
+<div><div class="ph">
+<div class="top"><span class="b">☰</span>Today</div>
+<div class="srch">🔍 Search settings</div>
+<div class="dim"></div>
+<div class="drawer">
+<div class="top">Settings<span style="margin-left:auto;color:var(--mute)">«</span></div>
+<div class="grp">General</div>
+<div class="dr">👤 Profiles</div><div class="dr">🎨 Appearance</div><div class="dr">🔔 Notifications</div>
+<div class="grp">Features</div>
+<div class="dr on">☀ Today</div><div class="dr">✓ To-dos &amp; lists</div><div class="dr">🔁 Habits</div><div class="dr">📁 Files &amp; tags</div>
+<div class="grp">Connect</div>
+<div class="dr">🤖 Claude</div><div class="dr">📱 Widgets</div><div class="dr">💾 Data</div>
+</div></div><div class="cap">Open: slides over the page</div></div>
+</div>
+
+<h2>B · Drill-down list (like phone Settings)</h2>
+<p class="hint">First screen is a tidy list of sections with a one-line summary. Tap one, get its settings with a back arrow. Simplest to read on a small screen.</p>
+<div class="row">
+<div><div class="ph">
+<div class="top">Settings</div>
+<div class="srch">🔍 Search settings</div>
+<div class="li"><span class="ic">👤</span><div>Profiles<span class="s">Personal, Work + 1</span></div><span class="go">›</span></div>
+<div class="li"><span class="ic">🎨</span><div>Appearance<span class="s">Dark · Comfortable</span></div><span class="go">›</span></div>
+<div class="li"><span class="ic">☀</span><div>Today<span class="s">Pills, list, day start</span></div><span class="go">›</span></div>
+<div class="li"><span class="ic">✓</span><div>To-dos &amp; lists<span class="s">Subtasks, Done column</span></div><span class="go">›</span></div>
+<div class="li"><span class="ic">🔁</span><div>Habits<span class="s">On · Insights on</span></div><span class="go">›</span></div>
+<div class="li"><span class="ic">📁</span><div>Files &amp; tags<span class="s">Categories, tags</span></div><span class="go">›</span></div>
+<div class="li"><span class="ic">🤖</span><div>Claude<span class="s">Connector</span></div><span class="go">›</span></div>
+</div><div class="cap">Screen 1: the list</div></div>
+<div><div class="ph">
+<div class="top"><span class="b">‹</span>To-dos &amp; lists</div>
+<div class="sc">Applies to: <b>This profile ▾</b></div>
+<div class="set"><div>Subtasks<small>Show subtasks under to-dos</small></div><div class="tg"></div></div>
+<div class="set"><div>Subtasks open by default</div><div class="tg"></div></div>
+<div class="set"><div>Done column starts folded</div><div class="tg"></div></div>
+<div class="set"><div>Category buttons<small>Big filters on projects</small></div><div class="tg"></div></div>
+<div class="set"><div>Unified board</div><div class="tg"></div></div>
+</div><div class="cap">Screen 2: one section</div></div>
+</div>
+
+<h2>C · Accordion (everything on one page)</h2>
+<p class="hint">One long page. Tap a heading to open it; others fold. No sidebar at all. Good for quick tweaks, tiring for long scrolls.</p>
+<div class="row"><div><div class="ph">
+<div class="top">Settings</div>
+<div class="srch">🔍 Search settings</div>
+<div class="acc"><div class="h"><span>👤 Profiles</span><span>▸</span></div></div>
+<div class="acc"><div class="h"><span>🎨 Appearance</span><span>▸</span></div></div>
+<div class="acc open"><div class="h"><span>☀ Today</span><span>▾</span></div>
+<div class="set"><div>Show Today list</div><div class="tg"></div></div>
+<div class="set"><div>Pills on desktop</div><div class="tg off"></div></div>
+<div class="set"><div>Day starts at</div><span style="color:var(--mute)">04:00</span></div></div>
+<div class="acc"><div class="h"><span>✓ To-dos &amp; lists</span><span>▸</span></div></div>
+<div class="acc"><div class="h"><span>🔁 Habits</span><span>▸</span></div></div>
+<div class="acc"><div class="h"><span>📁 Files &amp; tags</span><span>▸</span></div></div>
+</div><div class="cap">Sections fold in place</div></div></div>
+
+<h2>D · Section picker at the top</h2>
+<p class="hint">A dropdown (or swipeable chips) under the title picks the section. Everything stays on one screen, nothing hidden in a sidebar.</p>
+<div class="row">
+<div><div class="ph">
+<div class="top">Settings</div>
+<div class="srch">🔍 Search settings</div>
+<div class="sel"><span>☀ Today</span><span>▾</span></div>
+<div class="menu"><div>👤 Profiles</div><div>🎨 Appearance</div><div>☀ Today</div><div>✓ To-dos &amp; lists</div><div>🔁 Habits</div><div>📁 Files &amp; tags</div></div>
+<div class="set"><div>Show Today list</div><div class="tg"></div></div>
+</div><div class="cap">Dropdown</div></div>
+<div><div class="ph">
+<div class="top">Settings</div>
+<div class="srch">🔍 Search settings</div>
+<div class="chips"><span class="chip">Profiles</span><span class="chip">Look</span><span class="chip on">Today</span><span class="chip">To-dos</span><span class="chip">Habits</span><span class="chip">Files</span></div>
+<div class="sc">Applies to: <b>This profile ▾</b></div>
+<div class="set"><div>Show Today list</div><div class="tg"></div></div>
+<div class="set"><div>Pills on desktop</div><div class="tg off"></div></div>
+<div class="set"><div>Day starts at</div><span style="color:var(--mute)">04:00</span></div>
+<div class="set"><div>Subtasks open by default</div><div class="tg"></div></div>
+</div><div class="cap">Swipeable chips</div></div>
+</div>
+
+<h2>My recommendation</h2>
+<p class="n"><b>A on desktop and phone</b>: the same slide-out sidebar everywhere (collapsed to icons on desktop, as the main sidebar already does). If you want fewer taps on phone, <b>B</b>.</p>
+</body></html>

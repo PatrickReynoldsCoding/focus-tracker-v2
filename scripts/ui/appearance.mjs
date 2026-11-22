@@ -6,7 +6,7 @@ await api.put('/features/files-tab', { enabled: false });
 const errors = [];
 for (const th of ['light', 'dark', 'eink']) {
   const { page } = await open(browser, { width: 390, height: 844 }, errors, { init: `try{localStorage.setItem('ft.theme','${th}')}catch(e){}` });
-  await page.goto(`${B}/#/settings`);
+  await page.goto(`${B}/#/settings/all`);
   await page.waitForSelector('.appearance');
   await page.waitForTimeout(500);
   await page.locator('.appearance').screenshot({ path: `${OUT}/p2-appearance-${th}.png` });

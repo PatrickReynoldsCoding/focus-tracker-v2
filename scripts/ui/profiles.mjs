@@ -84,7 +84,7 @@ await cleanUp();
   await shot(page, 'phone-light-new-today');
 
   // Settings: tags say whom each section is for; Features switches this profile only.
-  await page.goto(`${B}/#/settings`);
+  await page.goto(`${B}/#/settings/all`);
   await page.waitForSelector('.scope-tag');
   await settle(page);
   const tags = await page.$$eval('.scope-tag', (els) => els.map((e) => e.textContent));
@@ -240,10 +240,10 @@ for (const t of ['light', 'dark', 'eink'])
     await shot(page, `${t}-${v}-manage`);
     await page.keyboard.press('Escape');
     await settle(page, 500); // closing a dialog steps Back in the history: let it, then go
-    await page.goto(`${B}/#/settings`);
+    await page.goto(`${B}/#/settings/all`);
     await page.waitForSelector('.scope-tag');
     await settle(page);
-    ok(await page.evaluate(() => location.hash === '#/settings'), `${t} ${v}: on Settings`);
+    ok(await page.evaluate(() => location.hash === '#/settings/all'), `${t} ${v}: on Settings`);
     ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `${t} ${v}: Settings has no sideways scroll`);
     const overlap = await page.$$eval('.settings-section[data-scope]', (secs) =>
       secs.some((s) => {

@@ -300,3 +300,9 @@ My suggestion: 1.
 3. The largest text is 72 px (short quotes in a big panel). Options: (a) 72 px (now); (b) a lower cap such as 48 px. My suggestion: (a), say if a one-word quote looks too big.
 4. Lora covers Latin letters only; other scripts fall back to Georgia. Options: (a) Latin only, 23 KB (now); (b) add Latin-extended, 13 KB more. My suggestion: (a).
 5. E-ink uses plain Georgia italic, not Lora, as you asked. Options: (a) Georgia (now); (b) Lora on E-ink too. My suggestion: (a).
+
+## Mobile Settings (D60)
+1. Order of the sections in the list is the registry order (General, Appearance, Sessions, Notifications …, Profiles later). Options: (a) registry order (now); (b) group with headings (General / Features / Connect, as in mockup A). My suggestion: (a) for now; (b) if the list grows past about 15.
+2. Desktop keeps the sidebar. Options: (a) keep (now); (b) use the same drill-down on desktop too. My suggestion: (a).
+3. Sections without a computed summary show a fixed line (for example "Work and break lengths"). Options: (a) fixed lines (now); (b) compute every one. My suggestion: (a); say which ones you want live.
+4. The phone's in-app "← Back" button and the ‹ both show inside a section. Options: (a) both (now); (b) hide the app Back inside Settings sections. My suggestion: (a).

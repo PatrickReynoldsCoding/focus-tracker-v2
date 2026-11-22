@@ -109,7 +109,7 @@ async function run(name, viewport, opts, off) {
     }
   }
   // Settings.
-  await page.goto(`${B}/#/settings`);
+  await page.goto(`${B}/#/settings/all`);
   await settle(page);
   const s = await text(page);
   ok(iOff ? !/Open Insights/.test(s) : /Open Insights/.test(s), `${name}: Settings ${iOff ? 'does not mention' : 'links to'} Insights`);

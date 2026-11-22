@@ -78,7 +78,7 @@ for (const [vp, name] of [[{ width: 390, height: 844 }, 'phone'], [{ width: 1280
   await page.goto(`${B}/#/files`); await page.waitForSelector('.files .files-open');
   await page.screenshot({ path: `${OUT}/${name}-files.png`, fullPage: true });
   await page.goto(`${B}/#/habits`); await page.waitForSelector('.habits-page');
-  await page.goto(`${B}/#/settings`); await page.waitForSelector('text=Weekly rotation');
+  await page.goto(`${B}/#/settings/all`); await page.waitForSelector('text=Weekly rotation');
   await page.screenshot({ path: `${OUT}/${name}-settings.png`, fullPage: true });
   await page.goto(`${B}/#/log`); await page.waitForSelector('text=halfway through');
   // clean focus for the next run
