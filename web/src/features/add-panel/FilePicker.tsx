@@ -15,8 +15,11 @@ type Folder = {
   project_id: string | null;
   status?: string | null;
   location?: string | null;
+  /** Projects and its category folders (D52). */
+  virtual?: 'projects' | 'category';
+  color?: string | null;
 };
-type Crumb = { id: string; name: string; project_id?: string | null };
+type Crumb = { id: string; name: string; project_id?: string | null; virtual?: string };
 type Listing = { path: Crumb[]; folders: Folder[]; files: FileItem[] };
 type Files = NonNullable<PanelAdderTarget['files']>;
 
@@ -104,7 +107,8 @@ export function FilePicker({ files, onBack, onClose }: { place: string; files: F
     const m = makers.find((x) => x.c.id === making);
     if (!m || !name.trim() || busy) return;
     setBusy(true);
-    const f = await m.c.make!(name.trim(), folder);
+    // Nothing can be made straight in Projects or a category's folder (D52): it goes at the top.
+    const f = await m.c.make!(name.trim(), inVirtual ? null : folder);
     if (!f) return setBusy(false);
     onClose();
     await files.add(f, m.t.panel?.(f) ?? null);
@@ -134,9 +138,11 @@ export function FilePicker({ files, onBack, onClose }: { place: string; files: F
     );
   };
 
-  const folders = (list?.folders ?? []).filter((f) => !(folder === null && !deep && f.project_id && FINISHED.includes(f.status ?? '')));
+  // Finished projects' folders are left out (they sit in their category's folder).
+  const folders = (list?.folders ?? []).filter((f) => !(!deep && f.project_id && FINISHED.includes(f.status ?? '')));
   const shown = (list?.files ?? []).filter((f) => typeOf.has(f.type));
   const top = !folder && !deep;
+  const inVirtual = !!list?.path.at(-1)?.virtual;
 
   return (
     <div class="ap ap-picker">
@@ -169,7 +175,7 @@ export function FilePicker({ files, onBack, onClose }: { place: string; files: F
               Make and add
             </button>
           </div>
-          <p class="muted small">{list?.path.length ? `In ${list.path.map((c) => c.name).join(' › ')}.` : 'At the top of Files.'}</p>
+          <p class="muted small">{list?.path.length && !inVirtual ? `In ${list.path.map((c) => c.name).join(' › ')}.` : 'At the top of Files.'}</p>
         </form>
       )}
       {groups.length > 1 && (
@@ -211,10 +217,10 @@ export function FilePicker({ files, onBack, onClose }: { place: string; files: F
             {folders.map((f) => (
               <li key={`f-${f.id}`}>
                 <button class="ap-row" onClick={() => (setFolder(f.id), setQ(''), setQuery(''), setGroup(''))}>
-                  <FolderIcon project={!!f.project_id} size={28} />
+                  <FolderIcon project={!!f.project_id} virtual={f.virtual} color={f.color} size={28} />
                   <span class="ap-text">
                     <strong>{f.name}</strong>
-                    <span class="muted small">{[f.project_id ? 'Project folder' : 'Folder', f.location].filter(Boolean).join(' · ')}</span>
+                    <span class="muted small">{[f.project_id ? 'Project folder' : f.virtual === 'category' ? 'Category' : f.virtual ? 'Your projects, by category' : 'Folder', f.location].filter(Boolean).join(' · ')}</span>
                   </span>
                   <span class="ap-go" aria-hidden="true">
                     ›

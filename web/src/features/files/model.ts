@@ -15,8 +15,15 @@ export type Folder = {
   status?: string | null;
   /** Where it is, in a search. */
   location?: string | null;
+  /** Projects and its category folders (D52): made from the categories, not stored. */
+  virtual?: 'projects' | 'category';
+  /** A category folder's category (null: No category) and colour (a palette name or #rrggbb). */
+  category_id?: string | null;
+  color?: string | null;
+  /** Folders inside a virtual folder. */
+  count?: number;
 };
-export type Crumb = { id: string; name: string; project_id: string | null };
+export type Crumb = { id: string; name: string; project_id: string | null; virtual?: 'projects' | 'category' };
 export type Listing = { folder: Folder | null; path: Crumb[]; folders: Folder[]; files: FileItem[]; more: boolean };
 
 /** Something in the listing: a folder or a file. */
@@ -64,3 +71,16 @@ export function changed(iso: string): string {
 }
 
 export const DRAG_TYPE = 'application/x-ft-file';
+
+/** What is being moved, for where it may go (D52). */
+export type Moving = 'file' | 'folder' | 'project-folder';
+export const movingOf = (e: Entry): Moving => (e.kind === 'file' ? 'file' : e.folder.project_id ? 'project-folder' : 'folder');
+/** Whether something can be moved into a place (null: the top level). A project's folder goes only
+ *  into a category's folder (its category changes); anything else never into the virtual folders. */
+export function canMoveInto(moving: Moving, target: { virtual?: 'projects' | 'category' } | null): boolean {
+  if (moving === 'project-folder') return target?.virtual === 'category';
+  return !target?.virtual;
+}
+/** The plural of a count of folders inside a virtual folder. */
+export const virtualSub = (f: Folder) =>
+  f.virtual === 'projects' ? 'Your projects, by category' : `Category · ${f.count ?? 0} project${f.count === 1 ? '' : 's'}`;

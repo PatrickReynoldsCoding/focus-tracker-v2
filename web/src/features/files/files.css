@@ -103,3 +103,17 @@ html[data-theme='eink'] .file-row + .file-row { border-top: 2px solid #000; }
 html[data-theme='eink'] .drop-on { outline: 3px solid #000; background: #fff !important; }
 html[data-theme='eink'] .files-crumbs .crumb[aria-current='page'] { text-decoration: underline; }
 html[data-theme='eink'] .files-open, html[data-theme='eink'] .files-crumbs a, html[data-theme='eink'] .files-menu-item { text-decoration: none; }
+
+/* Projects and the category folders (D52): a category's folder in its category's colour. */
+.folder-icon.is-projects .folder-shape { fill: var(--accent); }
+.folder-icon.is-category .folder-shape { fill: var(--kb, var(--muted)); }
+.folder-icon.is-category[data-color='red'] { --kb: var(--kb-red); } .folder-icon.is-category[data-color='orange'] { --kb: var(--kb-orange); }
+.folder-icon.is-category[data-color='yellow'] { --kb: var(--kb-yellow); } .folder-icon.is-category[data-color='green'] { --kb: var(--kb-green); }
+.folder-icon.is-category[data-color='teal'] { --kb: var(--kb-teal); } .folder-icon.is-category[data-color='blue'] { --kb: var(--kb-blue); }
+.folder-icon.is-category[data-color='purple'] { --kb: var(--kb-purple); } .folder-icon.is-category[data-color='pink'] { --kb: var(--kb-pink); }
+.folder-icon.is-category[data-color='grey'] { --kb: var(--kb-grey); }
+.folder-icon.is-category[data-color='none'] { --kb: var(--muted); }
+.files-virtual-note { margin: 0; }
+html[data-theme='eink'] .folder-icon.is-category .folder-shape, html[data-theme='eink'] .folder-icon.is-projects .folder-shape { fill: #000; }
+/* A long name or path (Projects › category › project) is cut short; it must not widen the page. */
+.file-row .files-text, .folder-tile .files-text, .file-meta .files-text { contain: inline-size; }

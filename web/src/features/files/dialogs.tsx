@@ -3,7 +3,7 @@
 import { useState } from 'preact/hooks';
 import { Dialog, Loading, useData } from '../../core/ui';
 import { FolderIcon } from './icons';
-import type { Folder, Listing } from './model';
+import { canMoveInto, type Folder, type Listing, type Moving } from './model';
 
 export function NameDialog({ title, initial = '', action, note, onSave, onClose }: { title: string; initial?: string; action: string; note?: string; onSave: (name: string) => void; onClose: () => void }) {
   const [name, setName] = useState(initial);
@@ -32,12 +32,31 @@ export function NameDialog({ title, initial = '', action, note, onSave, onClose 
   );
 }
 
-/** Pick a folder to move things to: open folders to go down, the path to go up, then "Move here". */
-export function MoveDialog({ what, start, moving, onMove, onClose }: { what: string; start: string | null; moving: string[]; onMove: (to: { id: string | null; name: string }) => void; onClose: () => void }) {
+/** Pick a folder to move things to: open folders to go down, the path to go up, then "Move here".
+ *  A project's folder can only go into a category's folder (D52), anything else never into Projects
+ *  or a category's folder. */
+export function MoveDialog({
+  what,
+  start,
+  moving,
+  kind = 'file',
+  onMove,
+  onClose,
+}: {
+  what: string;
+  start: string | null;
+  moving: string[];
+  kind?: Moving;
+  onMove: (to: { id: string | null; name: string; virtual?: 'projects' | 'category' }) => void;
+  onClose: () => void;
+}) {
   const [at, setAt] = useState<string | null>(start);
   const { data, error } = useData<Listing>(`/files?${at ? `folder=${at}&` : ''}sort=name`);
   const here = data?.folder ?? null;
   const name = here?.name ?? 'Files';
+  const allowed = !!data && canMoveInto(kind, here);
+  const hint =
+    kind === 'project-folder' ? 'A project’s folder goes in a category’s folder (Projects › category): its category changes.' : here?.virtual ? 'Choose a project’s folder or one of your own.' : null;
   return (
     <Dialog title={`Move ${what}`} onClose={onClose}>
       <div class="stack files-move">
@@ -65,7 +84,7 @@ export function MoveDialog({ what, start, moving, onMove, onClose }: { what: str
               return (
                 <li key={f.id}>
                   <button type="button" class="files-move-row" disabled={self} onClick={() => setAt(f.id)} title={self ? 'This is what you are moving' : undefined}>
-                    <FolderIcon project={!!f.project_id} />
+                    <FolderIcon project={!!f.project_id} virtual={f.virtual} color={f.color} />
                     <span class="files-name">{f.name}</span>
                     <span aria-hidden="true">›</span>
                   </button>
@@ -75,6 +94,7 @@ export function MoveDialog({ what, start, moving, onMove, onClose }: { what: str
             {!data.folders.length && <li class="muted small files-move-empty">No folders in here.</li>}
           </ul>
         )}
+        {hint && !allowed && <p class="muted small files-move-hint">{hint}</p>}
         <div class="row spread">
           <button type="button" class="ghost" onClick={onClose}>
             Cancel
@@ -82,10 +102,10 @@ export function MoveDialog({ what, start, moving, onMove, onClose }: { what: str
           <button
             type="button"
             class="primary"
-            disabled={!data || (at !== null && moving.includes(at))}
+            disabled={!allowed || (at !== null && moving.includes(at))}
             onClick={() => {
               onClose();
-              onMove({ id: at, name });
+              onMove({ id: at, name, virtual: here?.virtual });
             }}
           >
             Move here

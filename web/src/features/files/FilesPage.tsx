@@ -1,7 +1,8 @@
 // The Files tab, like Google Drive: a folder's folders and files as a grid or a list, a path to
 // go back up, type filters, a search that looks in the folder and everything inside it, sorting,
 // a New menu, and Rename / Move… / Delete on every item (drag onto a folder with a mouse).
-// Kinds of files come from the features (registerFileType in core/registry.tsx).
+// Kinds of files come from the features (registerFileType in core/registry.tsx). The top level
+// shows Projects › category › project folders (D52), virtual folders worked out by the server.
 import type { VNode } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { del, get, newId, optimistic, patch, post, say } from '../../core/api';
@@ -10,7 +11,7 @@ import { go, Loading, Markdown, useData } from '../../core/ui';
 import { DeleteFolderDialog, MoveDialog, NameDialog, type Count } from './dialogs';
 import { FolderIcon } from './icons';
 import { Menu, MenuItem } from '../../core/menu';
-import { canDrag, changed, DRAG_TYPE, entryKey, entryName, entryRef, FINISHED, folderHref, isPhone, usePref, type Entry, type Folder, type Listing } from './model';
+import { canDrag, canMoveInto, changed, DRAG_TYPE, entryKey, entryName, entryRef, FINISHED, folderHref, isPhone, movingOf, usePref, virtualSub, type Entry, type Folder, type Listing } from './model';
 import './files.css';
 
 type Dlg =
@@ -84,7 +85,9 @@ export function FilesPage({ route, params }: { route: string; params: string[] }
   const label = (f: FileItem) => (f.project_id && f.project_id !== inProject && f.type !== 'project-note' ? <ProjectLabel projectId={f.project_id} /> : null);
   const deep = !!dq || !!group || extraOn.length > 0;
   const known = data.files.filter((f) => typeOf(f));
-  const hiddenFinished = !deep && !hereId && finished !== '1' ? data.folders.filter((f) => f.status && FINISHED.includes(f.status)) : [];
+  // Finished projects' folders (in their category's folder) wait behind "Show n finished projects".
+  const hiddenFinished = !deep && finished !== '1' ? data.folders.filter((f) => f.project_id && f.status && FINISHED.includes(f.status)) : [];
+  const virtualHere = here?.virtual ?? null;
   const folders = data.folders.filter((f) => !hiddenFinished.includes(f));
   const drag = canDrag();
 
@@ -100,8 +103,9 @@ export function FilesPage({ route, params }: { route: string; params: string[] }
     return () => setData(() => before);
   };
 
-  const move = (entries: Entry[], to: { id: string | null; name: string }) => {
+  const move = (entries: Entry[], to: { id: string | null; name: string; virtual?: 'projects' | 'category' }) => {
     const items = entries.map(entryRef).filter((r) => !(r.type === 'folder' && r.id === to.id));
+    if (entries.some((e) => !canMoveInto(movingOf(e), to.id ? to : null))) return;
     if (!items.length) return;
     const keys = entries.map(entryKey);
     optimistic(
@@ -111,7 +115,7 @@ export function FilesPage({ route, params }: { route: string; params: string[] }
         return back;
       },
       () => post('/files/move', { items, folder_id: to.id }),
-      `Moved to ${to.name}`,
+      entries.some((e) => movingOf(e) === 'project-folder') && to.virtual === 'category' ? `Moved to ${to.name}: the project’s category is ${to.name === 'No category' ? 'cleared' : to.name}` : `Moved to ${to.name}`,
     );
   };
 
@@ -121,7 +125,7 @@ export function FilesPage({ route, params }: { route: string; params: string[] }
       optimistic(
         () => (setData((d) => ({ ...d, folders: d.folders.map((f) => (f.id === entry.folder.id ? { ...f, name } : f)) })), back),
         () => patch(`/folders/${entry.folder.id}`, { name }),
-        entry.folder.project_id ? 'Project renamed' : undefined,
+        entry.folder.project_id ? 'Project renamed' : entry.folder.virtual === 'category' ? 'Category renamed' : undefined,
       );
       return;
     }
@@ -186,7 +190,7 @@ export function FilesPage({ route, params }: { route: string; params: string[] }
   // ---------- drag and drop (mouse) ----------
 
   const dragProps = (e: Entry) =>
-    drag
+    drag && !(e.kind === 'folder' && e.folder.virtual)
       ? {
           draggable: true,
           onDragStart: (ev: DragEvent) => {
@@ -200,12 +204,13 @@ export function FilesPage({ route, params }: { route: string; params: string[] }
           },
         }
       : {};
-  const dropProps = (target: { id: string | null; name: string }, key: string) =>
+  const dropProps = (target: { id: string | null; name: string; virtual?: 'projects' | 'category' }, key: string) =>
     drag
       ? {
           onDragOver: (ev: DragEvent) => {
             if (!dragging || !ev.dataTransfer?.types.includes(DRAG_TYPE)) return;
             if (dragging.kind === 'folder' && dragging.folder.id === target.id) return;
+            if (!canMoveInto(movingOf(dragging), target.id ? target : null)) return;
             ev.preventDefault();
             ev.dataTransfer.dropEffect = 'move';
             if (dropOn !== key) setDropOn(key);
@@ -248,15 +253,17 @@ export function FilesPage({ route, params }: { route: string; params: string[] }
     const parts = [deep && f.location ? f.location : deep ? 'Files' : null, t?.detail?.(f), changed(f.updated_at)].filter(Boolean);
     return parts.join(' · ');
   };
-  const folderSub = (f: Folder) => [deep ? (f.location ?? 'Files') : null, f.project_id ? (f.status && f.status !== 'active' ? `Project · ${f.status}` : 'Project') : null].filter(Boolean).join(' · ');
+  const folderSub = (f: Folder) =>
+    [deep ? (f.location ?? 'Files') : null, f.virtual ? virtualSub(f) : null, f.project_id ? (f.status && f.status !== 'active' ? `Project · ${f.status}` : 'Project') : null].filter(Boolean).join(' · ');
+  const icon = (f: Folder, size?: number) => <FolderIcon project={!!f.project_id} virtual={f.virtual} color={f.color} size={size} />;
 
   const folderTile = (f: Folder) => {
     const e: Entry = { kind: 'folder', folder: f };
     const key = entryKey(e);
     return (
-      <li key={f.id} class={`folder-tile ${dropOn === key ? 'drop-on' : ''} ${f.status && FINISHED.includes(f.status) ? 'is-finished' : ''}`} {...dragProps(e)} {...dropProps({ id: f.id, name: f.name }, key)}>
+      <li key={f.id} class={`folder-tile ${dropOn === key ? 'drop-on' : ''} ${f.status && FINISHED.includes(f.status) ? 'is-finished' : ''}`} {...dragProps(e)} {...dropProps(f, key)}>
         <a class="files-open" href={folderHref(f.id)} draggable={false}>
-          <FolderIcon project={!!f.project_id} />
+          {icon(f)}
           <span class="files-text">
             <span class="files-name">{f.name}</span>
             {folderSub(f) && <span class="files-sub">{folderSub(f)}</span>}
@@ -316,12 +323,12 @@ export function FilesPage({ route, params }: { route: string; params: string[] }
     const e: Entry = { kind: 'folder', folder: f };
     const key = entryKey(e);
     return (
-      <li key={key} class={`file-row ${dropOn === key ? 'drop-on' : ''}`} {...dragProps(e)} {...dropProps({ id: f.id, name: f.name }, key)}>
+      <li key={key} class={`file-row ${dropOn === key ? 'drop-on' : ''}`} {...dragProps(e)} {...dropProps(f, key)}>
         <a class="files-open" href={folderHref(f.id)} draggable={false}>
-          <FolderIcon project={!!f.project_id} />
+          {icon(f)}
           <span class="files-text">
             <span class="files-name">{f.name}</span>
-            <span class="files-sub">{[folderSub(f), changed(f.updated_at)].filter(Boolean).join(' · ')}</span>
+            <span class="files-sub">{[folderSub(f), f.updated_at ? changed(f.updated_at) : null].filter(Boolean).join(' · ')}</span>
           </span>
         </a>
         {more(e)}
@@ -338,9 +345,11 @@ export function FilesPage({ route, params }: { route: string; params: string[] }
     <div class="stack files" data-view={view}>
       <div class="page-head row files-head">
         <h1>Files</h1>
-        <button class="primary" aria-haspopup="menu" onClick={(ev) => setMenu({ anchor: ev.currentTarget as HTMLElement, entry: null })}>
-          + New
-        </button>
+        {!virtualHere && (
+          <button class="primary" aria-haspopup="menu" onClick={(ev) => setMenu({ anchor: ev.currentTarget as HTMLElement, entry: null })}>
+            + New
+          </button>
+        )}
       </div>
       <input type="search" class="files-search" placeholder={hereId ? `Search in ${where}` : 'Search files'} value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} aria-label={hereId ? `Search in ${where}` : 'Search files'} />
       {hereId && (
@@ -355,18 +364,25 @@ export function FilesPage({ route, params }: { route: string; params: string[] }
                 <span class="crumb-sep" aria-hidden="true">
                   ›
                 </span>
-                <a href={folderHref(c.id)} class={`crumb ${dropOn === `crumb:${c.id}` ? 'drop-on' : ''}`} aria-current={last ? 'page' : undefined} {...(!last ? dropProps({ id: c.id, name: c.name }, `crumb:${c.id}`) : {})}>
+                <a href={folderHref(c.id)} class={`crumb ${dropOn === `crumb:${c.id}` ? 'drop-on' : ''}`} aria-current={last ? 'page' : undefined} {...(!last ? dropProps(c, `crumb:${c.id}`) : {})}>
                   {c.name}
                 </a>
               </span>
             );
           })}
-          {here && (
+          {here && here.virtual !== 'projects' && (
             <button class="icon small files-more" aria-label={`Options for ${here.name}`} aria-haspopup="menu" onClick={(ev) => setMenu({ anchor: ev.currentTarget as HTMLElement, entry: { kind: 'folder', folder: here } })}>
               ⋯
             </button>
           )}
         </nav>
+      )}
+      {virtualHere && (
+        <p class="muted small files-virtual-note">
+          {virtualHere === 'projects'
+            ? 'A folder for each category, made from your categories (Projects tab → Manage categories), and No category.'
+            : `The folders of the projects in ${here!.name === 'No category' ? 'no category' : `the category ${here!.name}`}. Move a project’s folder into another category’s folder to change its category.`}
+        </p>
       )}
       {here?.project_id && (
         <p class="muted small files-project-note">
@@ -425,12 +441,12 @@ export function FilesPage({ route, params }: { route: string; params: string[] }
           Show {hiddenFinished.length} finished project{hiddenFinished.length === 1 ? '' : 's'}
         </button>
       )}
-      {!deep && !hereId && finished === '1' && data.folders.some((f) => f.status && FINISHED.includes(f.status)) && (
+      {!deep && finished === '1' && data.folders.some((f) => f.project_id && f.status && FINISHED.includes(f.status)) && (
         <button class="ghost small files-finished" onClick={() => setFinished('0')}>
           Hide finished projects
         </button>
       )}
-      {empty && <p class="empty">{dq ? `Nothing matches “${dq}”.` : extraOn.length ? 'No files with these tags here.' : group ? 'Nothing of this type here.' : hereId ? 'This folder is empty. Use New to add something.' : 'Nothing here yet. Use New to make a folder, note, list or whiteboard.'}</p>}
+      {empty && <p class="empty">{dq ? `Nothing matches “${dq}”.` : extraOn.length ? 'No files with these tags here.' : group ? 'Nothing of this type here.' : virtualHere ? (hiddenFinished.length ? 'Only finished projects here.' : 'No projects in this category yet.') : hereId ? 'This folder is empty. Use New to add something.' : 'Nothing here yet. Use New to make a folder, note, list or whiteboard.'}</p>}
 
       {menu && !menu.entry && (
         <Menu anchor={menu.anchor} label="New" onClose={() => setMenu(null)}>
@@ -469,10 +485,16 @@ export function FilesPage({ route, params }: { route: string; params: string[] }
       {making && <making.dialog folderId={hereId} onClose={() => setDlg(null)} />}
       {dlg?.kind === 'rename' && (
         <NameDialog
-          title={dlg.entry.kind === 'folder' && dlg.entry.folder.project_id ? 'Rename project' : 'Rename'}
+          title={dlg.entry.kind === 'folder' && dlg.entry.folder.project_id ? 'Rename project' : dlg.entry.kind === 'folder' && dlg.entry.folder.virtual ? 'Rename category' : 'Rename'}
           initial={entryName(dlg.entry)}
           action="Save"
-          note={dlg.entry.kind === 'folder' && dlg.entry.folder.project_id ? 'This is a project’s folder: the project gets the new name too.' : undefined}
+          note={
+            dlg.entry.kind === 'folder' && dlg.entry.folder.project_id
+              ? 'This is a project’s folder: the project gets the new name too.'
+              : dlg.entry.kind === 'folder' && dlg.entry.folder.virtual
+                ? 'This folder is a category: the category gets the new name.'
+                : undefined
+          }
           onSave={(n) => {
             if (dlg.entry.kind === 'folder' && dlg.entry.folder.id === hereId) {
               const id = hereId;
@@ -494,6 +516,7 @@ export function FilesPage({ route, params }: { route: string; params: string[] }
           what={entryName(dlg.entry)}
           start={dlg.entry.kind === 'folder' ? (dlg.entry.folder.parent_id ?? null) : (dlg.entry.file.folder_id ?? null)}
           moving={dlg.entry.kind === 'folder' ? [dlg.entry.folder.id] : []}
+          kind={movingOf(dlg.entry)}
           onMove={(to) => {
             const e = dlg.entry;
             if (e.kind === 'folder' && e.folder.id === hereId) {
@@ -549,6 +572,22 @@ function ItemMenu({
 }) {
   if (entry.kind === 'folder') {
     const f = entry.folder;
+    if (f.virtual)
+      return (
+        <Menu anchor={anchor} label={f.name} onClose={onClose}>
+          <MenuItem icon="↗" href={folderHref(f.id)}>
+            Open
+          </MenuItem>
+          {f.virtual === 'category' && f.category_id && (
+            <MenuItem icon="✎" onClick={() => onRename(entry)}>
+              Rename category
+            </MenuItem>
+          )}
+          <MenuItem icon="▤" href="#/projects">
+            Projects tab
+          </MenuItem>
+        </Menu>
+      );
     return (
       <Menu anchor={anchor} label={f.name} onClose={onClose}>
         <MenuItem icon="↗" href={folderHref(f.id)}>
