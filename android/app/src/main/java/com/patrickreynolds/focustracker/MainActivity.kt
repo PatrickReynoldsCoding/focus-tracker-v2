@@ -59,7 +59,8 @@ class MainActivity : Activity() {
         }
         setContentView(frame)
         if (intent.getBooleanExtra(EXTRA_PIN_WIDGET, false)) pinWidget()
-        web.loadUrl(prefs.url + "/#" + (intent.getStringExtra(EXTRA_FRAGMENT) ?: "/today"))
+        web.loadUrl(address(prefs, intent))
+        openLink(intent)
         if (Build.VERSION.SDK_INT >= 33) {
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
             onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) { goBack() }
@@ -88,14 +89,27 @@ class MainActivity : Activity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (intent.hasExtra(EXTRA_UPDATE_URL)) Updater.setTestUrl(this, intent.getStringExtra(EXTRA_UPDATE_URL))
-        intent.getStringExtra(EXTRA_FRAGMENT)?.let { web.loadUrl(Prefs(this).url + "/#" + it) }
+        if (intent.hasExtra(EXTRA_FRAGMENT)) web.loadUrl(address(Prefs(this), intent))
+        openLink(intent)
         if (intent.getBooleanExtra(EXTRA_PIN_WIDGET, false)) pinWidget()
     }
 
     override fun onPause() {
         super.onPause()
         // Changes made in the app show on the widget when you go back to the home screen.
-        thread { TodayWidget.refresh(applicationContext) }
+        thread {
+            TodayWidget.refresh(applicationContext)
+            FilesWidget.refresh(applicationContext)
+            SingleFileWidget.refresh(applicationContext)
+        }
+    }
+
+    /** A link from the Files widget opens in the browser (web addresses only). */
+    private fun openLink(intent: Intent?) {
+        val url = intent?.getStringExtra(EXTRA_OPEN_URL) ?: return
+        val uri = Uri.parse(url)
+        if (uri.scheme != "https" && uri.scheme != "http") return
+        runCatching { startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
     }
 
     /** Ask the launcher to add the Today widget (also reachable with: am start ... --ez ft.pinWidget true). */
@@ -113,6 +127,17 @@ class MainActivity : Activity() {
 
     companion object {
         const val EXTRA_FRAGMENT = "ft.fragment"
+        /** The profile to open the page in (the Files widgets); the web app takes `?profile=` off the address (D44). */
+        const val EXTRA_PROFILE = "ft.profile"
+        /** A web address to open in the browser (a link in the Files widget). */
+        const val EXTRA_OPEN_URL = "ft.openUrl"
+
+        /** The web app's address for a page (EXTRA_FRAGMENT), in a profile when EXTRA_PROFILE is given (a full load, so it is set before anything draws). */
+        fun address(prefs: Prefs, intent: Intent?): String {
+            val fragment = intent?.getStringExtra(EXTRA_FRAGMENT) ?: "/today"
+            val profile = intent?.getStringExtra(EXTRA_PROFILE)?.takeIf { it.isNotEmpty() }
+            return prefs.url + "/" + (if (profile != null) "?profile=" + java.net.URLEncoder.encode(profile, "UTF-8") else "") + "#" + fragment
+        }
         const val EXTRA_PIN_WIDGET = "ft.pinWidget"
         /** Debug builds only: where the updater looks for releases (a local test server). */
         const val EXTRA_UPDATE_URL = "ft.updateUrl"

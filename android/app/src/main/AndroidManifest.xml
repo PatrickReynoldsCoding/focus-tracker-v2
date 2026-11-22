@@ -33,6 +33,25 @@
             </intent-filter>
         </receiver>
         <receiver android:name=".AlarmReceiver" android:exported="false" />
+        <!-- What the Files and Single file widgets show (asked when one is added, and from its ⚙ or a long press). Exported: the launcher opens it. -->
+        <activity android:name=".WidgetSetupActivity" android:exported="true" android:taskAffinity="" android:excludeFromRecents="true"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+        <receiver android:name=".FilesWidget" android:exported="false" android:label="@string/files_widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/files_widget_info" />
+        </receiver>
+        <receiver android:name=".SingleFileWidget" android:exported="false" android:label="@string/file_widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/file_widget_info" />
+        </receiver>
         <receiver android:name=".TodayWidget" android:exported="false" android:label="@string/widget_name">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />

@@ -3,7 +3,10 @@
 A small native app (Kotlin, no Compose) with:
 
 - **The tracker itself**: the web app in a full-screen WebView, signed in, with links to other sites opening in the browser.
-- **Today widget** (3 × 3 or larger, resizable down to 3 wide, compact layout below ~230 dp): today's focus project and next action, a running session's timer and pomodoro phase, then the to-dos due today and the habits left. Tap a to-do to tick it, a habit to count a session, Start to start a session on the focus project. Stop… and the project name open the app. **+** adds a to-do for today.
+- **Today widget** (2 × 3 by default, resizable down to 2 cells wide; a narrow layout below 200 dp with the timer and its button stacked, a compact one up to 230 dp): today's focus project and next action, a running session's timer and pomodoro phase, then the to-dos due today and the habits left. Tap a to-do to tick it, a habit to count a session, Start to start a session on the focus project. Stop… and the project name open the app. **+** adds a to-do for today.
+- **Files widget** ("Focus files", 2 × 3, down to 2 wide; D44): like Google Keep's, a scrolling list of the notes, lists and to-dos of a folder (and the folders inside it), a tag or the whole profile, newest first or by name; each card shows the title, its kind and project, and the start of the text (a note's text without Markdown marks, a list's or to-do's items), cut to the length chosen in characters or lines. Tap a card to open the file in the app (in the widget's profile); tap the title to open the folder or tag on Files; ⚙ changes the settings.
+- **Single file widget** ("Focus file", 2 × 2, down to 2 wide): one note (its text in paragraphs) or list or to-do (its items), scrolling, cut to the length chosen. Tap a to-do's item to tick or untick it; anything else opens the file.
+- **Widget settings** (on adding a Files or Single file widget, from its ⚙, or a long press → Reconfigure on Android 12+): the profile; what it shows (every file, a folder, a tag; whiteboards and links too) or, for a single file, the file (recently changed, a folder, a tag, or search); the length (characters or lines, a slider); the order. Both widgets read `GET /api/widget/files` and `GET /api/widget/file/:kind/:id` (one small request each), draw the saved copy at once and show "Offline · saved …" when the server does not answer in time.
 - **Notifications** for reminders, habit prompts and pomodoro breaks (checked every 15 minutes with WorkManager; each shown once across all devices). Pomodoro and "Time is up" alerts are on time: the app sets an exact alarm for the next one whenever it reads the status (Android 11: always allowed; 12: falls back to an alarm-clock alarm, which shows a clock icon, if exact alarms are switched off; 13+: allowed at install).
 
 The app's screens are the web app on purpose: one UI to keep up, and the native part is only what Android needs native code for (widgets, notifications).
@@ -17,7 +20,7 @@ The app's screens are the web app on purpose: one UI to keep up, and the native 
 adb install -r app/build/outputs/apk/release/app-release.apk
 ```
 
-Open it, type the tracker's address and password, choose which mode the widget shows. The app signs in and makes an API token called "Android (<model>)" (revoke it in Settings → Devices and API tokens). Then long-press the home screen → Widgets → Focus → "Focus today".
+Open it, type the tracker's address and password, choose which mode the widget shows. The app signs in and makes an API token called "Android (<model>)" (revoke it in Settings → Devices and API tokens). Then long-press the home screen → Widgets → Focus → "Focus today", "Focus files" or "Focus file".
 
 ## Updating from inside the app
 
@@ -58,8 +61,10 @@ The server applies Settings → Notifications (master switch, kinds, quiet hours
 - Gradle 9.6 (runs on the Java 25 installed here), AGP 8.7.3, Kotlin 2.0.21, minSdk 30 (Android 11), targetSdk 35.
 - Release lint is off: AGP 8.7's lint cannot run on Java 25.
 - Debug builds allow plain http to `10.0.2.2` only, for testing in the emulator against `npx wrangler dev`.
-- `./gradlew testDebugUnitTest` checks the status parsing against the server's `/api/status` shape.
+- `./gradlew testDebugUnitTest` checks the status parsing against the server's `/api/status` shape, the widget feeds against `/api/widget/files`, the widget requests, and that every widget's `*_widget_info.xml` goes down to 2 cells (and the narrow layouts keep the ids the code sets).
 
 ## Tested
+
+0.4.0 (2026-11-22): the emulator crashes on the build machine, so the widgets were not run. Checked instead: the unit tests above, the release build, the APK's signature (same certificate as 0.3.5), the server feeds (`test/widgets.test.ts`, a local server) and opening a file in another profile (`scripts/ui/open-link.mjs`). Not tried: placing, resizing and setting up the widgets, ticking, the narrow layouts on a launcher.
 
 On the Android 15 emulator against a local server (2026-11-18): setup and sign-in, the web app signed in and clear of the system bars, the widget showing focus, next action, to-dos and habits, ticking a to-do, starting a session (timer and pomodoro shown), and quick add. Not yet tried on a real phone or with the e-ink Android 11 phone.

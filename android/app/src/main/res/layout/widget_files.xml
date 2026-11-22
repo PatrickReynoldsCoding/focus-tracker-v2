@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Files widget (FilesWidget.kt) and the Single file widget (SingleFileWidget.kt): a header and a scrolling list. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="10dp" android:background="@drawable/widget_bg">
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+        <TextView android:id="@+id/title" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:minHeight="32dp" android:gravity="center_vertical"
+            android:text="Files" android:textColor="@color/fg" android:textSize="16sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/settings" android:layout_width="32dp" android:layout_height="32dp" android:gravity="center"
+            android:text="⚙" android:textSize="16sp" android:textColor="@color/muted" android:contentDescription="Widget settings" />
+    </LinearLayout>
+    <TextView android:id="@+id/note" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:textColor="@color/muted" android:textSize="11sp" android:maxLines="2" android:ellipsize="end" android:visibility="gone" />
+
+    <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:layout_marginTop="6dp">
+        <ListView android:id="@+id/list" android:layout_width="match_parent" android:layout_height="match_parent"
+            android:divider="@null" android:dividerHeight="0dp" />
+        <TextView android:id="@+id/empty" android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center"
+            android:text="No files here" android:textColor="@color/muted" android:textSize="13sp" />
+    </FrameLayout>
+</LinearLayout>

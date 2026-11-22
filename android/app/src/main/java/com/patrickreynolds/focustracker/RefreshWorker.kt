@@ -16,10 +16,12 @@ import androidx.work.Worker
 import androidx.work.WorkerParameters
 import java.util.concurrent.TimeUnit
 
-/** Every 15 minutes (session alerts have their own exact alarm, see AlarmScheduler): redraw the widgets and show new reminders as notifications (each once). */
+/** Every 15 minutes (session alerts have their own exact alarm, see AlarmScheduler): redraw the widgets (Today, Files, Single file) and show new reminders as notifications (each once). */
 class RefreshWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
     override fun doWork(): Result {
         TodayWidget.refresh(applicationContext)
+        FilesWidget.refresh(applicationContext)
+        SingleFileWidget.refresh(applicationContext)
         notifyNew(applicationContext)
         return Result.success()
     }

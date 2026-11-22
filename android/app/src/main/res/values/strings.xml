@@ -2,4 +2,8 @@
     <string name="app_name">Focus</string>
     <string name="widget_name">Focus today</string>
     <string name="widget_description">Today\'s focus, session timer, to-dos and habits</string>
+    <string name="files_widget_name">Focus files</string>
+    <string name="files_widget_description">The notes, lists and to-dos of a folder or a tag, with the start of each</string>
+    <string name="file_widget_name">Focus file</string>
+    <string name="file_widget_description">One note, list or to-do</string>
 </resources>

@@ -34,7 +34,7 @@ class ApiException(val status: Int, message: String) : Exception(message)
  * Blocking HTTP calls: run them off the main thread. A widget's broadcast may run for about 10 seconds, so
  * `fast` gives up after 4 + 6 seconds and the widget shows the saved status instead of timing out.
  */
-class Api(private val prefs: Prefs, private val fast: Boolean = false) {
+class Api(private val prefs: Prefs, private val fast: Boolean = false, private val mode: String? = null) {
     fun get(path: String): String = call("GET", path, null)
     fun post(path: String, body: JSONObject = JSONObject()): String = call("POST", path, body.toString())
 
@@ -52,7 +52,9 @@ class Api(private val prefs: Prefs, private val fast: Boolean = false) {
         c.connectTimeout = if (fast) 4_000 else 10_000
         c.readTimeout = if (fast) 6_000 else 15_000
         c.setRequestProperty("Authorization", "Bearer ${prefs.token}")
-        // No X-Mode: the widgets follow the profile that is open in the web app (the server remembers it).
+        // No X-Mode: the Today widget follows the profile that is open in the web app (the server remembers it).
+        // The Files and Single file widgets each have their own profile (`mode`).
+        if (!mode.isNullOrEmpty()) c.setRequestProperty("X-Mode", mode)
         if (body != null) {
             c.doOutput = true
             c.setRequestProperty("Content-Type", "application/json")
