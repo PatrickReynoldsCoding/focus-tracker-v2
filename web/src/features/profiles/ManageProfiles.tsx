@@ -243,7 +243,7 @@ export function ProfileList() {
         <span>
           The profile I open becomes the default
           <span class="muted small" style="display:block">
-            The default profile is used by Claude, the Mac menu bar and the Android widgets when they name none. Turn this off to keep the one you chose with Make default.
+            Off (the usual): the default stays the one you chose with Make default. The default profile is used by Claude, the Mac menu bar and the Android widgets when they name none.
           </span>
         </span>
       </label>

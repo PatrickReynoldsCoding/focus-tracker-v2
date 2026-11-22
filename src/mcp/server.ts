@@ -6,13 +6,14 @@ import { errorResponse, resolveMode } from '../api';
 import { Ctx, type Env } from '../core/ctx';
 import { ApiError } from '../core/errors';
 import { FEATURES_KEY, isOn, statesFrom } from '../core/features';
+import { profileIdOf } from '../core/profile-name';
 import { allTools, type Tool } from '../core/registry';
 
 const SUPPORTED = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 const LATEST = SUPPORTED[0];
 
 const INSTRUCTIONS = `Focus Tracker is the owner's personal tracker: projects with Kanban boards, notes (Markdown), lists, to-dos, habits, a daily focus project and work sessions.
-- Data is split into profiles (called modes in the tools), such as "personal" and "work"; list_profiles gives them all. Every tool takes an optional "mode" (a profile's id); without it the default profile is used. Each profile has its own settings and feature switches, so a tool can be off in one profile and on in another.
+- Data is split into profiles (called modes in the tools), such as "Personal" and "Work"; list_profiles gives them all. Every tool takes an optional "mode": a profile's id or its name, in any case (mode "work" or "My Work"); without it the default profile is used. So when the owner says "add X to Y in my work profile", pass mode "work" to the tools that find Y and add X. An unknown profile is refused with the list of profiles. Each profile has its own settings and feature switches, so a tool can be off in one profile and on in another.
 - Start with get_today for the day, list_projects / get_project for projects, search to find anything.
 - Never choose today's focus project unless the owner asks: each day starts empty until they choose.
 - Never store sensitive material (bank or card details, passwords, ID numbers, health records) in resources or notes.
@@ -21,7 +22,7 @@ const INSTRUCTIONS = `Focus Tracker is the owner's personal tracker: projects wi
 
 type Rpc = { jsonrpc: '2.0'; id?: string | number | null; method: string; params?: Record<string, unknown> };
 
-const modeArg = z.string().optional().describe('Profile id such as "personal" or "work" (list_profiles). Default: the default profile.');
+const modeArg = z.string().optional().describe('The profile: its id or its name, any case, such as "work" or "My Work" (list_profiles). Default: the default profile.');
 
 const toolFeatures = (t: Tool): string[] => (t.feature ? [t.feature].flat() : []);
 
@@ -64,7 +65,9 @@ async function callTool(env: Env, name: string, args: Record<string, unknown>) {
   try {
     const { mode, ...rest } = args ?? {};
     const parsed = tool.input.parse(rest);
-    const ctx = new Ctx(env, await resolveMode(env, typeof mode === 'string' ? mode : undefined));
+    // A profile by id or by name (D54).
+    const named = typeof mode === 'string' && mode.trim() ? await profileIdOf(env.DB, mode) : undefined;
+    const ctx = new Ctx(env, await resolveMode(env, named));
     // The switches of the profile the call is for decide.
     for (const f of toolFeatures(tool))
       if (!(await isOn(ctx, f))) throw new ApiError(404, `${name} is turned off in the profile "${ctx.mode}" (its feature ${f} is off there: Settings → Features)`, 'feature_off');

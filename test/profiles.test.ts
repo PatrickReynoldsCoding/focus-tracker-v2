@@ -214,18 +214,24 @@ describe('managing profiles', () => {
     expect((await call('GET', '/profiles')).profiles.at(-1).id).toBe(p.id);
   });
 
-  it('opening a profile makes it the default, unless that is turned off', async () => {
+  it('opening a profile leaves the default alone unless that is turned on (D54)', async () => {
     const p = await fresh();
-    expect((await call('GET', '/profiles')).follow_open).toBe(true);
+    await call('PUT', '/profiles/default', { id: 'personal' });
+    // Off by default: the default is only what is chosen with Make default.
+    expect((await call('GET', '/profiles')).follow_open).toBe(false);
+    expect(await call('POST', '/profiles/opened', { id: p.id })).toEqual({ default: 'personal', follow_open: false });
+    // An 'off' row from before (v0.25 to v0.42 stored only that) still means off.
+    await env.DB.prepare("INSERT OR REPLACE INTO settings (mode, key, value, updated_at) VALUES ('', 'profiles.follow_open', 'off', ?)").bind(new Date().toISOString()).run();
+    expect((await call('GET', '/profiles')).follow_open).toBe(false);
+    // Turned on, the profile opened becomes the default.
+    const on = await call('PUT', '/profiles/follow-open', { on: true });
+    expect(on.follow_open).toBe(true);
     expect(await call('POST', '/profiles/opened', { id: p.id })).toEqual({ default: p.id, follow_open: true });
     expect(await text()).toContain(`Profile: ${p.id}`);
     await call('PUT', '/profiles/default', { id: 'personal' });
-    const off = await call('PUT', '/profiles/follow-open', { on: false });
-    expect(off.follow_open).toBe(false);
+    await call('PUT', '/profiles/follow-open', { on: false });
     expect(await call('POST', '/profiles/opened', { id: p.id })).toEqual({ default: 'personal', follow_open: false });
-    await call('PUT', '/profiles/follow-open', { on: true });
     await call('POST', '/profiles/opened', { id: 'nope' }, { expect: 404 });
-    await call('POST', '/profiles/opened', { id: 'personal' });
   });
 
   it('deletes a profile and everything in it only with its name, can restore it, and moves the default', async () => {

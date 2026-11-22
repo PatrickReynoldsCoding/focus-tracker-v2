@@ -8,14 +8,15 @@
 //   - deleting a profile with everything in it: the caller sends the profile's name; the
 //     profile is put aside (table deleted_modes, its rows stay) and can be restored for
 //     RESTORE_DAYS days, then it is purged for good (the hourly cron, or Delete now),
-//   - the default profile (used when a client or Claude names none). While profiles.follow_open
-//     is on (the usual), opening a profile in the app makes it the default, so the Mac menu bar
-//     and the Android widgets follow the app (v0.25.0); turned off, the chosen default stays.
+//   - the default profile (used when a client or Claude names none): the one chosen in Manage
+//     profiles. Opening a profile in the app makes it the default only while profiles.follow_open
+//     is on, which is off unless the owner turns it on (D54; v0.25.0 to v0.42 had it on).
 
 import { z } from 'zod';
 import type { Ctx } from '../core/ctx';
 import { ApiError, bad } from '../core/errors';
 import { allEntities, allModules, type Module } from '../core/registry';
+import { deletedProfileIdOf, profileIdOf } from '../core/profile-name';
 import { create, get, list, move, update } from '../core/store';
 import { modesEntity } from './basics';
 import { cleanGrid, cleanPills } from './layout';
@@ -58,7 +59,8 @@ export async function defaultProfile(ctx: Ctx): Promise<string> {
   return all.find((m) => m.id === chosen)?.id ?? all.find((m) => m.id === 'personal')?.id ?? all[0]?.id ?? 'personal';
 }
 
-const follows = async (ctx: Ctx) => (await ctx.setting(FOLLOW_KEY, '')) !== 'off';
+/** Off unless turned on (D54): stored as 'on'. The 'off' rows of before mean off too. */
+const follows = async (ctx: Ctx) => (await ctx.setting(FOLLOW_KEY, '')) === 'on';
 
 async function deletedProfiles(ctx: Ctx): Promise<Deleted[]> {
   const rows = (await ctx.db.prepare('SELECT id, row, deleted_at FROM deleted_modes ORDER BY deleted_at DESC').all<{ id: string; row: string; deleted_at: string }>()).results;
@@ -178,7 +180,7 @@ export async function profileOpened(ctx: Ctx, id: string) {
 }
 
 export async function setFollowOpen(ctx: Ctx, on: boolean) {
-  await ctx.setSetting(FOLLOW_KEY, on ? null : 'off', '');
+  await ctx.setSetting(FOLLOW_KEY, on ? 'on' : null, '');
   return listProfiles(ctx);
 }
 
@@ -268,7 +270,7 @@ export async function purgeExpired(db: D1Database, now = new Date()): Promise<st
 
 // ---------- the module ----------
 
-const idArg = z.string().describe('The profile’s id, such as "personal" (list_profiles gives them)');
+const idArg = z.string().describe('The profile’s id or name, any case, such as "personal" or "My Work" (list_profiles gives them)');
 const body = async <T>(c: { req: { json: () => Promise<unknown> } }) => ((await c.req.json().catch(() => ({}))) ?? {}) as T;
 
 export const profilesModule: Module = {
@@ -297,7 +299,7 @@ export const profilesModule: Module = {
   tools: [
     {
       name: 'list_profiles',
-      description: 'List the profiles (called modes in other tools: pass a profile’s id as `mode`) with their colours, the default one, and profiles deleted in the last week that can still be restored.',
+      description: 'List the profiles (called modes in other tools: pass a profile’s id or name as `mode`) with their colours, the default one, and profiles deleted in the last week that can still be restored.',
       readOnly: true,
       input: z.object({}),
       run: (ctx) => listProfiles(ctx),
@@ -308,33 +310,33 @@ export const profilesModule: Module = {
       input: z.object({
         label: z.string().describe('Its name, such as "Side projects"'),
         color: z.string().optional().describe('Colour theme as #rrggbb'),
-        copy_from: z.string().optional().describe('Id of the profile whose settings to copy'),
+        copy_from: z.string().optional().describe('Id or name of the profile whose settings to copy'),
       }),
-      run: (ctx, a) => createProfile(ctx, a),
+      run: async (ctx, a) => createProfile(ctx, { ...a, copy_from: a.copy_from ? await profileIdOf(ctx.db, a.copy_from) : undefined }),
     },
     {
       name: 'update_profile',
       description: 'Rename a profile, change its colour ("" for the usual one) or its place in the list (1 = first).',
       input: z.object({ id: idArg, label: z.string().optional(), color: z.string().optional(), position: z.number().int().min(1).optional() }),
-      run: (ctx, a) => updateProfile(ctx, a.id, a),
+      run: async (ctx, a) => updateProfile(ctx, await profileIdOf(ctx.db, a.id), a),
     },
     {
       name: 'set_default_profile',
-      description: 'Choose the profile used when a device or a tool names none. Opening another profile in the app changes it again, unless the owner turned that off in Manage profiles.',
+      description: 'Choose the profile used when a device or a tool names none. It stays until changed (opening another profile in the app changes it only if the owner turned that on in Manage profiles).',
       input: z.object({ id: idArg }),
-      run: (ctx, a) => setDefaultProfile(ctx, a.id),
+      run: async (ctx, a) => setDefaultProfile(ctx, await profileIdOf(ctx.db, a.id)),
     },
     {
       name: 'delete_profile',
       description: `Delete a profile and everything in it (projects, notes, habits, settings). Only when the owner asks, and pass the profile’s name as confirm_name. It can be restored with restore_profile for ${RESTORE_DAYS} days; then it is gone. The last profile cannot be deleted.`,
       input: z.object({ id: idArg, confirm_name: z.string().describe('The profile’s name, exactly as the owner sees it') }),
-      run: (ctx, a) => deleteProfile(ctx, a.id, a.confirm_name),
+      run: async (ctx, a) => deleteProfile(ctx, await profileIdOf(ctx.db, a.id), a.confirm_name),
     },
     {
       name: 'restore_profile',
       description: `Bring back a profile deleted in the last ${RESTORE_DAYS} days, with everything that was in it (list_profiles shows them under deleted).`,
       input: z.object({ id: idArg }),
-      run: (ctx, a) => restoreProfile(ctx, a.id),
+      run: async (ctx, a) => restoreProfile(ctx, await deletedProfileIdOf(ctx.db, a.id)),
     },
   ],
 };
