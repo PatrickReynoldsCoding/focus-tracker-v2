@@ -36,6 +36,8 @@ export interface TodayItem {
   from?: string | null;
   list_id?: string | null;
   project_id?: string | null;
+  /** To-dos and cards with subtasks (D57): [done, total]. They follow it here; they are never listed on their own. */
+  subtasks?: [number, number];
 }
 
 export interface TodayList {

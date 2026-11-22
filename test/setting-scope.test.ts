@@ -197,7 +197,9 @@ describe('Claude', () => {
 describe('migration 0024', () => {
   it('removes leftover rows for all profiles of these settings and lists every scoped key', async () => {
     const sql = MIGRATIONS.find(([name]) => name === '0024_setting_scope.sql')![1];
-    for (const u of allScoped()) expect(sql, `${u.key} is in the migration`).toContain(`'${u.key}'`);
+    // Settings made after 0024 cannot have leftover rows for all profiles, so they are not in it.
+    const later = ['subtasks.open_default'];
+    for (const u of allScoped().filter((x) => !later.includes(x.key))) expect(sql, `${u.key} is in the migration`).toContain(`'${u.key}'`);
     await env.DB.prepare("INSERT INTO settings (mode, key, value, updated_at) VALUES ('', 'pomodoro.work', '99', 'x'), ('personal', 'pomodoro.work', '20', 'x'), ('', 'timezone', 'Europe/London', 'x') ON CONFLICT (mode, key) DO UPDATE SET value = excluded.value").run();
     await env.DB.batch(statements(sql).map((s) => env.DB.prepare(s)));
     expect(await row('', 'pomodoro.work')).toBeNull();

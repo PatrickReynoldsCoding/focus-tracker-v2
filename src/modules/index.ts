@@ -26,6 +26,7 @@ import { resourcesModule } from './resources';
 import { sessionsModule } from './sessions';
 import { settingScopeModule } from './setting-scope';
 import { stickiesModule } from './stickies';
+import { subtasksModule } from './subtasks';
 import { relationsModule } from './relations';
 import { swiftbarModule } from './swiftbar';
 import { tagsModule } from './tags';
@@ -41,6 +42,7 @@ export const MODULES: Module[] = [
   projectsModule,
   boardsModule,
   doneColumnModule,
+  subtasksModule,
   basicsModule,
   categoriesModule,
   profilesModule,

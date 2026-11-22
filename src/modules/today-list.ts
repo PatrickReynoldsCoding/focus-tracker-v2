@@ -12,6 +12,7 @@ import type { Row } from '../core/entity';
 import { buildTodayList, type TodayCardIn, type TodayList, type TodayTodoIn } from '../core/today-list';
 import { checkHabit, HABITS_FLAG, habitProgressIfOn, skipHabit } from './habits';
 import { DONE_FLAG, tickCard } from './boards';
+import { subtaskCounts } from './subtasks';
 import { tickTodo, todosForDay } from './todos';
 
 export const TODAY_LIST_FLAG = 'today-panel';
@@ -85,7 +86,10 @@ export async function setNotToday(ctx: Ctx, kind: 'todo' | 'card', id: string, o
 export async function todayList(ctx: Ctx): Promise<TodayList> {
   const day = await ctx.today();
   const [habits, todos, cards, names, hide] = await Promise.all([habitProgressIfOn(ctx, day), todosForDay(ctx, day), cardsForDay(ctx, day), todoListNames(ctx), notTodayKeys(ctx, day)]);
-  return buildTodayList(day, { habits, todos: withListNames(todos, names), cards, hide });
+  const list = buildTodayList(day, { habits, todos: withListNames(todos, names), cards, hide });
+  const counts = await subtaskCounts(ctx, list.items.filter((x) => x.kind !== 'habit').map((x) => x.id));
+  for (const x of list.items) if (counts[x.id]) x.subtasks = counts[x.id];
+  return list;
 }
 
 export { tickCard };

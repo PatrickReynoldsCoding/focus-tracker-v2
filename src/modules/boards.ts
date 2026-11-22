@@ -13,6 +13,7 @@ import type { Entity, Row } from '../core/entity';
 import { bad } from '../core/errors';
 import type { Module } from '../core/registry';
 import { create, get, list, move, update } from '../core/store';
+import { addSubtasks, attachSubtasks, needSubtasks, subtasksArg } from './subtasks';
 
 /** A new project's columns; the last is its fixed Done column (D34). */
 export const DEFAULT_COLUMNS = ['To do', 'Doing', 'Done'];
@@ -209,7 +210,8 @@ export async function board(ctx: Ctx, where: { project_id?: string; list_id?: st
     owner ? hasDoneColumn(ctx, owner) : false,
   ]);
   if (sortDone) cols.sort((a, b) => Number(!!a.is_done) - Number(!!b.is_done));
-  return cols.map((c) => ({ ...c, cards: cards.filter((t) => t.column_id === c.id).map((t) => ({ ...t, status: c.name })) }));
+  const withSubs = await attachSubtasks(ctx, where, cards);
+  return cols.map((c) => ({ ...c, cards: withSubs.filter((t) => t.column_id === c.id).map((t) => ({ ...t, status: c.name })) }));
 }
 
 // ---------- changing cards ----------
@@ -315,20 +317,25 @@ export const boardsModule: Module = {
     {
       name: 'add_card',
       description:
-        'Add a card to a project board, a to-do (list_id) or a plain list (list_id). Give column_id, or a column (status or group) name, or neither for the first column. A card added to Done is done.',
+        'Add a card to a project board, a to-do (list_id) or a plain list (list_id). Give column_id, or a column (status or group) name, or neither for the first column. A card added to Done is done. subtasks adds a checklist of subtasks (more later with add_subtask).',
       input: z.object({
         project_id: z.string().optional(),
         list_id: z.string().optional(),
         column_id: z.string().optional(),
         column: z.string().optional().describe('Column (status) name, instead of column_id'),
         ...cardInput,
+        subtasks: subtasksArg,
       }),
-      run: (ctx, a) => addCard(ctx, a),
+      run: async (ctx, { subtasks, ...a }) => {
+        await needSubtasks(ctx, subtasks);
+        const card = await addCard(ctx, a);
+        return subtasks?.length ? { ...card, subtasks: await addSubtasks(ctx, card.id, subtasks) } : card;
+      },
     },
     {
       name: 'update_card',
       description:
-        'Edit a card’s title, Markdown note or colour, or its status: a column name of its board (it moves to the end of that column), or done true (into the Done column) / false (back out of it).',
+        'Edit a card’s title, Markdown note or colour, or its status: a column name of its board (it moves to the end of that column), or done true (into the Done column) / false (back out of it). add_subtasks adds subtasks to its checklist; ticking the card leaves its subtasks as they are.',
       input: z.object({
         id: z.string(),
         title: z.string().optional(),
@@ -336,8 +343,13 @@ export const boardsModule: Module = {
         color: z.string().nullable().optional(),
         status: z.string().optional().describe('Column name on the same board'),
         done: z.boolean().optional(),
+        add_subtasks: subtasksArg,
       }),
-      run: (ctx, { id, ...a }) => updateCard(ctx, id, a),
+      run: async (ctx, { id, add_subtasks, ...a }) => {
+        await needSubtasks(ctx, add_subtasks);
+        const card = await updateCard(ctx, id, a);
+        return add_subtasks?.length ? { ...card, subtasks: await addSubtasks(ctx, id, add_subtasks) } : card;
+      },
     },
     {
       name: 'move_card',
@@ -354,7 +366,7 @@ export const boardsModule: Module = {
     },
     {
       name: 'get_board',
-      description: 'The columns (statuses or groups) and cards of a project board, a to-do or a plain list. is_done marks the fixed Done column of a project or to-do, always last.',
+      description: 'The columns (statuses or groups) and cards of a project board, a to-do or a plain list. is_done marks the fixed Done column of a project or to-do, always last. Each card lists its subtasks (id, title, done) while the subtasks feature is on.',
       readOnly: true,
       input: z.object({ project_id: z.string().optional(), list_id: z.string().optional() }),
       run: (ctx, a) => board(ctx, a.project_id ? { project_id: a.project_id } : { list_id: a.list_id }),

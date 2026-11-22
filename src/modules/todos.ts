@@ -16,6 +16,7 @@ import { ApiError, bad, notFound } from '../core/errors';
 import { entity, type KindAlias, type Module } from '../core/registry';
 import { create, get, move, remove, update, type ListOptions } from '../core/store';
 import { firstColumn, tasksEntity, tickCard, todoDoneColumn } from './boards';
+import { addSubtasks, needSubtasks, subtasksArg } from './subtasks';
 
 export const TODO_FIELDS: Record<string, Field> = {
   title: { type: 'text', required: true },
@@ -229,7 +230,7 @@ export const todosModule: Module = {
   tools: [
     {
       name: 'add_todo',
-      description: 'Add a to-do. Without list_id it goes on the first to-do list. day (YYYY-MM-DD) makes it due that day; empty means anytime.',
+      description: 'Add a to-do. Without list_id it goes on the first to-do list. day (YYYY-MM-DD) makes it due that day; empty means anytime. subtasks adds a checklist of subtasks under it (more later with add_subtask; tick them with tick_subtask).',
       input: z.object({
         title: z.string().min(1),
         list_id: z.string().optional(),
@@ -237,12 +238,17 @@ export const todosModule: Module = {
         day: z.string().optional(),
         project_id: z.string().optional(),
         note: z.string().optional(),
+        subtasks: subtasksArg,
       }),
-      run: (ctx, a) => createTodo(ctx, a),
+      run: async (ctx, { subtasks, ...a }) => {
+        await needSubtasks(ctx, subtasks);
+        const todo = await createTodo(ctx, a);
+        return subtasks?.length ? { ...todo, subtasks: await addSubtasks(ctx, todo.id, subtasks) } : todo;
+      },
     },
     {
       name: 'tick_todo',
-      description: 'Mark a to-do done (today) or not done. Done moves its card into the to-do’s Done column; not done moves it back to its group.',
+      description: 'Mark a to-do done (today) or not done. Done moves its card into the to-do’s Done column; not done moves it back to its group. Its subtasks are left as they are.',
       input: z.object({ id: z.string(), done: z.boolean().default(true) }),
       run: (ctx, a) => tickTodo(ctx, a.id, a.done),
     },

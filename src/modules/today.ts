@@ -11,6 +11,7 @@ import type { Module } from '../core/registry';
 import { create, find, get, list, update } from '../core/store';
 import { habitProgressIfOn } from './habits';
 import { listsEntity } from './lists';
+import { subtaskCounts } from './subtasks';
 import { todosForDay } from './todos';
 import { pendingNotifications } from './notifications';
 import { projectsEntity } from './projects';
@@ -215,6 +216,8 @@ export async function today(ctx: Ctx) {
     withList ? todoListNames(ctx) : {},
     withList ? todoListProjects(ctx) : {},
   ]);
+  // Subtasks follow their to-do or card here (D57): only a count, they are never rows of their own.
+  const subtasks = withList ? await subtaskCounts(ctx, [...todos.map((t) => t.id), ...cards.map((c) => c.id)]) : {};
   return {
     mode: ctx.mode,
     day,
@@ -234,6 +237,7 @@ export async function today(ctx: Ctx) {
     todo_lists: todoLists,
     // A to-do list's project (list id → project id), so a to-do from a project's list says which.
     todo_list_projects: todoListProject,
+    subtasks,
   };
 }
 
