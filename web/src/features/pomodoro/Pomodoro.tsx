@@ -1,6 +1,7 @@
 import { useEffect } from 'preact/hooks';
-import { change, put } from '../../core/api';
-import { Loading, useData } from '../../core/ui';
+import { put, say, version } from '../../core/api';
+import { OwnValue, scopedChange, ScopeChoice, useScopeStates } from '../../core/scope';
+import { Loading } from '../../core/ui';
 import { mmss, nextLabel, nextPomodoro, pausePomodoro, phaseLabel, resumePomodoro, startPomodoro, startPomodoroClock, stopPomodoro, usePomodoro, type LivePomodoro } from './store';
 
 const icon = (p: LivePomodoro) => (p.phase === 'work' ? '🍅' : '☕');
@@ -102,33 +103,103 @@ export function PomodoroCompact() {
   );
 }
 
+const SECTION = 'pomodoro';
+const LENGTHS = [25, 50, 90];
+
+/** Settings → Pomodoro: lengths, rounds, breaks pausing the session, the menu bar countdown and the
+ *  planned length of a new session; each for this profile or for every profile (D46). */
 export function PomodoroSettings() {
-  const { data } = useData<{ global: Record<string, string>; mode: Record<string, string> }>('/settings');
-  if (!data) return <Loading />;
-  const set = (key: string, value: string) => change(() => put(`/settings/${key}`, { value: value || null, global: false }), 'Saved');
-  const number = (key: string, label: string, fallback: string) => (
-    <label>
-      {label}
-      <input type="number" min={1} defaultValue={data.mode[key] ?? fallback} onBlur={(e) => set(key, (e.target as HTMLInputElement).value)} />
-    </label>
-  );
+  const { states, of } = useScopeStates();
+  if (!states) return <Loading />;
+  const valueOf = (id: string) => (of(id)?.value as string | null | undefined) ?? null;
+  // Settings are not part of undo: a plain message.
+  const set = async (key: string, value: string, reset?: () => void) => {
+    const v = value || null;
+    if (v === valueOf(key)) return;
+    try {
+      const sent = await scopedChange(SECTION, [key], states, (scope) => put(`/settings/${key}`, { value: v, scope }).then(() => scope));
+      if (sent === false) return reset?.();
+      version.value++;
+      say(sent === 'all' ? 'Saved for every profile' : 'Saved');
+    } catch (err) {
+      reset?.();
+      say(`Not saved: ${(err as Error).message}`, 'error');
+    }
+  };
+  const mark = (id: string) => <OwnValue state={of(id)} section={SECTION} />;
+  const number = (key: string, label: string, fallback: string) => {
+    const shown = valueOf(key) ?? fallback;
+    return (
+      <label>
+        {label}
+        <input
+          key={`${key}-${shown}`}
+          type="number"
+          min={1}
+          defaultValue={shown}
+          onBlur={(e) => {
+            const el = e.target as HTMLInputElement;
+            if (el.value !== shown) set(key, el.value, () => (el.value = shown));
+          }}
+        />
+        {mark(key)}
+      </label>
+    );
+  };
   const check = (key: string, label: string, on: boolean) => (
     <label class="inline">
-      <input type="checkbox" defaultChecked={on} onChange={(e) => set(key, (e.target as HTMLInputElement).checked ? 'on' : 'off')} /> {label}
+      <input
+        type="checkbox"
+        checked={on}
+        onChange={(e) => {
+          const el = e.target as HTMLInputElement;
+          set(key, el.checked ? 'on' : 'off', () => (el.checked = on));
+        }}
+      />{' '}
+      <span>
+        {label}
+        {mark(key)}
+      </span>
     </label>
   );
+  const length = valueOf('session.length') ?? '25';
   return (
     <section class="card">
       <h2>Pomodoro</h2>
+      <ScopeChoice section={SECTION} />
       <div class="stack">
-        <div class="row">
+        <div class="row pomo-lengths">
           {number('pomodoro.work', 'Work (min)', '25')}
           {number('pomodoro.break', 'Break (min)', '5')}
           {number('pomodoro.long_break', 'Long break (min)', '15')}
           {number('pomodoro.rounds', 'Rounds before a long break', '4')}
         </div>
-        {check('pomodoro.breaks_pause_session', 'A break also pauses the session timer (work resumes it)', data.mode['pomodoro.breaks_pause_session'] === 'on')}
-        {check('swiftbar.show_pomodoro', 'Show the Pomodoro countdown in the Mac menu bar (SwiftBar)', data.mode['swiftbar.show_pomodoro'] !== 'off')}
+        {check('pomodoro.breaks_pause_session', 'A break also pauses the session timer (work resumes it)', valueOf('pomodoro.breaks_pause_session') === 'on')}
+        {check('swiftbar.show_pomodoro', 'Show the Pomodoro countdown in the Mac menu bar (SwiftBar)', valueOf('swiftbar.show_pomodoro') !== 'off')}
+        <label>
+          <span>
+            A new session is planned for
+            {mark('session.length')}
+          </span>
+          <select
+            value={length}
+            onChange={(e) => {
+              const el = e.target as HTMLSelectElement;
+              set('session.length', el.value, () => (el.value = length));
+            }}
+          >
+            {[...new Set([...LENGTHS.map(String), length])]
+              .filter((v) => v !== 'none')
+              .sort((a, b) => Number(a) - Number(b))
+              .map((v) => (
+                <option key={v} value={v}>
+                  {v} min
+                </option>
+              ))}
+            <option value="none">No limit</option>
+          </select>
+          <span class="muted small">The last length chosen when starting a session; starting one with another length changes it.</span>
+        </label>
       </div>
     </section>
   );

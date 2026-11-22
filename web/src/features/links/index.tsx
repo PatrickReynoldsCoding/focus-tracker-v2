@@ -4,6 +4,7 @@
 import './links.css';
 import { useState } from 'preact/hooks';
 import { change, del, post, say } from '../../core/api';
+import { OwnValue, scopedChange, ScopeChoice, useScopeStates } from '../../core/scope';
 import { useFlag } from '../../core/features';
 import { registerPanel, type CardTileProps } from '../../core/registry';
 import { Loading, useData } from '../../core/ui';
@@ -34,6 +35,10 @@ function BlockedMark({ card }: CardTileProps) {
 function LinkTypes() {
   const on = useFlag(FLAG);
   const { data } = useData<LinkType[]>(on ? '/links/types' : null);
+  const { states, of } = useScopeStates();
+  // The whole list is one setting (D46): this profile's, or every profile's with All profiles.
+  const send = (run: (scope: 'profile' | 'all') => Promise<unknown>, done: string) =>
+    scopedChange('link-types', ['links.types'], states, (scope) => change(() => run(scope)).then((ok) => ok && say(scope === 'all' ? `${done} for every profile` : done)));
   const [outward, setOutward] = useState('');
   const [inward, setInward] = useState('');
   if (!on) return null;
@@ -41,7 +46,11 @@ function LinkTypes() {
   return (
     <section class="card">
       <h2>Link types</h2>
-      <p class="muted small">How items can be linked. Each type reads one way from each item.</p>
+      <p class="muted small">
+        How items can be linked. Each type reads one way from each item.
+        <OwnValue state={of('links.types')} section="link-types" />
+      </p>
+      <ScopeChoice section="link-types" />
       <ul class="plain link-types">
         {data.map((t) => (
           <li key={t.id}>
@@ -50,7 +59,7 @@ function LinkTypes() {
               {t.inward !== t.outward && <span class="muted"> / {t.inward}</span>}
             </span>
             {t.custom ? (
-              <button class="icon small" aria-label={`Remove ${t.outward}`} onClick={() => change(() => del(`/links/types/${t.id}`)).then((ok) => ok && say('Link type removed'))}>
+              <button class="icon small" aria-label={`Remove ${t.outward}`} onClick={() => send((scope) => del(`/links/types/${t.id}?scope=${scope}`), 'Link type removed')}>
                 ✕
               </button>
             ) : (
@@ -65,7 +74,7 @@ function LinkTypes() {
           e.preventDefault();
           if (!outward.trim()) return;
           // Link types are settings, which undo does not cover: a plain message.
-          change(() => post('/links/types', { outward, inward })).then((ok) => ok && say('Link type added'));
+          send((scope) => post('/links/types', { outward, inward, scope }), 'Link type added');
           setOutward('');
           setInward('');
         }}

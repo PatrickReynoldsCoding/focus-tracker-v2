@@ -21,3 +21,4 @@
 @media (max-width: 700px) {
   .pomo-float { bottom: calc(72px + env(safe-area-inset-bottom)); }
 }
+.pomo-lengths { align-items: flex-start; }

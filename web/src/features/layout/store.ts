@@ -104,10 +104,11 @@ export async function resetPillGrid(place: string, pill: string) {
   const ok = await saveLayout(place, { grids }, () => del(`${path(place)}/grids/${pill}`));
   if (ok) say('This pill is back to its usual layout.', 'info', { label: 'Undo', run: undo });
 }
-/** The whole view is sent each time, so two changes waiting offline (merged into one) lose nothing. */
-export function saveView(place: string, change: View) {
+/** The whole view is sent each time, so two changes waiting offline (merged into one) lose nothing.
+ *  For every profile (scope 'all', D46) only the switches changed are sent. */
+export function saveView(place: string, change: View, scope: 'profile' | 'all' = 'profile') {
   const view = { ...layoutNow(place).view, ...change };
-  return saveLayout(place, { view }, () => put(`${path(place)}/view`, view));
+  return saveLayout(place, { view }, () => put(`${path(place)}/view`, scope === 'all' ? { ...change, scope } : view));
 }
 
 /** True while the media query matches (re-renders when it changes). */

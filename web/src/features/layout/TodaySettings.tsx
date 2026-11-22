@@ -7,6 +7,7 @@ import { useState } from 'preact/hooks';
 import { del, undo } from '../../core/api';
 import { useFlag, useFlags } from '../../core/features';
 import { lookupPanel, standIn, type PanelDef } from '../../core/registry';
+import { OwnValue, scopedChange, ScopeChoice, useScopeStates } from '../../core/scope';
 import { Dialog } from '../../core/ui';
 import { groupByKind, useAddable } from './AddFeature';
 import { readingOrder } from './grid';
@@ -95,6 +96,15 @@ export function PillSheet({
 export function TodaySettings({ place, panels, pills, saved, view, plain, onClose }: { plain?: boolean; place: string; panels: PanelDef<any>[]; pills: Pill[]; saved: boolean; view: View; onClose: () => void }) {
   const [editing, setEditing] = useState<{ pill: Pill; isNew: boolean } | null>(null);
   const { nameOf } = usePillOptions(place, panels);
+  // Today's view switches can go to this profile or to every profile (D46); the pills stay this profile's.
+  const { states, of, reload } = useScopeStates();
+  const VIEW = 'today-view';
+  const setView = async (change: View) => {
+    const sent = await scopedChange(VIEW, Object.keys(change).map((k) => `${VIEW}.${k}`), states, (scope) => saveView(place, change, scope));
+    if (sent !== false) reload();
+    return sent;
+  };
+  const mark = (key: string) => (place === 'today' ? <OwnValue state={of(`${VIEW}.${key}`)} section={VIEW} /> : null);
 
   // The sheet sits above the page's messages, so what can be undone is said here, with its Undo.
   const [notice, setNotice] = useState<string | null>(null);
@@ -115,9 +125,18 @@ export function TodaySettings({ place, panels, pills, saved, view, plain, onClos
       <label class="pl-switch">
         <span>
           {label}
+          {mark(key)}
           <span class="muted small"> {hint}</span>
         </span>
-        <input type="checkbox" role="switch" checked={on} onChange={() => saveView(place, { [key]: !on })} />
+        <input
+          type="checkbox"
+          role="switch"
+          checked={on}
+          onChange={(e) => {
+            const box = e.target as HTMLInputElement;
+            void setView({ [key]: !on }).then((sent) => sent === false && (box.checked = on));
+          }}
+        />
       </label>
     );
   };
@@ -197,8 +216,18 @@ export function TodaySettings({ place, panels, pills, saved, view, plain, onClos
         </section>
         )}
 
+        {place === 'today' && (
+          <section>
+            <ScopeChoice section={VIEW} label="Today’s switches (focus card, pill row, the All pill) apply to" />
+            <p class="muted small">Pills and their panels are always this profile’s own.</p>
+          </section>
+        )}
+
         <section>
-          <h3>Focus card</h3>
+          <h3>
+            Focus card
+            {mark('focusCard')}
+          </h3>
           <div class="pl-seg" role="radiogroup" aria-label="Focus card">
             {(
               [
@@ -207,7 +236,7 @@ export function TodaySettings({ place, panels, pills, saved, view, plain, onClos
                 ['hidden', 'Hidden'],
               ] as const
             ).map(([v, label]) => (
-              <button key={v} role="radio" aria-checked={card === v} class={card === v ? 'on' : ''} onClick={() => saveView(place, { focusCard: v })}>
+              <button key={v} role="radio" aria-checked={card === v} class={card === v ? 'on' : ''} onClick={() => void setView({ focusCard: v })}>
                 {label}
               </button>
             ))}
