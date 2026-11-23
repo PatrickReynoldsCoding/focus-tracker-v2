@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Focus Tracker Desktop
+Comment=Focus Tracker's Desktop page in a window of its own
+# install.sh puts in the address and the Chrome profile (FT_URL, FT_CHROME_PROFILE).
+Exec=google-chrome "--profile-directory=@PROFILE@" "--app=@URL@/#/desktop"
+Icon=focus-tracker-desktop
+Terminal=false
+Categories=Office;
+StartupNotify=false
