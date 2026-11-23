@@ -47,6 +47,26 @@ describe('desktop layout', () => {
     expect((await call('GET', '/layout/Bad%20Page', undefined, { ...m, expect: 400 })).error).toContain('Unknown page');
   });
 
+  it('keeps free places for a computer and a phone, checked (D65)', async () => {
+    const m = await freshMode();
+    const grid = {
+      items: { focus: { x: 0, y: 0, w: 12 } },
+      removed: [],
+      cells: { focus: { x: 0, y: 0, w: 8, h: 4 }, todos: { x: 8, y: 6, w: 4, h: 6 } },
+      phone: { focus: { x: 0, y: 0, w: 4, h: 4 }, todos: { x: 0, y: 9, w: 2, h: 5 } },
+    };
+    expect(await call('PUT', '/layout/today/grid', grid, m)).toEqual(grid);
+    expect((await call('GET', '/layout/today', undefined, m)).grid).toEqual(grid);
+    // A pill's own grid keeps them too.
+    const pill = await call('PUT', '/layout/today/grids/home', { items: {}, cells: { habits: { x: 2, y: 3, w: 4, h: 2 } } }, m);
+    expect(pill.cells).toEqual({ habits: { x: 2, y: 3, w: 4, h: 2 } });
+    const bad = async (body: unknown) => (await call('PUT', '/layout/today/grid', body, { ...m, expect: 400 })).error as string;
+    expect(await bad({ items: {}, phone: { a: { x: 2, y: 0, w: 3, h: 2 } } })).toContain('right edge');
+    expect(await bad({ items: {}, cells: { a: { x: 0, y: 0, w: 2, h: 0 } } })).toContain('cells.a.h');
+    expect(await bad({ items: {}, cells: { a: { x: 0, y: -1, w: 2, h: 2 } } })).toContain('cells.a.y');
+    expect(await bad({ items: {}, phone: [] })).toContain('phone must be');
+  });
+
   it('resets a page, and Undo brings the layout back', async () => {
     const m = await freshMode();
     const grid = { items: { focus: { x: 0, y: 0, w: 8 } }, removed: [] };
@@ -144,7 +164,7 @@ describe('Today pills', () => {
 
   it('has the layout flags on by default', async () => {
     const list = await call('GET', '/features');
-    for (const id of ['movable-panels', 'today-pills', 'popout-windows']) expect(list.find((f: any) => f.id === id)?.enabled).toBe(true);
+    for (const id of ['movable-panels', 'free-panels', 'today-pills', 'popout-windows']) expect(list.find((f: any) => f.id === id)?.enabled).toBe(true);
   });
 
   it('has the computer’s pills off by default, per profile, and the pill tools still work', async () => {

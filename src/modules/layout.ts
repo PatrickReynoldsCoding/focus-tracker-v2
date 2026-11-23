@@ -1,8 +1,10 @@
 // How pages are laid out in the web app: where panels sit on a desktop (Today, a project's page),
 // which are removed, Today's pills (tabs, on every screen) and their switches. Stored per mode in
 // settings rows, so every device shows the same:
-//   layout.<page>        { items: { <panel id>: { x, y, w, h?, ph? } }, removed: [<panel id>] }  (desktop grid; Today's "All" pill;
-//                        h: fixed height on a computer, ph: on a phone; y also sets the phone's order)
+//   layout.<page>        { items: { <panel id>: { x, y, w, h?, ph? } }, removed: [<panel id>],   (desktop grid; Today's "All" pill;
+//                          cells?: { <panel id>: { x, y, w, h } }, phone?: { … } }          h: fixed height on a computer, ph: on a phone; y also sets the phone's order.
+//                        cells / phone: free arranging (flag free-panels, D65): places in cells, 12 columns on a computer and 4
+//                        on a phone, y and h in rows; a gap stays a gap)
 //   layout.<page>.pills  [{ id, name, icon, panels: [<panel id>] }]                       (pills, undoable)
 //   layout.<page>.grids  { <pill id>: { items, removed: [] } }                              (each pill's own desktop grid)
 //   layout.<page>.view   { focusCard, pillCounts, pillSwipe, pillLast, pillAll }           (switches)
@@ -35,7 +37,12 @@ const PILL_ID = /^[A-Za-z0-9_-]{1,40}$/;
 const MAX_ITEMS = 200;
 
 export type GridItem = { x: number; y: number; w: number; h?: number | null; ph?: number | null };
-export type Grid = { items: Record<string, GridItem>; removed: string[] };
+/** A place in cells (free arranging, D65): column, row, width in columns, height in rows. */
+export type Cell = { x: number; y: number; w: number; h: number };
+export type Grid = { items: Record<string, GridItem>; removed: string[]; cells?: Record<string, Cell>; phone?: Record<string, Cell> };
+export const PHONE_COLUMNS = 4;
+const MAX_ROW = 2000;
+const MAX_ROWS = 200;
 export type Pill = { id: string; name: string; icon: string | null; panels: string[] };
 export type View = { focusCard?: (typeof FOCUS_CARD)[number]; pillCounts?: boolean; pillSwipe?: boolean; pillLast?: boolean; pillAll?: boolean };
 const VIEW_SWITCHES = ['pillCounts', 'pillSwipe', 'pillLast', 'pillAll'] as const;
@@ -84,7 +91,28 @@ export function cleanGrid(body: unknown): Grid {
       items[id] = item;
     }
   }
-  return { items, removed: panelIds(b.removed ?? [], 'removed', MAX_ITEMS) };
+  const out: Grid = { items, removed: panelIds(b.removed ?? [], 'removed', MAX_ITEMS) };
+  const c = body as { cells?: unknown; phone?: unknown } | null;
+  if (c?.cells != null) out.cells = cleanCells(c.cells, 'cells', COLUMNS);
+  if (c?.phone != null) out.phone = cleanCells(c.phone, 'phone', PHONE_COLUMNS);
+  return out;
+}
+
+/** Check free places: whole cells inside the columns. Overlaps are the browser's to avoid. */
+function cleanCells(v: unknown, name: string, cols: number): Record<string, Cell> {
+  if (typeof v !== 'object' || Array.isArray(v)) throw bad(`${name} must be an object of panel id → place`);
+  const entries = Object.entries(v as Record<string, unknown>);
+  if (entries.length > MAX_ITEMS) throw bad(`At most ${MAX_ITEMS} panels`);
+  const out: Record<string, Cell> = {};
+  for (const [id, raw] of entries) {
+    if (!PANEL_ID.test(id)) throw bad(`"${id.slice(0, 40)}" is not a panel id`);
+    const p = (raw ?? {}) as Record<string, unknown>;
+    const w = int(p.w, `${name}.${id}.w`, 1, cols);
+    const x = int(p.x, `${name}.${id}.x`, 0, cols - 1);
+    if (x + w > cols) throw bad(`${name}.${id} runs past the right edge (x + w is more than ${cols})`);
+    out[id] = { x, y: int(p.y, `${name}.${id}.y`, 0, MAX_ROW), w, h: int(p.h, `${name}.${id}.h`, 1, MAX_ROWS) };
+  }
+  return out;
 }
 
 /** Check the phone's pills: names, icons, ids and panel ids. */
@@ -220,6 +248,13 @@ export const layoutModule: Module = {
       default: true,
     },
     {
+      id: 'free-panels',
+      label: 'Arrange panels freely',
+      description:
+        'One way to arrange, on a phone and a computer: hold a panel (a long mouse press on a computer) and every panel can be moved anywhere and sized from any side. A gap stays a gap, and a panel you drop onto another pushes it down. A phone (4 columns) and a computer (12 columns) each keep their own arrangement. Off: the older way (drag by the title on a computer, a long press to arrange a list on a phone). Needs “Move and resize panels”.',
+      default: true,
+    },
+    {
       id: 'today-pills',
       label: 'Today pills',
       description:
@@ -344,7 +379,8 @@ export const layoutModule: Module = {
       description:
         'Where panels sit on Today, on project pages (one layout for every project page) or on the Desktop page (page "desktop", a bare page for a window behind the others on a computer): each panel id with its column x (0–11), width w in columns (1–12), order y, and optional fixed heights h (computer) and ph (phone), in pixels; and removed (panels taken off the page). ' +
         'With pill (a pill id from get_today_pills), the layout inside that pill of Today. grid null means the usual layout. The phone shows panels in y order. ' +
-        'The Desktop also gives panels: the panel ids on it, in order (null = the usual ones, listed in usual); the same panel ids as get_today_pills.',
+        'The Desktop also gives panels: the panel ids on it, in order (null = the usual ones, listed in usual); the same panel ids as get_today_pills. ' +
+        'With free arranging (the usual, switch free-panels) the app places panels by cells and phone instead: panel id → { x, y, w, h } in cells (cells: 12 columns on a computer; phone: 4 columns), y and h in rows of about 44 px; a gap stays a gap. A panel missing from them goes below the others.',
       readOnly: true,
       feature: 'movable-panels',
       input: z.object({ page: z.enum(['today', 'project', 'desktop']), pill: z.string().optional() }),
@@ -359,13 +395,21 @@ export const layoutModule: Module = {
     {
       name: 'set_page_layout',
       description:
-        'Replace the layout of Today, of project pages, of the Desktop page or of one of Today’s pills (pill id): the whole grid as get_page_layout returns it (items and removed; null = back to the usual layout). x + w may not pass 12; h and ph are 60–4000 or left out for “follow the content”. ' +
+        'Replace the layout of Today, of project pages, of the Desktop page or of one of Today’s pills (pill id): the whole grid as get_page_layout returns it (items and removed; null = back to the usual layout). x + w may not pass 12; h and ph are 60–4000 or left out for “follow the content”. With free arranging set cells (computer, x + w at most 12) and phone (x + w at most 4): { x, y, w, h } in cells, h 1–200 rows; panels must not overlap. ' +
         'For the Desktop, panels (optional) replaces its list of panel ids, in order (null = the usual ones); leave out grid to keep it. Can be undone.',
       feature: 'movable-panels',
       input: z.object({
         page: z.enum(['today', 'project', 'desktop']),
         pill: z.string().optional(),
-        grid: z.object({ items: z.record(z.string(), z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number().nullable().optional(), ph: z.number().nullable().optional() })), removed: z.array(z.string()).optional() }).nullable().optional(),
+        grid: z
+          .object({
+            items: z.record(z.string(), z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number().nullable().optional(), ph: z.number().nullable().optional() })),
+            removed: z.array(z.string()).optional(),
+            cells: z.record(z.string(), z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() })).optional(),
+            phone: z.record(z.string(), z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() })).optional(),
+          })
+          .nullable()
+          .optional(),
         panels: z.array(z.string()).nullable().optional(),
       }),
       run: async (ctx, a) => {
