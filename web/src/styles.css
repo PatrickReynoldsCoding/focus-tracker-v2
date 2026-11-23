@@ -217,6 +217,13 @@ dialog.sheet::backdrop { background: var(--backdrop); }
   dialog.sheet.wide { max-width: 720px; }
   .toast { bottom: 24px; }
 }
+/* A bare page (RouteDef.bare, the Desktop page): only the page, no side bar, header or phone bar. */
+.shell.bare { display: block; background: var(--bg); }
+.shell.bare > .content { padding: 12px 12px 16px; }
+.shell.bare .toast { bottom: 16px; }
+@media (min-width: 900px) {
+  .shell.bare { display: block; }
+}
 @media (min-width: 900px) {
   .shell { display: grid; grid-template-columns: 200px 1fr; }
   .side { display: flex; flex-direction: column; gap: 2px; padding: 16px 10px; position: sticky; top: 0; height: 100vh; border-right: 1px solid var(--line); background: var(--surface); }

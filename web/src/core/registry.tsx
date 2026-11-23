@@ -39,6 +39,9 @@ export interface RouteDef {
   prefix: string;
   tab: string;
   feature?: string;
+  /** Drawn alone, for a window of its own (the Desktop page): no side bar, header, phone bar or
+   *  overlays (corner timer, pop-out windows); messages still show. */
+  bare?: boolean;
   render: Render<{ route: string; params: string[] }>;
 }
 

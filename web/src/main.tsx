@@ -12,8 +12,8 @@ import './styles.css';
 function useCurrent() {
   const r = useSignal(route);
   const { tab, extra, params } = routeTab(r, useTabs(), useRoutes());
-  if (extra) return { r, params, tabId: tab?.id ?? extra.tab, render: () => extra.render({ route: r, params }) };
-  return { r, params, tabId: tab?.id, render: () => (tab ? tab.render({ route: r, params }) : null) };
+  if (extra) return { r, params, tabId: tab?.id ?? extra.tab, bare: !!extra.bare, render: () => extra.render({ route: r, params }) };
+  return { r, params, tabId: tab?.id, bare: false, render: () => (tab ? tab.render({ route: r, params }) : null) };
 }
 
 function Page() {
@@ -125,7 +125,7 @@ function App() {
   const ok = useSignal(signedIn);
   const tabs = useTabs();
   const badges = useSignal(tabBadges);
-  const { tabId, r: current } = useCurrent();
+  const { tabId, r: current, bare } = useCurrent();
   const [wide, setWide] = useState(() => {
     try {
       return localStorage.getItem('ft.wide') === '1';
@@ -167,6 +167,15 @@ function App() {
   }, []);
   if (ok === null) return <p class="empty">Loading…</p>;
   if (!ok) return <Login />;
+  if (bare)
+    return (
+      <div class="shell bare">
+        <main class="content">
+          <Page />
+        </main>
+        <Toast />
+      </div>
+    );
   return (
     <div class={`shell ${wide ? 'wide' : ''}${sideHidden ? ' no-side' : ''}`}>
       <nav class="side" aria-label="Main">
