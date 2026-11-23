@@ -61,7 +61,7 @@ Modular first: a feature lives in its own files on the server and in the browser
 - **Offline** (DECISIONS D27): change a screen's data with `useData`'s `setData` (or pass it up to the page that loaded it), not only in local state, so the saved copy keeps the change while it waits offline. A create that should work offline sends an id made with `newId()`. Which changes may wait is a list in `core/offline.ts` (`QUEUE_RULES`).
 - `web/public/`: icons, manifest and the service worker `sw.js` (filled in at build time by `web/sw-plugin.ts`).
 - `styles.css` holds shared tokens and base styles; a feature's own styles go in `features/<name>/<name>.css`, imported by the feature.
-- `clients/swiftbar/`, `clients/gnome/`, `android/`: the Mac menu bar plugin, the GNOME launcher and extension for the Desktop page, and the Android app (see their READMEs).
+- `clients/swiftbar/`, `clients/gnome/`, `android/`: the Mac menu bar plugin, the GNOME app and extension for the Desktop page (its `test/` runs a hidden GNOME Shell), and the Android app (see their READMEs).
 
 ## Adding things
 

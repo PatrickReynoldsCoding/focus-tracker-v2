@@ -1,6 +1,6 @@
 # Spec: Desktop widget window for Linux (GNOME)
 
-Status: **built** (part 1: v0.52.0, D64; parts 2 and 3: `clients/gnome/`, installed with `clients/gnome/install.sh`; the owner chose: follow the open profile, clickable, the Desktop has its own panels). Written 2026-11-23 for another Claude to build. The owner asked for it.
+Status: **built** (part 1: v0.52.0, D64; parts 2 and 3: `clients/gnome/`, v0.53.0 with its own app instead of a Chrome window, installed with `clients/gnome/install.sh`; the owner chose: follow the open profile, clickable, the Desktop has its own panels). Written 2026-11-23 for another Claude to build. The owner asked for it.
 Read `AGENTS.md` first (it has the rules for code, flags, tests and releases).
 
 ## Goal
