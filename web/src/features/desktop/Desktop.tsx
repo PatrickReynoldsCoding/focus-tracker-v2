@@ -15,7 +15,7 @@ import { reveal } from '../layout/adding';
 import { inApp, setControls } from './app';
 import { GridLayout, resetPage } from '../layout/grid';
 import { GridScope, type GridStore } from '../layout/scope';
-import { layoutNow, saveGrid, saveLayout, titleOf, useLayout } from '../layout/store';
+import { DESKTOP, layoutNow, saveGrid, saveLayout, titleOf, useLayout, useMedia } from '../layout/store';
 
 export const PLACE = 'desktop';
 /** Today's panels are drawn here, with Today's props. */
@@ -56,6 +56,10 @@ export function Desktop() {
   const flags = useFlags();
   const movable = useFlag('movable-panels');
   const Adder = usePanelAdder();
+  // With a mouse the Desktop is always the grid, so panels resize from their corner as on a computer,
+  // even in a narrow window; in a narrow one a panel starts full width.
+  const mouse = useMedia('(pointer: fine)');
+  const wideScreen = useMedia(DESKTOP);
   const registered = usePanels<any>(FROM);
   const [adding, setAdding] = useState(false);
   const shown = useRef<PanelDef<any>[]>([]);
@@ -90,7 +94,7 @@ export function Desktop() {
   const panels = ids
     .map((id) => lookupPanel(FROM, id, flags))
     .filter((p, i, all): p is PanelDef<any> => !!p && !p.fixed && all.findIndex((q) => q?.id === p.id) === i)
-    .map((p) => ({ ...p, alwaysShown: false }));
+    .map((p) => ({ ...p, alwaysShown: false, wide: p.wide || !wideScreen }));
   shown.current = panels;
 
   const target: PanelAdderTarget = {
@@ -117,10 +121,11 @@ export function Desktop() {
     target: Adder ? target : undefined,
     reset: () => resetPage(PLACE),
     resetLabel: 'Reset the Desktop’s layout',
+    grid: mouse,
   };
 
   return (
-    <div class="desktop-page">
+    <div class={`desktop-page${inApp ? ' in-app' : ''}`}>
       {Adder && !inApp && (
         <button class="ghost small desktop-add" title="Put a panel or a file on the Desktop" aria-label="Add a panel to the Desktop" onClick={() => setAdding(true)}>
           +

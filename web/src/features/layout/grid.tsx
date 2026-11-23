@@ -133,7 +133,7 @@ export function GridLayout({ place, props, panels }: PanelLayoutProps) {
     reset: () => resetPage(place),
     resetLabel: 'Reset this page’s layout',
   };
-  if (!desktop) return <Stack key={store.key} place={place} props={props} panels={shown} all={panels} store={store} own={!scope} />;
+  if (!desktop && !store.grid) return <Stack key={store.key} place={place} props={props} panels={shown} all={panels} store={store} own={!scope} />;
   return <Grid key={store.key} place={place} props={props} panels={shown} all={panels} store={store} own={!scope} />;
 }
 

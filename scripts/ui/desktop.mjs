@@ -1,8 +1,9 @@
 // Browser check for the Desktop page (D64): #/desktop drawn bare (no side bar, header, phone bar or
 // corner timer), the window title, the usual panels, + in the corner opening Add panel, a feature
 // panel and a file added (the file not put on Today), a panel moved (the grid on a wide window, a
-// long press and ↑ in a narrow one), still there after a reload, Remove with Undo, Today's own
-// layout untouched, the flag off; light, dark and E-ink at 600 and 1280 px.
+// long press and ↑ on a phone; resized from its corner in a narrow window with a mouse, the grid with
+// full-width panels), still there after a reload, Remove with Undo, Today's own
+// layout untouched, the flag off; light, dark and E-ink at 1280, 600 (mouse) and 390 px (touch).
 // Needs a seeded server; it takes off what it added and removes its note.
 // Usage: FT_URL=http://localhost:8787 node scripts/ui/desktop.mjs
 import { mkdirSync } from 'node:fs';
@@ -28,7 +29,8 @@ const todayBefore = await api.get('/layout/today');
 /** The Desktop's panels in screen order. */
 const drawn = (page) => page.$$eval('[data-panel]', (els) => els.map((e) => e.dataset.panel));
 
-async function run(page, name, narrow) {
+async function run(page, name, mode) {
+  const narrow = mode === 'touch';
   await page.goto(`${B}/#/desktop`);
   await page.waitForSelector('.desktop-page [data-panel]');
   await page.waitForTimeout(500);
@@ -41,7 +43,12 @@ async function run(page, name, narrow) {
   ok(first.includes('focus') && first.includes('today-list'), `${name}: the usual panels show: focus card and Today list (${first.join(', ')})`);
   ok(!first.includes('habits'), `${name}: Habits is not on the Desktop yet`);
   ok((await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)) <= 0, `${name}: no sideways scroll`);
-  if (narrow) ok(!(await page.$('.lg-grid')) && !!(await page.$('.lg-stack')), `${name}: a narrow window stacks the panels in one column`);
+  if (mode === 'touch') ok(!(await page.$('.lg-grid')) && !!(await page.$('.lg-stack')), `${name}: a phone stacks the panels in one column`);
+  if (mode === 'narrow') {
+    const gw = (await page.locator('.lg-grid').boundingBox()).width;
+    const tw = (await page.locator('.lg-item[data-panel="today-list"]').boundingBox()).width;
+    ok(Math.abs(gw - tw) < 4, `${name}: a narrow window with a mouse is the grid, each panel full width (${Math.round(tw)} of ${Math.round(gw)})`);
+  }
   await shot(page, `${name}-usual`);
 
   // + in the corner: Add panel, a feature panel.
@@ -68,6 +75,8 @@ async function run(page, name, narrow) {
   // Move a panel.
   if (narrow) {
     const before = await drawn(page);
+    await page.locator(`.lg-row[data-panel="${noteId}"] h2, .lg-row[data-panel="${noteId}"] .card-head`).first().scrollIntoViewIfNeeded();
+    await page.waitForTimeout(300);
     const h = await page.locator(`.lg-row[data-panel="${noteId}"] h2, .lg-row[data-panel="${noteId}"] .card-head`).first().boundingBox();
     await page.mouse.move(h.x + 20, h.y + 6);
     await page.mouse.down();
@@ -81,6 +90,19 @@ async function run(page, name, narrow) {
     const after = await drawn(page);
     ok(after.indexOf(noteId) === before.indexOf(noteId) - 1, `${name}: ↑ moves the note up one`);
     await page.click('.lg-arr-done');
+  } else if (mode === 'narrow') {
+    // Resize the Today list from its corner, as on a computer.
+    const before = await page.locator('.lg-item[data-panel="today-list"]').boundingBox();
+    await page.hover('.lg-item[data-panel="today-list"]');
+    await page.waitForTimeout(250);
+    const rb = await page.locator('.lg-item[data-panel="today-list"] .lg-resize').boundingBox();
+    await page.mouse.move(rb.x + rb.width / 2, rb.y + rb.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(rb.x - 260, rb.y + 80, { steps: 8 });
+    await page.mouse.up();
+    await page.waitForTimeout(500);
+    const after = await page.locator('.lg-item[data-panel="today-list"]').boundingBox();
+    ok(after.width < before.width - 150, `${name}: the Today list resized narrower from its corner (${Math.round(before.width)} → ${Math.round(after.width)})`);
   } else {
     // The Today list by its title, to the right column under the focus card.
     const tl = await page.locator('.lg-item[data-panel="today-list"]').boundingBox();
@@ -97,7 +119,7 @@ async function run(page, name, narrow) {
   }
   await page.waitForTimeout(400);
   const grid = (await api.get('/layout/desktop')).grid;
-  ok(grid && (narrow ? grid.items[noteId] : grid.items['today-list']?.x > 0), `${name}: the move is saved in the Desktop’s own layout`);
+  ok(grid && (mode === 'touch' ? grid.items[noteId] : mode === 'narrow' ? grid.items['today-list']?.w < 12 : grid.items['today-list']?.x > 0), `${name}: the change is saved in the Desktop’s own layout`);
   const order = await drawn(page);
   await page.reload();
   await page.waitForSelector(`[data-panel="${noteId}"]`);
@@ -106,6 +128,8 @@ async function run(page, name, narrow) {
 
   // Remove from the Desktop, then Undo.
   if (narrow) {
+    await page.locator('.lg-row[data-panel="habits"] h2, .lg-row[data-panel="habits"] .card-head').first().scrollIntoViewIfNeeded();
+    await page.waitForTimeout(300);
     const h = await page.locator('.lg-row[data-panel="habits"] h2, .lg-row[data-panel="habits"] .card-head').first().boundingBox();
     await page.mouse.move(h.x + 20, h.y + 6);
     await page.mouse.down();
@@ -134,14 +158,14 @@ async function run(page, name, narrow) {
   ok(JSON.stringify(todayNow.grid) === JSON.stringify(todayBefore.grid) && JSON.stringify(todayNow.pills) === JSON.stringify(todayBefore.pills), `${name}: Today’s layout is unchanged`);
 }
 
-for (const [w, h, narrow] of [[1280, 900, false], [600, 1100, true]])
+for (const [w, h, mode] of [[1280, 900, 'wide'], [600, 1100, 'narrow'], [390, 844, 'touch']])
   for (const theme of ['light', 'dark', 'eink']) {
     await api.call('POST', '/layout/desktop/remove', { panel: 'habits' }).catch(() => {});
     await api.call('POST', '/layout/desktop/remove', { panel: noteId }).catch(() => {});
     await api.call('DELETE', '/layout/desktop/grid').catch(() => {});
     const name = `${theme}-${w}`;
-    const { page, ctx } = await open(browser, { width: w, height: h }, errors, { name, colorScheme: theme === 'dark' ? 'dark' : 'light', init: theme === 'eink' ? eink : undefined });
-    await run(page, name, narrow);
+    const { page, ctx } = await open(browser, { width: w, height: h }, errors, { name, touch: mode === 'touch', colorScheme: theme === 'dark' ? 'dark' : 'light', init: theme === 'eink' ? eink : undefined });
+    await run(page, name, mode);
     await ctx.close();
   }
 

@@ -26,6 +26,9 @@ export interface GridStore {
   /** Back to the usual layout, and its text. */
   reset: () => void;
   resetLabel: string;
+  /** The grid (drag by the title, resize from the corner) even on a narrow screen, not the phone's
+   *  stack: the Desktop page in a narrow window with a mouse. */
+  grid?: boolean;
 }
 
 export const GridScope = createContext<GridStore | null>(null);

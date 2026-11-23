@@ -3,3 +3,5 @@
 .desktop-add { position: fixed; top: 6px; right: 6px; z-index: 6; min-width: 32px; min-height: 32px; padding: 0 8px; border-radius: 16px; color: var(--muted); background: var(--bg); opacity: 0.6; }
 .desktop-add:hover, .desktop-add:focus-visible { opacity: 1; color: var(--fg); }
 .desktop-empty { text-align: center; padding: 24px 16px; }
+/* Inside the GNOME app its Open full app and ⚙ buttons sit in the top right corner: room for them. */
+.desktop-page.in-app { padding-top: 34px; }
