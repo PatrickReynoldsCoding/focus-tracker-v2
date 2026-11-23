@@ -684,3 +684,16 @@ The app (owner, 2026-11-23: no title bar, a settings icon in the top right, Remo
 
 v0.54.0 (owner, 2026-11-23): a ⤢ button beside the app's ⚙ opens the full app; and with a mouse (`pointer: fine`) the Desktop page is always the computer's grid, even in a window narrower than 900 px, so panels move by their title and resize from their corner as on a computer (`GridStore.grid`, `features/layout/scope.ts`); in a narrow window a panel not yet placed starts full width. A phone keeps the stack. Inside the app the page leaves 34 px at the top for the app's two buttons.
 
+## D65. Arrange panels freely, one way on a phone and a computer (owner, 2026-11-23: "think android home screen logic rather than ios home screen logic")
+
+Code: web `features/layout/free.tsx` (new, `FreeBoard`), used by `GridLayout` (`features/layout/grid.tsx`) while the flag `free-panels` is on (the usual), styles in `layout.css` (`fr-`); server `src/modules/layout.ts` (`Grid.cells`, `Grid.phone`, `cleanCells`, the flag); browser check `scripts/ui/free.mjs`; mockup `docs/mockups/arrange-free.html`. No migration (settings rows).
+
+- **One gesture everywhere**: hold a panel (a finger, or a long mouse press, 450 ms; moving more than 10 px first is a scroll and cancels it) and every panel on the page can be arranged: they wiggle (not with reduced motion or E-ink), show a grabber on each side, ✕ (remove) and ⋯ (the panel's own actions, such as Pop out), over a grid of cells. The drag-by-title of the older desktop grid and the phone's arrange list are gone while the flag is on. The press that started it carries straight on into moving that panel. Done (in a bar at the bottom, with + Add panel and ↺ Reset), Esc or a tap on an empty spot finishes. Arrow keys move a focused panel by a cell; Shift + arrows size it.
+- **Free places**: panels sit on cells, 12 columns on a computer and 4 on a phone, rows of 44 px, each with its own place and size (content scrolls inside). A panel dragged away leaves its gap; a panel dropped on others pushes them straight down (and the ones under those, and so on); nothing ever moves up. A dashed outline shows where it lands. A panel can land at most one row below the lowest other panel, so holding it at the bottom edge cannot grow the page for ever.
+- **Sizes from any side**: top, right, bottom, left; a phone panel can be 1–4 columns wide. The grabbers sit just inside each side, so two panels side by side never fight over a press.
+- **Saved per device kind**: `cells` (computer) and `phone` (phone) in the same grid row as the older `items`, which stay untouched, so turning the flag off gives the older layout back. A panel with no saved place yet goes below the placed ones, as tall as its content (up to 16 rows), at its older column on a computer (or the column where it sits highest) and full width on a phone; arranging saves every panel's place. A pill of Today, project pages and the Desktop page each keep their own, as before. The Desktop app's narrow window counts as a phone (4 columns).
+- **Auto height is gone** while the flag is on: a panel is as tall as its cells.
+- **Claude**: `get_page_layout` / `set_page_layout` read and write `cells` and `phone`.
+
+Why: the owner disliked the phone's arrange list and wanted one system on both, where panels stay where they are put.
+
