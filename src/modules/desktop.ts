@@ -4,12 +4,14 @@
 // Today, and taking it off one leaves the other alone. Stored per mode like the other layouts:
 //   layout.desktop          the grid (as every page's, src/modules/layout.ts)
 //   layout.desktop.panels   [<panel id>], in order (null = the usual ones, DESKTOP_USUAL)
-// Add panel and Claude's add_panel / remove_panel change the list (src/modules/add-panel.ts).
+// Add panel and Claude's add_panel / remove_panel change the list (src/modules/add-panel.ts); a file
+// deleted while on it leaves it (beforeDelete).
 
 import type { Ctx } from '../core/ctx';
 import { bad } from '../core/errors';
 import type { Module } from '../core/registry';
 import { setSettingWithUndo } from '../core/store';
+import { fileSources } from './files';
 
 export const DESKTOP = 'desktop';
 export const FLAG = 'desktop-page';
@@ -39,4 +41,11 @@ export const desktopModule: Module = {
       default: true,
     },
   ],
+  // A file deleted while on the Desktop leaves it too, in the same undo step.
+  async beforeDelete(ctx, _e, row) {
+    const list = await readDesktopPanels(ctx);
+    if (!list) return;
+    const gone = new Set(fileSources().flatMap((s) => (s.today ? [s.today.prefix + row.id] : [])));
+    if (list.some((id) => gone.has(id))) await saveDesktopPanels(ctx, list.filter((id) => !gone.has(id)));
+  },
 };

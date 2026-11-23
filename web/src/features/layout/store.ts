@@ -13,8 +13,9 @@ export type Pos = { x: number; y: number; w: number; h?: number | null; ph?: num
 export type Grid = { items: Record<string, Pos>; removed: string[] };
 export type Pill = { id: string; name: string; icon: string | null; panels: string[] };
 export type View = { focusCard?: 'compact' | 'full' | 'hidden'; pillCounts?: boolean; pillSwipe?: boolean; pillLast?: boolean; pillAll?: boolean };
-/** grid: the page's grid (on Today, the All pill's); grids: each pill's own grid, by pill id. */
-export type LayoutData = { grid: Grid | null; pills: Pill[] | null; grids: Record<string, Grid>; view: View };
+/** grid: the page's grid (on Today, the All pill's); grids: each pill's own grid, by pill id.
+ *  panels: the Desktop page's own panel ids (null = the usual ones, `usual`); other pages have none. */
+export type LayoutData = { grid: Grid | null; pills: Pill[] | null; grids: Record<string, Grid>; view: View; panels?: string[] | null; usual?: string[] };
 const EMPTY: LayoutData = { grid: null, pills: null, grids: {}, view: {} };
 
 export const COLS = 12;
@@ -50,7 +51,7 @@ async function load(m: string, place: string, v: number) {
   const rev = localRev;
   try {
     const d = await get<LayoutData>(path(place));
-    if (rev === localRev && inFlight === 0 && mode.value === m) set(m, place, { grid: d.grid, pills: d.pills, grids: d.grids ?? {}, view: d.view ?? {} });
+    if (rev === localRev && inFlight === 0 && mode.value === m) set(m, place, { grid: d.grid, pills: d.pills, grids: d.grids ?? {}, view: d.view ?? {}, panels: d.panels, usual: d.usual });
   } catch {
     // Offline with no saved copy, or the server is unhappy: draw the default layout.
     if (!cache.value[k]) set(m, place, EMPTY);

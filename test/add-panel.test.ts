@@ -132,6 +132,16 @@ describe('desktop page (D64)', () => {
     expect((await call('GET', '/layout/desktop', undefined, m)).panels).not.toContain(`list-${list.id}`);
   });
 
+  it('a deleted file leaves the Desktop, and Undo puts it back', async () => {
+    const m = await freshMode();
+    const note = await call('POST', '/lists', { name: 'Gone soon', kind: 'note' }, m);
+    await call('POST', '/layout/desktop/add', { file: { type: 'note', id: note.id } }, m);
+    await call('DELETE', `/lists/${note.id}`, undefined, m);
+    expect((await call('GET', '/layout/desktop', undefined, m)).panels).toEqual(['focus', 'today-list', 'todos']);
+    await call('POST', '/undo', {}, m);
+    expect((await call('GET', '/layout/desktop', undefined, m)).panels).toContain(`list-${note.id}`);
+  });
+
   it('refuses pills on the Desktop', async () => {
     const m = await freshMode();
     const err = (await call('POST', '/layout/desktop/add', { panel: 'habits', pill: 'a' }, { ...m, expect: 400 })).error as string;

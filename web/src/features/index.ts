@@ -33,6 +33,7 @@ import './layout';
 import './today-list';
 import './files';
 import './add-panel';
+import './desktop';
 import './project-labels';
 import './tags';
 import './pomodoro';
