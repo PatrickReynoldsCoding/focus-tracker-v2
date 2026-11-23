@@ -145,6 +145,39 @@ for (const [w, h, narrow] of [[1280, 900, false], [600, 1100, true]])
     await ctx.close();
   }
 
+// Inside the GNOME app (clients/gnome/app): no + in the corner (its ⚙ menu has Add panel), the
+// controls its menu calls, and another page asked for goes to the full app instead.
+{
+  const messages = [];
+  const init = () => {
+    window.__sent = [];
+    window.webkit = { messageHandlers: { ft: { postMessage: (m) => window.__sent.push(m) } } };
+  };
+  const { page, ctx } = await open(browser, { width: 600, height: 1000 }, errors, { name: 'app', init });
+  await page.close();
+  const app = await ctx.browser().newContext({ viewport: { width: 600, height: 1000 }, userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/605.1.15 FocusTrackerDesktop/1", storageState: await ctx.storageState() });
+  await app.addInitScript(init);
+  const p2 = await app.newPage();
+  p2.on('pageerror', (e) => errors.push(`app: ${e.message}`));
+  await p2.goto(`${B}/#/desktop`);
+  await p2.waitForSelector('.desktop-page [data-panel]');
+  await p2.waitForTimeout(400);
+  ok(!(await p2.$('.desktop-add')), 'app: no + in the corner (the ⚙ menu has Add panel)');
+  const listed = await p2.evaluate(() => window.ftDesktop.panels());
+  ok(listed.some((x) => x.id === 'focus' && x.title === 'Focus'), `app: the menu can list the panels by name (${listed.map((x) => x.title).join(', ')})`);
+  await p2.evaluate(() => window.ftDesktop.add());
+  await p2.waitForSelector('dialog[open] .ap-list');
+  ok(true, 'app: the menu’s Add panel opens the sheet');
+  await p2.keyboard.press('Escape');
+  await p2.evaluate(() => (location.hash = '#/p/abc'));
+  await p2.waitForTimeout(500);
+  messages.push(...(await p2.evaluate(() => window.__sent)));
+  ok(messages.some((m) => m.open === '/p/abc'), 'app: a link to another page asks the app to open it in the full app');
+  ok((await p2.evaluate(() => location.hash)) === '#/desktop', 'app: the window stays on the Desktop');
+  await app.close();
+  await ctx.close();
+}
+
 // The flag off: the address shows nothing of the Desktop.
 await api.put('/features/desktop-page', { enabled: false });
 {

@@ -6,12 +6,13 @@
 // Desktop's store through GridScope, the way a pill of Today gives its own.
 
 import type { VNode } from 'preact';
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { post, say, undo } from '../../core/api';
 import { useFlag, useFlags } from '../../core/features';
 import { lookupPanel, placeDef, usePanelAdder, usePanels, type PanelAdderTarget, type PanelDef } from '../../core/registry';
 import { Loading } from '../../core/ui';
 import { reveal } from '../layout/adding';
+import { inApp, setControls } from './app';
 import { GridLayout, resetPage } from '../layout/grid';
 import { GridScope, type GridStore } from '../layout/scope';
 import { layoutNow, saveGrid, saveLayout, titleOf, useLayout } from '../layout/store';
@@ -57,6 +58,25 @@ export function Desktop() {
   const Adder = usePanelAdder();
   const registered = usePanels<any>(FROM);
   const [adding, setAdding] = useState(false);
+  const shown = useRef<PanelDef<any>[]>([]);
+
+  // The app's ⚙ menu: Add panel, and Remove panel with the panels' names as they show.
+  useEffect(() => {
+    if (!inApp) return;
+    setControls({
+      add: () => setAdding(true),
+      panels: () =>
+        shown.current.map((p) => ({
+          id: p.id,
+          title: document.querySelector(`[data-panel="${CSS.escape(p.id)}"] h2`)?.textContent?.trim() || titleOf(p),
+        })),
+      remove: (id) => {
+        const p = shown.current.find((x) => x.id === id);
+        if (p) removeFrom(p);
+      },
+    });
+    return () => setControls(null);
+  }, []);
 
   useEffect(() => {
     const before = document.title;
@@ -71,6 +91,7 @@ export function Desktop() {
     .map((id) => lookupPanel(FROM, id, flags))
     .filter((p, i, all): p is PanelDef<any> => !!p && !p.fixed && all.findIndex((q) => q?.id === p.id) === i)
     .map((p) => ({ ...p, alwaysShown: false }));
+  shown.current = panels;
 
   const target: PanelAdderTarget = {
     where: 'the Desktop',
@@ -100,7 +121,7 @@ export function Desktop() {
 
   return (
     <div class="desktop-page">
-      {Adder && (
+      {Adder && !inApp && (
         <button class="ghost small desktop-add" title="Put a panel or a file on the Desktop" aria-label="Add a panel to the Desktop" onClick={() => setAdding(true)}>
           +
         </button>
