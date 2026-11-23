@@ -7,6 +7,22 @@
       <summary>Width of the window</summary>
       <description>The Desktop window's width in pixels (logical pixels, as in the display settings). It is never wider than the screen's free area.</description>
     </key>
+    <key name="position" type="s">
+      <choices>
+        <choice value="left"/>
+        <choice value="center"/>
+        <choice value="right"/>
+      </choices>
+      <default>'left'</default>
+      <summary>Where the window sits</summary>
+      <description>left or right: against that edge of the screen's free area, full height. center: in the middle, at the height below.</description>
+    </key>
+    <key name="height" type="i">
+      <range min="0" max="4000"/>
+      <default>0</default>
+      <summary>Height in the middle</summary>
+      <description>The window's height in pixels when it sits in the middle; 0 is full height. On the left or right it is always full height.</description>
+    </key>
     <key name="open-at-login" type="b">
       <default>true</default>
       <summary>Open at login</summary>

@@ -7,8 +7,9 @@
 //   - becomes a desktop-type window: drawn in the desktop layer (below every normal window, above
 //     the desktop icons), and left out of the dock, Alt+Tab and the overview (skip taskbar);
 //   - shows on every workspace;
-//   - sits on the left of the primary screen's free area, full height, at the width in the settings
-//     (default 600 px), and goes back there when moved, resized, maximised or minimised;
+//   - sits on the primary screen's free area where the settings say: against the left (the default)
+//     or right edge at full height, or in the middle at the height set there (0 = full height); at
+//     the width set (default 600 px); and goes back there when moved, resized, maximised or minimised;
 //   - takes clicks and typing as usual.
 // At login it opens the window if it is not open (the launcher from clients/gnome/install.sh).
 // Disabling the extension gives the window back as a normal window.
@@ -39,7 +40,7 @@ export default class FocusTrackerDesktop extends Extension {
     on(global.display, 'window-created', (_d, w) => this._watch(w));
     on(global.display, 'workareas-changed', () => this._placeAll());
     on(Main.layoutManager, 'monitors-changed', () => this._placeAll());
-    on(this._settings, 'changed::width', () => this._placeAll());
+    for (const key of ['width', 'height', 'position']) on(this._settings, `changed::${key}`, () => this._placeAll());
     on(this._settings, 'changed::title', () => {
       for (const w of [...this._pinned.keys()]) if (!this._matches(w)) this._unpin(w);
       for (const w of global.display.list_all_windows()) this._watch(w);
@@ -158,14 +159,20 @@ export default class FocusTrackerDesktop extends Extension {
     for (const w of this._pinned.keys()) this._place(w);
   }
 
-  /** On the left of the primary screen's free area, full height. Only moves when it is elsewhere. */
+  /** Where the settings say on the primary screen's free area. Only moves when it is elsewhere. */
   _place(w) {
     const monitor = global.display.get_primary_monitor();
     const area = Main.layoutManager.getWorkAreaForMonitor(monitor);
     const width = Math.min(this._settings.get_int('width'), area.width);
+    const position = this._settings.get_string('position');
+    const tall = this._settings.get_int('height');
+    // At an edge it is always full height; in the middle it takes the height set (0 = full).
+    const height = position === 'center' && tall > 0 ? Math.min(tall, area.height) : area.height;
+    const x = position === 'right' ? area.x + area.width - width : position === 'center' ? area.x + Math.floor((area.width - width) / 2) : area.x;
+    const y = area.y + Math.floor((area.height - height) / 2);
     if (w.is_maximized?.()) w.unmaximize?.();
     const r = w.get_frame_rect();
-    if (r.x === area.x && r.y === area.y && r.width === width && r.height === area.height) return;
-    w.move_resize_frame(false, area.x, area.y, width, area.height);
+    if (r.x === x && r.y === y && r.width === width && r.height === height) return;
+    w.move_resize_frame(false, x, y, width, height);
   }
 }

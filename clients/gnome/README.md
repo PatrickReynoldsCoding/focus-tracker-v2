@@ -44,9 +44,10 @@ browser tab's title ends in “ - Google Chrome”, so only the app window match
 - makes it a desktop-type window: below every normal window, above the desktop icons, and left out of
   the dock, Alt+Tab and the overview;
 - shows it on every workspace;
-- puts it on the left of the main screen's free area (under the top bar, beside a fixed dock), full
-  height, at the width in its settings (default 600 px), and puts it back when it is moved, resized,
-  maximised or minimised;
+- places it on the main screen's free area (under the top bar, beside a fixed dock) where its
+  settings say: **Left** (the default) or **Right**, full height; or **Middle**, centred, at the height
+  set for the middle (0 = full height); at the width set (default 600 px). It goes back there when it
+  is moved, resized, maximised or minimised;
 - opens it at login if it is not open (after about 8 seconds, so a window Chrome reopens counts).
 
 Clicks and typing work as in any window. Turning the extension off gives the window back as a normal
@@ -59,7 +60,7 @@ schema and adds it to the enabled extensions. **Log out and in once**: GNOME onl
 extension (or a new version of it) at login. Check it with
 `gnome-extensions info focus-tracker-desktop@focus-tracker`.
 
-Settings (width, open at login): `gnome-extensions prefs focus-tracker-desktop@focus-tracker`, or the
+Settings (position, width, height in the middle, open at login): `gnome-extensions prefs focus-tracker-desktop@focus-tracker`, or the
 Extensions app.
 
 ### Remove
