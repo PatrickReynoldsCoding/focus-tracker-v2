@@ -1,0 +1,438 @@
+<title>Free Panel Arranging</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: Today as a board of cells (4 columns on a phone, 12 on a computer). Hold a panel (finger or
+   long mouse press) and every panel can be dragged and sized from any side; panels stay where they are
+   put, gaps stay gaps, and a panel landed on moves down out of the way. */
+:root {
+  --bg: #f6f5f1; --surface: #ffffff; --surface-2: #efede7; --fg: #1e1f1c; --muted: #6c6d66; --line: #e1dfd7;
+  --accent: #2f5d50; --accent-fg: #ffffff; --accent-soft: #dfe9e4; --danger: #b3322a; --danger-fg: #ffffff;
+  --cell: rgb(47 93 80 / 0.07); --ghost: rgb(47 93 80 / 0.16);
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.05), 0 2px 8px rgb(0 0 0 / 0.04);
+  --lift: 0 14px 34px rgb(0 0 0 / 0.22), 0 3px 8px rgb(0 0 0 / 0.12);
+  --c-yellow: #f7edb8; --c-blue: #d4e2f7;
+  --radius: 12px;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-head: "Space Grotesk", "Inter", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #151514; --surface: #1f1f1d; --surface-2: #2a2a27; --fg: #ebeae5; --muted: #9d9d95; --line: #34342f;
+    --accent: #7fb8a5; --accent-fg: #0f1a16; --accent-soft: #23352f; --danger: #ff8a80; --danger-fg: #1a0a09;
+    --cell: rgb(127 184 165 / 0.07); --ghost: rgb(127 184 165 / 0.18);
+    --shadow: none; --lift: 0 14px 34px rgb(0 0 0 / 0.6); --c-yellow: #463f1d; --c-blue: #22324a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #151514; --surface: #1f1f1d; --surface-2: #2a2a27; --fg: #ebeae5; --muted: #9d9d95; --line: #34342f;
+  --accent: #7fb8a5; --accent-fg: #0f1a16; --accent-soft: #23352f; --danger: #ff8a80; --danger-fg: #1a0a09;
+  --cell: rgb(127 184 165 / 0.07); --ghost: rgb(127 184 165 / 0.18);
+  --shadow: none; --lift: 0 14px 34px rgb(0 0 0 / 0.6); --c-yellow: #463f1d; --c-blue: #22324a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.4 var(--font); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px)); padding-block: 10px 120px; }
+h1 { font: 600 1.05rem/1.2 var(--font-head); margin: 4px 0 2px; }
+.lede { color: var(--muted); font-size: 0.85rem; margin: 0 0 10px; max-width: 70ch; }
+.how { font-size: 0.82rem; color: var(--muted); background: var(--surface-2); border-radius: 10px; padding: 8px 10px; margin-bottom: 12px; max-width: 80ch; }
+.how b { color: var(--fg); font-weight: 600; }
+.mode { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 6px; }
+
+/* The board: panels are placed on cells, absolutely. */
+.board { position: relative; touch-action: pan-y; }
+.board.arranging { background-image: linear-gradient(var(--cell), var(--cell)); background-repeat: no-repeat; border-radius: 10px; }
+.cells { position: absolute; inset: 0; pointer-events: none; display: none; }
+.arranging .cells { display: block; }
+.cells i { position: absolute; border-radius: 8px; border: 1px dashed var(--line); }
+.ghost { position: absolute; border-radius: var(--radius); background: var(--ghost); border: 2px dashed var(--accent); display: none; pointer-events: none; transition: left 90ms, top 90ms, width 90ms, height 90ms; }
+.ghost.on { display: block; }
+.panel { position: absolute; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px 14px; touch-action: pan-y; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; display: flex; flex-direction: column; overflow: hidden; transition: left 160ms ease, top 160ms ease, width 160ms ease, height 160ms ease; }
+.panel .body { overflow: auto; flex: 1; min-height: 0; }
+.panel h2 { font: 600 0.95rem/1.2 var(--font-head); margin: 0 0 8px; display: flex; justify-content: space-between; gap: 8px; white-space: nowrap; }
+.panel h2 span { overflow: hidden; text-overflow: ellipsis; }
+.panel h2 small { font: 400 0.78rem var(--font); color: var(--muted); }
+.panel.pressing { scale: 0.985; transition: scale var(--hold, 450ms) linear, left 160ms, top 160ms, width 160ms, height 160ms; }
+.arranging .panel { overflow: visible; border-color: var(--accent); cursor: grab; }
+.arranging .panel .body { pointer-events: none; overflow: hidden; }
+.panel.moving { z-index: 20; box-shadow: var(--lift); transition: none; cursor: grabbing; }
+.panel.sizing { z-index: 19; transition: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .arranging .panel:not(.moving):not(.sizing) { animation: wiggle 0.42s ease-in-out infinite alternate; }
+  .arranging .panel:nth-child(2n):not(.moving) { animation-delay: -0.2s; }
+}
+@keyframes wiggle { from { rotate: -0.4deg; } to { rotate: 0.4deg; } }
+
+/* Grabbers on all four sides, and ✕ in the corner. */
+.grab { position: absolute; z-index: 3; display: none; touch-action: none; background: var(--accent); border: 2px solid var(--surface); box-shadow: 0 1px 4px rgb(0 0 0 / 0.25); }
+.arranging .grab { display: block; }
+/* Each grabber sits just inside its side, so two panels side by side never fight over a press. */
+.grab::after { content: ""; position: absolute; inset: -12px; }
+.grab.left::after, .grab.right::after { inset: -12px -6px; }
+.grab.top::after, .grab.bottom::after { inset: -6px -12px; }
+.grab.top, .grab.bottom { left: 50%; width: 46px; height: 14px; margin-left: -23px; border-radius: 7px; cursor: ns-resize; }
+.grab.top { top: 3px; } .grab.bottom { bottom: 3px; }
+.grab.left, .grab.right { top: 50%; width: 14px; height: 46px; margin-top: -23px; border-radius: 7px; cursor: ew-resize; }
+.grab.left { left: 3px; } .grab.right { right: 3px; }
+.x { position: absolute; z-index: 4; top: -10px; right: -10px; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--surface); background: var(--danger); color: var(--danger-fg); font: 700 13px/18px var(--font); display: none; padding: 0; cursor: pointer; }
+.arranging .x { display: block; }
+.tip { position: absolute; z-index: 5; left: 50%; top: 50%; translate: -50% -50%; background: var(--fg); color: var(--bg); font: 600 0.75rem var(--font); border-radius: 6px; padding: 3px 7px; display: none; pointer-events: none; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sizing .tip { display: block; }
+
+/* Panel contents */
+.row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); }
+.row:first-child { border-top: 0; }
+.row .grow { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row small { color: var(--muted); }
+.tick { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--accent); background: transparent; flex: none; padding: 0; cursor: pointer; }
+.tick.round { border-radius: 50%; }
+.tick[aria-pressed="true"] { background: var(--accent); }
+.done .grow { text-decoration: line-through; color: var(--muted); }
+.btn { border: 0; border-radius: 9px; padding: 8px 12px; background: var(--accent); color: var(--accent-fg); font: 600 0.85rem var(--font); cursor: pointer; }
+.btn.ghosty { background: var(--surface-2); color: var(--fg); }
+.focus-name { font: 600 1.15rem var(--font-head); margin: 2px 0 10px; }
+textarea { width: 100%; height: 100%; min-height: 60px; border: 0; background: var(--c-yellow); color: var(--fg); border-radius: 8px; padding: 8px; font: 0.9rem/1.4 var(--font); resize: none; -webkit-user-select: text; user-select: text; }
+.week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; font-size: 0.72rem; }
+.week div { background: var(--surface-2); border-radius: 6px; padding: 6px 0; }
+.week .today { background: var(--accent-soft); font-weight: 600; }
+.quote { font: italic 1rem/1.4 Georgia, serif; background: var(--c-blue); border-radius: 8px; padding: 10px; }
+
+/* Bars, the Feel sheet and the message */
+.bar { position: fixed; z-index: 30; left: 0; right: 0; bottom: 0; padding: 10px max(12px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px)); background: var(--surface); border-top: 1px solid var(--line); display: flex; gap: 8px; align-items: center; justify-content: center; }
+.bar .grow { flex: 1; max-width: 520px; font-size: 0.82rem; color: var(--muted); min-width: 0; }
+.feel { margin-top: 24px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px; max-width: 520px; }
+.feel summary { font: 600 0.9rem var(--font-head); cursor: pointer; }
+.feel label { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; margin-top: 10px; font-size: 0.82rem; }
+.feel input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+.feel output { font-variant-numeric: tabular-nums; color: var(--muted); }
+.feel .line { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; align-items: center; font-size: 0.82rem; }
+.feel select { font: inherit; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); }
+.toast { position: fixed; z-index: 40; left: 50%; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); translate: -50% 0; background: var(--fg); color: var(--bg); border-radius: 10px; padding: 8px 12px; font-size: 0.85rem; display: flex; gap: 12px; align-items: center; }
+.toast button { background: none; border: 0; color: inherit; font-weight: 700; cursor: pointer; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="wrap">
+  <h1>Arrange panels anywhere</h1>
+  <p class="lede">One way to arrange, on a phone and on a computer. A mockup of Today with example panels; changes stay on this device only.</p>
+  <div class="how"><b>Hold</b> any panel (a finger, or a long mouse press) and every panel can be arranged. <b>Drag</b> a panel anywhere: the gap it leaves stays, and panels it lands on move down. <b>Drag a side</b> to change its size. <b>✕</b> removes. <b>Done</b>, Esc or a tap on an empty spot finishes.</div>
+  <div class="mode" id="mode"></div>
+  <div class="board" id="board"><div class="cells" id="cells"></div><div class="ghost" id="ghost"></div></div>
+
+  <details class="feel" id="feel">
+    <summary>Feel</summary>
+    <label for="f-hold">Hold before it starts <output id="o-hold"></output><input id="f-hold" type="range" min="150" max="900" step="25"></label>
+    <label for="f-slop">Movement that still counts as holding <output id="o-slop"></output><input id="f-slop" type="range" min="3" max="30" step="1"></label>
+    <label for="f-row">Cell height <output id="o-row"></output><input id="f-row" type="range" min="24" max="80" step="2"></label>
+    <label for="f-scale">Lift size <output id="o-scale"></output><input id="f-scale" type="range" min="1" max="1.08" step="0.005"></label>
+    <div class="line"><label for="f-land" style="margin:0;display:flex;gap:8px;align-items:center">Landing on a panel <select id="f-land"><option value="push">pushes it down</option><option value="refuse">is not allowed</option></select></label></div>
+    <div class="line"><label style="margin:0;display:flex;gap:8px;align-items:center"><input id="f-buzz" type="checkbox"> Buzz when it starts</label></div>
+    <div class="line"><button class="btn ghosty" id="reset" type="button">Reset the panels</button><button class="btn ghosty" id="reset-feel" type="button">Reset the feel</button></div>
+  </details>
+</div>
+<div class="bar" id="bar" hidden><span class="grow">Drag panels anywhere. Drag a side to resize.</span><button class="btn" id="done" type="button">Done</button></div>
+<div class="toast" id="toast" hidden><span id="toast-text"></span><button id="toast-undo" type="button">Undo</button></div>
+
+<script>
+(() => {
+  // ---------- content ----------
+  const PANELS = {
+    focus: { title: 'Focus', meta: 'Mon 23 Nov', html: `<div class="focus-name">Focus Tracker v2</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button">Start session</button><button class="btn ghosty" type="button">Swap</button></div>` },
+    today: { title: 'Today', meta: '3 left', html: `
+      <div class="row"><button class="tick round" type="button" aria-pressed="false" aria-label="Stretch"></button><span class="grow">Stretch</span><small>0/2</small></div>
+      <div class="row"><button class="tick round" type="button" aria-pressed="false" aria-label="Run"></button><span class="grow">Run</span><small>0/3 wk</small></div>
+      <div class="row"><button class="tick" type="button" aria-pressed="false" aria-label="Reply to landlord"></button><span class="grow">Reply to landlord</span></div>
+      <div class="row"><button class="tick" type="button" aria-pressed="false" aria-label="Book dentist"></button><span class="grow">Book dentist</span></div>` },
+    groceries: { title: '✎ Groceries', meta: '', html: `<textarea id="note-groceries" aria-label="Groceries">Oat milk
+Eggs
+Spinach</textarea>` },
+    quote: { title: 'Keep in mind', meta: '2/9', html: `<div class="quote">Rest counts too.</div>` },
+    week: { title: 'This week', meta: '', html: `<div class="week"><div>Mon</div><div class="today">Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div></div>` },
+    habits: { title: 'Habits', meta: '0/2', html: `
+      <div class="row"><button class="tick round" type="button" aria-pressed="false" aria-label="Stretch habit"></button><span class="grow">Stretch</span><small>0/2</small></div>
+      <div class="row"><button class="tick round" type="button" aria-pressed="false" aria-label="Run habit"></button><span class="grow">Run</span><small>0/3 wk</small></div>` },
+  };
+  // Places in cells: x, y, width, height. A phone has 4 columns, a computer 12; each keeps its own.
+  const START = {
+    phone: [
+      { id: 'focus', x: 0, y: 0, w: 4, h: 4 }, { id: 'today', x: 0, y: 4, w: 4, h: 6 },
+      { id: 'groceries', x: 0, y: 10, w: 2, h: 4 }, { id: 'quote', x: 2, y: 10, w: 2, h: 4 },
+      { id: 'week', x: 0, y: 14, w: 4, h: 3 }, { id: 'habits', x: 0, y: 17, w: 4, h: 4 },
+    ],
+    computer: [
+      { id: 'focus', x: 0, y: 0, w: 8, h: 4 }, { id: 'today', x: 8, y: 0, w: 4, h: 8 },
+      { id: 'groceries', x: 0, y: 4, w: 4, h: 4 }, { id: 'quote', x: 4, y: 4, w: 4, h: 4 },
+      { id: 'week', x: 0, y: 8, w: 8, h: 3 }, { id: 'habits', x: 8, y: 8, w: 4, h: 4 },
+    ],
+  };
+  const COLS = { phone: 4, computer: 12 };
+  const MIN = { phone: { w: 1, h: 2 }, computer: { w: 2, h: 2 } };
+  const GAP = 10;
+  const FEEL0 = { hold: 450, slop: 10, row: 44, scale: 1.03, land: 'push', buzz: true };
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem('afm.' + k); return v ? JSON.parse(v) : d; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem('afm.' + k, JSON.stringify(v)); } catch { /* private mode */ } },
+  };
+
+  // ---------- state ----------
+  let feel = { ...FEEL0, ...store.get('feel', {}) };
+  const layouts = { phone: store.get('phone', null) ?? structuredClone(START.phone), computer: store.get('computer', null) ?? structuredClone(START.computer) };
+  let kind = 'phone';
+  let arranging = false;
+  let undoLayout = null;
+  const board = document.getElementById('board');
+  const ghost = document.getElementById('ghost');
+  const cellsEl = document.getElementById('cells');
+  const els = new Map();
+
+  const cols = () => COLS[kind];
+  const colW = () => board.clientWidth / cols();
+  const rowH = () => feel.row;
+  const layout = () => layouts[kind];
+  const save = () => store.set(kind, layout());
+  const overlaps = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+  // ---------- placement ----------
+  /** Put `moved` at its place and move every panel it lands on straight down, as far as needed, and
+   *  the panels those land on, and so on. Nothing ever moves up: gaps stay gaps. Returns null when
+   *  landing is not allowed (Feel) and something is in the way. */
+  function settle(base, moved) {
+    const out = base.map((p) => (p.id === moved.id ? { ...moved } : { ...p }));
+    if (feel.land === 'refuse') return out.some((p) => p.id !== moved.id && overlaps(p, moved)) ? null : out;
+    const fixed = [out.find((p) => p.id === moved.id)];
+    const rest = out.filter((p) => p.id !== moved.id).sort((a, b) => a.y - b.y || a.x - b.x);
+    for (const p of rest) {
+      for (let guard = 0; guard < 200; guard++) {
+        const hit = fixed.filter((f) => overlaps(f, p));
+        if (!hit.length) break;
+        p.y = Math.max(...hit.map((f) => f.y + f.h));
+      }
+      fixed.push(p);
+    }
+    return out;
+  }
+
+  // ---------- drawing ----------
+  function panelEl(id) {
+    const p = PANELS[id];
+    const el = document.createElement('section');
+    el.className = 'panel';
+    el.dataset.id = id;
+    el.innerHTML = `<button class="x" type="button" aria-label="Remove ${p.title}">✕</button>
+      <h2><span>${p.title}</span><small>${p.meta}</small></h2><div class="body">${p.html}</div>
+      ${['top', 'right', 'bottom', 'left'].map((s) => `<span class="grab ${s}" data-side="${s}" aria-hidden="true"></span>`).join('')}
+      <span class="tip"></span>`;
+    return el;
+  }
+  function px(p) {
+    const cw = colW(); const rh = rowH();
+    return { left: p.x * cw + GAP / 2, top: p.y * rh + GAP / 2, width: p.w * cw - GAP, height: p.h * rh - GAP };
+  }
+  function put(el, p) {
+    const r = px(p);
+    el.style.left = r.left + 'px'; el.style.top = r.top + 'px'; el.style.width = r.width + 'px'; el.style.height = r.height + 'px';
+  }
+  function draw(list = layout(), skip) {
+    const ids = list.map((p) => p.id);
+    for (const [id, el] of els) if (!ids.includes(id)) { el.remove(); els.delete(id); }
+    for (const p of list) {
+      let el = els.get(p.id);
+      if (!el) { el = panelEl(p.id); els.set(p.id, el); board.appendChild(el); }
+      if (p.id !== skip) put(el, p);
+    }
+    const bottom = Math.max(0, ...list.map((p) => p.y + p.h));
+    // Room below the last panel to drop into while arranging.
+    const rows = bottom + (arranging ? 4 : 0);
+    board.style.height = rows * rowH() + 'px';
+    board.classList.toggle('arranging', arranging);
+    document.getElementById('bar').hidden = !arranging;
+    if (arranging && (rows !== drawCells.rows || colW() !== drawCells.cw || rowH() !== drawCells.rh)) drawCells(rows);
+  }
+  function drawCells(rows) {
+    drawCells.rows = rows; drawCells.cw = colW(); drawCells.rh = rowH();
+    const cw = colW(); const rh = rowH();
+    let html = '';
+    for (let y = 0; y < rows; y++) for (let x = 0; x < cols(); x++) html += `<i style="left:${x * cw + GAP / 2}px;top:${y * rh + GAP / 2}px;width:${cw - GAP}px;height:${rh - GAP}px"></i>`;
+    cellsEl.innerHTML = html;
+  }
+  function showGhost(p) {
+    if (!p) return ghost.classList.remove('on');
+    const r = px(p);
+    Object.assign(ghost.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
+    ghost.classList.add('on');
+  }
+
+  // ---------- the gesture ----------
+  // Outside arranging: a press waits `hold` ms (the panel shrinks a little), moving more than `slop`
+  // first is a scroll (or, with a mouse, nothing). Then arranging starts and the press goes straight on
+  // into moving that panel. While arranging, a press on a panel moves it once it travels `slop`, a press
+  // on a side resizes, and a tap on an empty spot finishes.
+  let press = null; let act = null; let raf = 0;
+  const buzz = () => feel.buzz && navigator.vibrate?.(12);
+  const NO_HOLD = 'textarea, input, .x';
+
+  board.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    const el = e.target.closest('.panel');
+    if (!el) { if (arranging) finish(); return; }
+    const side = e.target.closest('.grab')?.dataset.side;
+    if (arranging && side) return startSize(e, el, side);
+    if (e.target.closest('.x')) return;
+    if (!arranging && e.target.closest(NO_HOLD)) return;
+    press = { el, id: el.dataset.id, x: e.clientX, y: e.clientY, pointerId: e.pointerId, ready: arranging };
+    if (!arranging) {
+      el.style.setProperty('--hold', feel.hold + 'ms');
+      el.classList.add('pressing');
+      press.timer = setTimeout(() => { el.classList.remove('pressing'); start(); press.ready = true; buzz(); swallowNextClick(); }, feel.hold);
+    }
+  });
+  addEventListener('pointermove', (e) => {
+    if (act && e.pointerId === act.pointerId) { act.cx = e.clientX; act.cy = e.clientY; return step(); }
+    if (!press || e.pointerId !== press.pointerId) return;
+    const moved = Math.hypot(e.clientX - press.x, e.clientY - press.y);
+    if (!press.ready) { if (moved > feel.slop) cancelPress(); return; }
+    if (moved > feel.slop) startMove(e);
+  });
+  addEventListener('pointerup', end);
+  addEventListener('pointercancel', end);
+  document.addEventListener('touchmove', (e) => { if (act || (press && press.ready)) e.preventDefault(); }, { passive: false });
+  board.addEventListener('contextmenu', (e) => { if (e.target.closest('.panel') && !e.target.closest('textarea')) e.preventDefault(); });
+  addEventListener('keydown', (e) => { if (e.key === 'Escape' && arranging) finish(); });
+
+  function cancelPress() { if (!press) return; clearTimeout(press.timer); press.el.classList.remove('pressing'); press = null; }
+  const swallow = (e) => { e.preventDefault(); e.stopPropagation(); };
+  function swallowNextClick() {
+    addEventListener('click', swallow, { capture: true, once: true });
+    setTimeout(() => removeEventListener('click', swallow, { capture: true }), 600);
+  }
+  function start() { if (arranging) return; arranging = true; document.activeElement?.blur?.(); draw(); }
+  function finish() { arranging = false; showGhost(null); draw(); save(); }
+
+  function startMove(e) {
+    const { el, id } = press;
+    const r = el.getBoundingClientRect();
+    const b = board.getBoundingClientRect();
+    act = { kind: 'move', el, id, pointerId: press.pointerId, gx: press.x - r.left, gy: press.y - r.top, cx: e.clientX, cy: e.clientY, base: structuredClone(layout()), left0: r.left - b.left, top0: r.top - b.top };
+    press = null;
+    try { el.setPointerCapture(act.pointerId); } catch { /* gone */ }
+    el.classList.add('moving');
+    el.style.scale = feel.scale;
+    raf = requestAnimationFrame(autoScroll);
+    step();
+  }
+  function startSize(e, el, side) {
+    e.preventDefault();
+    act = { kind: 'size', side, el, id: el.dataset.id, pointerId: e.pointerId, cx: e.clientX, cy: e.clientY, x0: e.clientX, y0: e.clientY + scrollY, base: structuredClone(layout()) };
+    try { e.target.setPointerCapture(e.pointerId); } catch { /* gone */ }
+    el.classList.add('sizing');
+    buzz();
+    raf = requestAnimationFrame(autoScroll);
+    step();
+  }
+  /** Where the panel being moved or sized would go, the others settled around it. */
+  function target() {
+    const me = act.base.find((p) => p.id === act.id);
+    const b = board.getBoundingClientRect();
+    const cw = colW(); const rh = rowH(); const n = cols(); const min = MIN[kind];
+    if (act.kind === 'move') {
+      const x = Math.round((act.cx - b.left - act.gx) / cw);
+      const y = Math.round((act.cy - b.top - act.gy) / rh);
+      return { ...me, x: Math.max(0, Math.min(n - me.w, x)), y: Math.max(0, y) };
+    }
+    const dx = Math.round((act.cx - act.x0) / cw);
+    const dy = Math.round((act.cy + scrollY - act.y0) / rh);
+    const t = { ...me };
+    if (act.side === 'right') t.w = Math.max(min.w, Math.min(n - me.x, me.w + dx));
+    if (act.side === 'left') { const x = Math.max(0, Math.min(me.x + me.w - min.w, me.x + dx)); t.w = me.w + (me.x - x); t.x = x; }
+    if (act.side === 'bottom') t.h = Math.max(min.h, me.h + dy);
+    if (act.side === 'top') { const y = Math.max(0, Math.min(me.y + me.h - min.h, me.y + dy)); t.h = me.h + (me.y - y); t.y = y; }
+    return t;
+  }
+  function step() {
+    const t = target();
+    const next = settle(act.base, t);
+    act.next = next;
+    act.ok = !!next;
+    if (act.kind === 'move') {
+      const b = board.getBoundingClientRect();
+      act.el.style.left = act.cx - b.left - act.gx + 'px';
+      act.el.style.top = act.cy - b.top - act.gy + 'px';
+      draw(next ?? act.base, act.id);
+      showGhost(t);
+      ghost.style.borderColor = next ? '' : 'var(--danger)';
+    } else {
+      draw(next ?? act.base);
+      act.el.querySelector('.tip').textContent = `${t.w} × ${t.h}` + (next ? '' : ' · in the way');
+    }
+  }
+  function autoScroll() {
+    if (!act) return;
+    const edge = 70; const y = act.cy;
+    const v = y < edge ? -(edge - y) / 4 : y > innerHeight - edge ? (y - (innerHeight - edge)) / 4 : 0;
+    if (v) { scrollBy(0, v); step(); }
+    raf = requestAnimationFrame(autoScroll);
+  }
+  function end(e) {
+    if (press && e.pointerId === press.pointerId) cancelPress();
+    if (!act || e.pointerId !== act.pointerId) return;
+    cancelAnimationFrame(raf);
+    const { el } = act;
+    if (act.ok) layouts[kind] = act.next;
+    el.classList.remove('moving', 'sizing');
+    el.style.scale = '';
+    act = null;
+    showGhost(null);
+    draw();
+    save();
+  }
+
+  // ---------- buttons ----------
+  board.addEventListener('click', (e) => {
+    const t = e.target.closest('.tick');
+    if (t && !arranging) { const on = t.getAttribute('aria-pressed') !== 'true'; t.setAttribute('aria-pressed', on); t.closest('.row').classList.toggle('done', on); return; }
+    const x = e.target.closest('.x');
+    if (!x) return;
+    const id = x.closest('.panel').dataset.id;
+    undoLayout = structuredClone(layout());
+    layouts[kind] = layout().filter((p) => p.id !== id);
+    draw(); save();
+    const toastEl = document.getElementById('toast');
+    document.getElementById('toast-text').textContent = `${PANELS[id].title.replace('✎ ', '')} removed. Its space stays free.`;
+    toastEl.hidden = false;
+    clearTimeout(toastEl.timer);
+    toastEl.timer = setTimeout(() => (toastEl.hidden = true), 4000);
+  });
+  document.getElementById('toast-undo').addEventListener('click', () => {
+    if (undoLayout) { layouts[kind] = undoLayout; undoLayout = null; draw(); save(); }
+    document.getElementById('toast').hidden = true;
+  });
+  document.getElementById('done').addEventListener('click', finish);
+
+  // ---------- phone or computer, by the window's width ----------
+  const wide = matchMedia('(min-width: 760px)');
+  function pickKind() {
+    kind = wide.matches ? 'computer' : 'phone';
+    document.getElementById('mode').textContent = kind === 'phone' ? 'Phone · 4 columns' : 'Computer · 12 columns';
+    for (const el of els.values()) el.remove();
+    els.clear();
+    draw();
+  }
+  wide.addEventListener('change', pickKind);
+  addEventListener('resize', () => draw());
+
+  // ---------- feel ----------
+  const sliders = [['hold', (v) => v + ' ms'], ['slop', (v) => v + ' px'], ['row', (v) => v + ' px'], ['scale', (v) => Math.round((v - 1) * 1000) / 10 + '%']];
+  function showFeel() {
+    for (const [k, fmt] of sliders) { document.getElementById('f-' + k).value = feel[k]; document.getElementById('o-' + k).textContent = fmt(feel[k]); }
+    document.getElementById('f-land').value = feel.land;
+    document.getElementById('f-buzz').checked = feel.buzz;
+  }
+  for (const [k, fmt] of sliders) document.getElementById('f-' + k).addEventListener('input', (e) => { feel[k] = Number(e.target.value); document.getElementById('o-' + k).textContent = fmt(feel[k]); store.set('feel', feel); draw(); });
+  document.getElementById('f-land').addEventListener('change', (e) => { feel.land = e.target.value; store.set('feel', feel); });
+  document.getElementById('f-buzz').addEventListener('change', (e) => { feel.buzz = e.target.checked; store.set('feel', feel); });
+  document.getElementById('reset').addEventListener('click', () => { layouts[kind] = structuredClone(START[kind]); save(); draw(); });
+  document.getElementById('reset-feel').addEventListener('click', () => { feel = { ...FEEL0 }; store.set('feel', feel); showFeel(); draw(); });
+  showFeel();
+  pickKind();
+})();
+</script>
