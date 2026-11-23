@@ -84,7 +84,7 @@ class DesktopWindow {
     this.web = this._webView();
     const overlay = new Gtk.Overlay();
     overlay.add(this.web);
-    overlay.add_overlay(this._gear());
+    overlay.add_overlay(this._corner());
     this.arrangeBar = this._arrangeBar();
     this.grip = this._grip();
     overlay.add_overlay(this.arrangeBar);
@@ -153,8 +153,20 @@ class DesktopWindow {
     });
   }
 
+  /** The top right corner: Open full app, then the ⚙ menu. */
+  _corner() {
+    const box = new Gtk.Box({ halign: Gtk.Align.END, valign: Gtk.Align.START, margin_top: 6, margin_end: 6, spacing: 4 });
+    const full = new Gtk.Button({ tooltip_text: 'Open full app' });
+    full.get_style_context().add_class('ft-gear');
+    full.add(new Gtk.Image({ icon_name: 'view-fullscreen-symbolic', pixel_size: 16 }));
+    full.connect('clicked', () => this._openFull('/today'));
+    box.pack_start(full, false, false, 0);
+    box.pack_start(this._gear(), false, false, 0);
+    return box;
+  }
+
   _gear() {
-    const button = new Gtk.MenuButton({ halign: Gtk.Align.END, valign: Gtk.Align.START, margin_top: 6, margin_end: 6, tooltip_text: 'Focus Tracker Desktop' });
+    const button = new Gtk.MenuButton({ tooltip_text: 'Focus Tracker Desktop' });
     button.get_style_context().add_class('ft-gear');
     button.add(new Gtk.Image({ icon_name: 'emblem-system-symbolic', pixel_size: 16 }));
     const menu = new Gtk.Menu();

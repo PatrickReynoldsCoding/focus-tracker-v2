@@ -37,7 +37,7 @@ Remove everything with `clients/gnome/install.sh --remove` (the sign-in is kept)
 ## The app (`app/main.js`)
 
 Run on its own with `gjs -m clients/gnome/app/main.js` (`FT_URL` sets the address). Its app id is
-`dev.focustracker.Desktop`; opening it again shows the window that is open. The ⚙ menu:
+`dev.focustracker.Desktop`; opening it again shows the window that is open. In the top right corner, **⤢** opens the full app and **⚙** opens a menu:
 
 - **Add panel…** and **Remove panel ▸** (the panels on the Desktop by name): the page's own Add panel
   and Remove, through `window.ftDesktop` (`web/src/features/desktop/app.ts`).
@@ -48,7 +48,9 @@ Run on its own with `gjs -m clients/gnome/app/main.js` (`FT_URL` sets the addres
 
 The page knows it is inside the app by `FocusTrackerDesktop` in the user agent: it hides its own + in
 the corner, and a link to any other page (a project, a list) opens that page in the full app while the
-window stays on the Desktop. Links to other sites open in the usual browser.
+window stays on the Desktop. Links to other sites open in the usual browser. With a mouse the Desktop is
+always the computer's grid, even in a narrow window: drag a panel by its title, resize it from its
+corner, ⋯ for its menu (a narrow window starts each panel full width).
 
 ## The extension (`extension/`)
 

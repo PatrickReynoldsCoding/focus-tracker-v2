@@ -43,14 +43,21 @@ update-desktop-database "$apps" 2>/dev/null || true
 # The extension. An older copy still loaded in this session is turned off first (it gives the window
 # back), and the new one is not turned on until the next login: turning it on now would run the old
 # copy GNOME still holds.
-if [[ $loaded == 1 ]]; then gnome-extensions disable "$uuid" 2>/dev/null || true; fi
-rm -rf "$ext"
-mkdir -p "$ext"
-cp -r "$here/extension/." "$ext/"
-glib-compile-schemas "$ext/schemas"
+# An unchanged extension is left alone (and stays on).
+same=0
+diff -rq -x gschemas.compiled "$here/extension" "$ext" >/dev/null 2>&1 && same=1
+if [[ $same == 0 ]]; then
+  if [[ $loaded == 1 ]]; then gnome-extensions disable "$uuid" 2>/dev/null || true; fi
+  rm -rf "$ext"
+  mkdir -p "$ext"
+  cp -r "$here/extension/." "$ext/"
+  glib-compile-schemas "$ext/schemas"
+fi
 
 echo "Installed the app (“Focus Tracker Desktop” in the app grid), its launcher and the extension."
-if [[ $loaded == 1 ]]; then
+if [[ $same == 1 ]]; then
+  echo "The extension has not changed. Close the window (⚙ → Close) and open Focus Tracker Desktop again for the new app."
+elif [[ $loaded == 1 ]]; then
   echo "Log out and in, then turn the extension on: gnome-extensions enable $uuid"
 else
   # GNOME does not know it yet, so it is safe to put it on the enabled list: it loads at the next login.
