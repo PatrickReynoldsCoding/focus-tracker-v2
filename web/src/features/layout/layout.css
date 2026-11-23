@@ -215,3 +215,46 @@ html[data-theme='eink'] .pl-switch input[type='checkbox'] { width: 52px; height:
 .lg-add-panel { display: flex; justify-content: center; margin-top: 14px; }
 .lg-add-panel button { min-width: 200px; border-style: dashed; }
 .lg-new > .lg-body > *, .lg-row.lg-new > :first-child { outline: 2px solid var(--accent); outline-offset: 2px; transition: outline-color 0.4s; }
+
+/* ---------- free arranging (free.tsx, D65) ---------- */
+.fr-board { position: relative; min-height: 40px; }
+.fr-item { position: absolute; min-width: 0; touch-action: pan-y; -webkit-touch-callout: none; transition: left 0.16s ease, top 0.16s ease, width 0.16s ease, height 0.16s ease; }
+.fr-body { height: 100%; overflow: auto; display: flex; flex-direction: column; gap: 14px; border-radius: var(--radius); }
+.fr-body > .card { flex: 1 0 auto; margin: 0; }
+/* A panel with no saved place yet keeps its content's own height, so it can be measured. */
+.fr-auto > .fr-body > .card { flex: 0 0 auto; }
+.fr-item.fr-pressing { scale: 0.985; transition: scale 0.45s linear; }
+.fr-arranging { border-radius: 10px; background-image: linear-gradient(to right, var(--line) 1px, transparent 1px), linear-gradient(to bottom, var(--line) 1px, transparent 1px); background-size: var(--fr-col) var(--fr-row); }
+.fr-arranging .fr-item { cursor: grab; -webkit-user-select: none; user-select: none; }
+.fr-arranging .fr-body { pointer-events: none; overflow: hidden; outline: 2px solid var(--accent); outline-offset: -1px; }
+.fr-arranging .fr-item:focus-visible .fr-body { outline-width: 3px; }
+.fr-moving { z-index: 20; transition: none; cursor: grabbing; scale: 1.03; box-shadow: var(--shadow-pop); border-radius: var(--radius); }
+.fr-sizing { z-index: 19; transition: none; }
+.fr-ghost { position: absolute; border-radius: var(--radius); background: var(--accent-soft); border: 2px dashed var(--accent); pointer-events: none; transition: left 0.09s, top 0.09s, width 0.09s, height 0.09s; }
+@media (prefers-reduced-motion: no-preference) {
+  .fr-arranging:not(.fr-calm) .fr-item:not(.fr-moving):not(.fr-sizing) { animation: fr-wiggle 0.42s ease-in-out infinite alternate; }
+  .fr-arranging:not(.fr-calm) .fr-item:nth-child(2n) { animation-delay: -0.2s; }
+}
+@keyframes fr-wiggle { from { rotate: -0.4deg; } to { rotate: 0.4deg; } }
+/* The grabbers sit just inside each side, so two panels side by side never fight over a press. */
+.fr-grab { position: absolute; z-index: 3; touch-action: none; background: var(--accent); border: 2px solid var(--surface); box-shadow: 0 1px 4px rgb(0 0 0 / 0.25); }
+.fr-grab::after { content: ''; position: absolute; inset: -12px; }
+.fr-top, .fr-bottom { left: 50%; width: 46px; height: 14px; margin-left: -23px; border-radius: 7px; cursor: ns-resize; }
+.fr-top { top: 3px; } .fr-bottom { bottom: 3px; }
+.fr-top::after, .fr-bottom::after { inset: -6px -12px; }
+.fr-left, .fr-right { top: 50%; width: 14px; height: 46px; margin-top: -23px; border-radius: 7px; cursor: ew-resize; }
+.fr-left { left: 3px; } .fr-right { right: 3px; }
+.fr-left::after, .fr-right::after { inset: -12px -6px; }
+.fr-x, .fr-more { position: absolute; z-index: 4; top: 6px; width: 28px; height: 28px; min-height: 0; padding: 0; border-radius: 50%; border: 2px solid var(--surface); font-weight: 700; line-height: 1; display: grid; place-items: center; }
+.fr-x { right: 6px; background: var(--danger); color: var(--danger-fg); }
+.fr-more { right: 40px; background: var(--surface-2); color: var(--fg); }
+.fr-tip { position: absolute; z-index: 5; left: 50%; top: 50%; translate: -50% -50%; background: var(--fg); color: var(--bg); font-size: 0.75rem; font-weight: 600; border-radius: 6px; padding: 3px 7px; pointer-events: none; font-variant-numeric: tabular-nums; }
+.fr-bar { position: fixed; z-index: 30; left: 0; right: 0; bottom: 0; display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--line); box-shadow: var(--shadow-pop); }
+.fr-bar-text { flex: 1 1 200px; max-width: 420px; }
+@media (max-width: 759px) { .fr-bar-text { display: none; } }
+/* Sticky notes and their button step aside while arranging. */
+body:has(.fr-arranging) :is(.sticky-layer, .sticky-fab) { display: none; }
+html[data-theme='eink'] .fr-grab, html[data-theme='eink'] .fr-x, html[data-theme='eink'] .fr-more { border: 2px solid #000; box-shadow: none; }
+html[data-theme='eink'] .fr-arranging .fr-body { outline: 2px solid #000; }
+html[data-theme='eink'] .fr-ghost { background: none; border: 3px dashed #000; }
+

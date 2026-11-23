@@ -59,7 +59,7 @@ export function PillsLayout({ place, props, panels, next }: PanelLayoutProps) {
 }
 
 /** Where a swipe means something else (the same places the tab swipe leaves alone). */
-const BLOCKED = '.lg-arranging, .board, .ed, .ProseMirror, dialog, [popover], .wb-full, input, textarea, select, [contenteditable], .sortable-chosen, .sortable-drag';
+const BLOCKED = '.lg-arranging, .fr-arranging, .board, .ed, .ProseMirror, dialog, [popover], .wb-full, input, textarea, select, [contenteditable], .sortable-chosen, .sortable-drag';
 function blockedAt(el: Element | null, stop: Element): boolean {
   for (let e = el; e && e !== stop; e = e.parentElement) {
     if (e.matches(BLOCKED)) return true;

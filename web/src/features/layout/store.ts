@@ -10,7 +10,10 @@ import { signal, useSignal } from '../../core/signal';
 
 /** A panel's place: column, width, order, a fixed height on a computer (h) and on a phone (ph). */
 export type Pos = { x: number; y: number; w: number; h?: number | null; ph?: number | null };
-export type Grid = { items: Record<string, Pos>; removed: string[] };
+/** A place in cells (free arranging, D65): column, row, width in columns, height in rows. */
+export type Cell = { x: number; y: number; w: number; h: number };
+/** cells / phone: free places (flag free-panels) on a computer (12 columns) and a phone (4). */
+export type Grid = { items: Record<string, Pos>; removed: string[]; cells?: Record<string, Cell>; phone?: Record<string, Cell> };
 export type Pill = { id: string; name: string; icon: string | null; panels: string[] };
 export type View = { focusCard?: 'compact' | 'full' | 'hidden'; pillCounts?: boolean; pillSwipe?: boolean; pillLast?: boolean; pillAll?: boolean };
 /** grid: the page's grid (on Today, the All pill's); grids: each pill's own grid, by pill id.

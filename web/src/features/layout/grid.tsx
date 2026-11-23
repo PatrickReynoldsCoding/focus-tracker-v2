@@ -1,4 +1,5 @@
-// The desktop grid (V1-GAPS 39): panels in 12 columns, moved and resized straight on the page:
+// The older desktop grid, used while the flag `free-panels` is off (free.tsx is the usual one, D65)
+// (V1-GAPS 39): panels in 12 columns, moved and resized straight on the page:
 // dragged by their title (or the ⠿ grip), resized from their corner, removed from their ⋯ menu;
 // heights follow their content unless set. Narrower screens stack the panels (stack.tsx). Hand-made rather than a library: the
 // panels are Preact components that must not be moved in the DOM behind Preact's back, the
@@ -19,6 +20,7 @@ import { isEink } from '../../core/theme';
 import { AddFeature } from './AddFeature';
 import { AddPanelButton, isFilePanel, pageTarget, removeFilePanel } from './adding';
 import { GridScope, type GridStore } from './scope';
+import { FreeBoard } from './free';
 import { Stack } from './stack';
 import { COLS, DESKTOP, layoutNow, saveGrid, saveLayout, titleOf, useLayout, useMedia, type Grid as GridData, type Pos } from './store';
 
@@ -117,6 +119,7 @@ export function GridLayout({ place, props, panels }: PanelLayoutProps) {
   const data = useLayout(place);
   const scope = useContext(GridScope);
   const adder = useFlag('add-panel');
+  const free = useFlag('free-panels');
   const removed = new Set(scope ? [] : (data?.grid?.removed ?? []));
   const shown = panels.filter((p) => p.fixed || p.alwaysShown || !removed.has(p.id));
   const store: GridStore = scope ?? {
@@ -133,6 +136,7 @@ export function GridLayout({ place, props, panels }: PanelLayoutProps) {
     reset: () => resetPage(place),
     resetLabel: 'Reset this page’s layout',
   };
+  if (free) return <FreeBoard key={store.key} place={place} props={props} panels={shown} all={panels} store={store} />;
   if (!desktop && !store.grid) return <Stack key={store.key} place={place} props={props} panels={shown} all={panels} store={store} own={!scope} />;
   return <Grid key={store.key} place={place} props={props} panels={shown} all={panels} store={store} own={!scope} />;
 }
