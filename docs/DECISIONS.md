@@ -664,3 +664,16 @@ Code: web `features/editor/Always.tsx` (new), `Editing.tsx` (`always`, `incoming
 - **A draft kept on the device** (unsaved or a refused offline save) is restored into the editor and saves again with the usual check; the old Restore / Discard banner is only for the other, tap-to-edit uses.
 
 Why: the extra tap before every edit slowed note taking, most of all on a phone.
+
+## D64. The Desktop page: a bare page of panels for a window behind the others (owner, 2026-11-23: "Why can't the widget be a window that we can add multiple panels to")
+
+Code: server `src/modules/desktop.ts` (new: flag `desktop-page`, the list `layout.desktop.panels`, a deleted file leaving it), `src/modules/add-panel.ts` (page `desktop`), `src/modules/layout.ts` (`GET /api/layout/desktop` gives `panels` and `usual`; `get_page_layout` / `set_page_layout` take page `desktop`); web `features/desktop/` (new), `RouteDef.bare` in `core/registry.tsx` and `main.tsx`; browser check `scripts/ui/desktop.mjs`. No migration (settings rows). Part 1 of `docs/desktop-widget-spec.md`; parts 2 (open it as its own Chrome window) and 3 (a GNOME Shell extension that pins it on the left, behind other windows) follow.
+
+- **A page, not a tab**: `#/desktop`, drawn bare (`RouteDef.bare`): no side bar, header, phone bar, corner timer or pop-out windows; messages (Undo) still show; Ctrl+Z still works. A faint + in the top right corner opens Add panel. The window title is "Focus Tracker Desktop", so the desktop can find the window.
+- **Its own panels** (owner's choice): the Desktop keeps a list of panel ids (`layout.desktop.panels`, per profile; null = the usual ones: the focus card and the Today list). A note, list or whiteboard put on the Desktop is **not** put on Today, and taking it off one leaves the other alone. Any of Today's feature panels can go on it except the Sticky notes buttons (the notes float over Today's page). The focus card can be removed here.
+- **Its own layout**: `layout.desktop`, the same grid as Today's (drag by the title, the corner, ⋯) in a wide window, and the stack (one column, a long press arranges) under 900 px, as the spec's 500–700 px window will be. Today's grid draws it, given the Desktop's store through `GridScope`, as a pill does.
+- **Follows the open profile** (owner's choice), like the rest of the app. Clicks work as on Today (owner's choice): tick, start a session, edit a note.
+- **Fresh**: Today's data reloads every 5 minutes (the Today list's timer) and when anything changes.
+- **Claude**: `add_panel` / `remove_panel` with page `desktop`; `get_page_layout` gives the Desktop's panels; `set_page_layout` can replace them.
+
+Why: the owner wants Focus Tracker on screen all day, like a desktop widget, with the same panels as Today but not tied to Today.

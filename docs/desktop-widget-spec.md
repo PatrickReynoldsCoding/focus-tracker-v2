@@ -1,6 +1,6 @@
 # Spec: Desktop widget window for Linux (GNOME)
 
-Status: **not started**. Written 2026-11-23 for another Claude to build. The owner asked for it.
+Status: **part 1 built** (v0.52.0, D64; the owner chose: follow the open profile, clickable, the Desktop has its own panels). Parts 2 and 3 not started. Written 2026-11-23 for another Claude to build. The owner asked for it.
 Read `AGENTS.md` first (it has the rules for code, flags, tests and releases).
 
 ## Goal

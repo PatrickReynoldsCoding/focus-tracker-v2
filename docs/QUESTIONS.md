@@ -324,3 +324,8 @@ My suggestion: 1.
 2. Done now only saves and lets go. Options: (a) keep the button (now); (b) hide it and rely on the "Saved" text. My suggestion: (a).
 3. Notes not near the screen show plain text until scrolled near. Options: (a) 300 px lead (now); (b) mount all at once. My suggestion: (a).
 4. On a phone the editor sits in the page (not full screen) and ⋯ Full screen goes full. Options: (a) now; (b) full screen on first tap as before. My suggestion: (a).
+
+## Desktop page (D64)
+1. Should the sticky notes float over the Desktop too, so the Sticky notes panel can go on it? Options: (a) no, left out (now); (b) yes, the same notes as Today. My suggestion: (a) until the window is in daily use.
+2. In a narrow Desktop window panels are arranged with a long press (as on a phone). Options: (a) keep it (now); (b) add the wide grid's ⋯ menu to each panel. My suggestion: (a), try it first.
+3. Should the reminder banners show on the Desktop? Options: (a) no (now); (b) yes, at the top. My suggestion: (a).
