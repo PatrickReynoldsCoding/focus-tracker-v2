@@ -1,0 +1,482 @@
+<title>Phone Arrange Mockups</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: one phone-width column (Today on a phone), three ways to arrange it, and a Feel sheet to tune the gesture. */
+:root {
+  --bg: #f6f5f1; --surface: #ffffff; --surface-2: #efede7; --fg: #1e1f1c; --muted: #6c6d66; --line: #e1dfd7;
+  --accent: #2f5d50; --accent-fg: #ffffff; --accent-soft: #dfe9e4; --danger: #b3322a; --danger-fg: #ffffff;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.05), 0 2px 8px rgb(0 0 0 / 0.04);
+  --lift: 0 14px 34px rgb(0 0 0 / 0.22), 0 3px 8px rgb(0 0 0 / 0.12);
+  --c-yellow: #f7edb8; --c-blue: #d4e2f7;
+  --radius: 12px;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-head: "Space Grotesk", "Inter", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #151514; --surface: #1f1f1d; --surface-2: #2a2a27; --fg: #ebeae5; --muted: #9d9d95; --line: #34342f;
+    --accent: #7fb8a5; --accent-fg: #0f1a16; --accent-soft: #23352f; --danger: #ff8a80; --danger-fg: #1a0a09;
+    --shadow: none; --lift: 0 14px 34px rgb(0 0 0 / 0.6); --c-yellow: #463f1d; --c-blue: #22324a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #151514; --surface: #1f1f1d; --surface-2: #2a2a27; --fg: #ebeae5; --muted: #9d9d95; --line: #34342f;
+  --accent: #7fb8a5; --accent-fg: #0f1a16; --accent-soft: #23352f; --danger: #ff8a80; --danger-fg: #1a0a09;
+  --shadow: none; --lift: 0 14px 34px rgb(0 0 0 / 0.6); --c-yellow: #463f1d; --c-blue: #22324a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.4 var(--font); }
+.wrap { max-width: 430px; margin: 0 auto; padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px)); padding-block: 10px 120px; }
+h1 { font: 600 1.05rem/1.2 var(--font-head); margin: 4px 0 2px; }
+.lede { color: var(--muted); font-size: 0.85rem; margin: 0 0 10px; }
+.variants { display: flex; gap: 6px; margin-bottom: 8px; overflow-x: auto; }
+.variants a { flex: 1 0 auto; text-align: center; padding: 8px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); text-decoration: none; font-size: 0.85rem; white-space: nowrap; }
+.variants a[aria-current="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.how { font-size: 0.82rem; color: var(--muted); background: var(--surface-2); border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; }
+.how b { color: var(--fg); font-weight: 600; }
+
+/* The panels */
+.board { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.panel { position: relative; grid-column: span 2; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px 14px; touch-action: pan-y; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; overflow: hidden; display: flex; flex-direction: column; min-height: 64px; }
+.panel.half { grid-column: span 1; }
+.panel .body { overflow: auto; flex: 1; min-height: 0; }
+.panel h2 { font: 600 0.95rem/1.2 var(--font-head); margin: 0 0 8px; display: flex; justify-content: space-between; gap: 8px; }
+.panel h2 small { font: 400 0.78rem var(--font); color: var(--muted); }
+.panel.pressing { transform: scale(0.985); transition: transform var(--hold, 450ms) linear; }
+.panel.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), var(--shadow); overflow: visible; }
+.panel.dragging { z-index: 20; box-shadow: var(--lift); border-color: var(--accent); transition: box-shadow 120ms; cursor: grabbing; }
+.panel.settling { transition: transform 160ms ease-out; }
+.board.all .panel { overflow: visible; }
+@media (prefers-reduced-motion: no-preference) {
+  .board.all .panel:not(.dragging) { animation: wiggle 0.42s ease-in-out infinite alternate; }
+  .board.all .panel:nth-child(2n):not(.dragging) { animation-delay: -0.2s; }
+}
+@keyframes wiggle { from { rotate: -0.5deg; } to { rotate: 0.5deg; } }
+
+/* Grabbers: a bar on the bottom edge (height), a tab on the right edge (half or full width), a corner (both). */
+.grab { position: absolute; z-index: 3; display: none; touch-action: none; background: var(--accent); border: 2px solid var(--surface); box-shadow: 0 1px 4px rgb(0 0 0 / 0.25); }
+.selected > .grab, .board.all .panel > .grab { display: block; }
+.grab.h { left: 50%; bottom: -9px; width: 54px; height: 16px; margin-left: -27px; border-radius: 8px; cursor: ns-resize; }
+.grab.w { right: -9px; top: 50%; width: 16px; height: 54px; margin-top: -27px; border-radius: 8px; cursor: ew-resize; }
+.grab.c { right: -10px; bottom: -10px; width: 26px; height: 26px; border-radius: 50%; cursor: nwse-resize; }
+.grab::after { content: ""; position: absolute; inset: -14px; } /* a bigger target for a thumb */
+.v-a .grab.w, .v-a .grab.c { display: none !important; }
+.v-b .grab.h, .v-b .grab.w { display: none !important; }
+.v-c .grab.c { display: none !important; }
+
+.x { position: absolute; z-index: 4; top: -9px; left: -9px; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--surface); background: var(--danger); color: var(--danger-fg); font: 700 13px/18px var(--font); display: none; padding: 0; }
+.board.all .x { display: block; }
+.size-tip { position: absolute; z-index: 5; left: 50%; bottom: 14px; translate: -50% 0; background: var(--fg); color: var(--bg); font: 600 0.75rem var(--font); border-radius: 6px; padding: 3px 7px; display: none; font-variant-numeric: tabular-nums; pointer-events: none; }
+.resizing .size-tip { display: block; }
+
+/* Panel contents */
+.row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); }
+.row:first-child { border-top: 0; }
+.row .grow { flex: 1; min-width: 0; }
+.row small { color: var(--muted); }
+.tick { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--accent); background: transparent; flex: none; padding: 0; }
+.tick.round { border-radius: 50%; }
+.tick[aria-pressed="true"] { background: var(--accent); }
+.done .grow { text-decoration: line-through; color: var(--muted); }
+.btn { border: 0; border-radius: 9px; padding: 8px 12px; background: var(--accent); color: var(--accent-fg); font: 600 0.85rem var(--font); }
+.btn.ghost { background: var(--surface-2); color: var(--fg); }
+.focus-name { font: 600 1.15rem var(--font-head); margin: 2px 0 10px; }
+.note textarea { width: 100%; min-height: 70px; height: 100%; border: 0; background: var(--c-yellow); color: var(--fg); border-radius: 8px; padding: 8px; font: 0.9rem/1.4 var(--font); resize: none; -webkit-user-select: text; user-select: text; }
+.week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; font-size: 0.72rem; }
+.week div { background: var(--surface-2); border-radius: 6px; padding: 6px 0; }
+.week .today { background: var(--accent-soft); font-weight: 600; }
+.quote { font: italic 1rem/1.4 Georgia, serif; background: var(--c-blue); border-radius: 8px; padding: 10px; }
+
+/* Arrange bar (C) and the Feel sheet */
+.bar { position: fixed; z-index: 30; left: 0; right: 0; bottom: 0; padding: 10px max(12px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px)); background: var(--surface); border-top: 1px solid var(--line); display: flex; gap: 8px; align-items: center; justify-content: center; }
+.bar .grow { flex: 1; max-width: 300px; font-size: 0.82rem; color: var(--muted); min-width: 0; }
+.bar .grow b { color: var(--fg); }
+.bar .plain { border: 0; background: var(--surface-2); color: var(--fg); border-radius: 9px; padding: 8px 10px; font: 500 0.82rem var(--font); }
+.bar .plain.danger { color: var(--danger); }
+.feel { margin-top: 18px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px; }
+.feel summary { font: 600 0.9rem var(--font-head); cursor: pointer; }
+.feel label { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; margin-top: 10px; font-size: 0.82rem; }
+.feel input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+.feel output { font-variant-numeric: tabular-nums; color: var(--muted); }
+.feel .row2 { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.toast { position: fixed; z-index: 40; left: 50%; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); translate: -50% 0; background: var(--fg); color: var(--bg); border-radius: 10px; padding: 8px 12px; font-size: 0.85rem; display: flex; gap: 12px; align-items: center; }
+.toast button { background: none; border: 0; color: inherit; font-weight: 700; }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="wrap">
+  <h1>Arrange panels on a phone</h1>
+  <p class="lede">A mockup of Today. Try each version, then tune it under Feel.</p>
+  <nav class="variants" aria-label="Versions">
+    <a href="#a" data-v="a">A · Hold to lift</a>
+    <a href="#b" data-v="b">B · Grid corner</a>
+    <a href="#c" data-v="c">C · All at once</a>
+  </nav>
+  <div class="how" id="how"></div>
+  <div class="board" id="board"></div>
+
+  <details class="feel" id="feel">
+    <summary>Feel</summary>
+    <label for="f-hold">Hold before it lifts <output id="o-hold"></output><input id="f-hold" type="range" min="150" max="900" step="25"></label>
+    <label for="f-slop">Movement that still counts as holding <output id="o-slop"></output><input id="f-slop" type="range" min="3" max="30" step="1"></label>
+    <label for="f-snap">Height steps <output id="o-snap"></output><input id="f-snap" type="range" min="1" max="80" step="1"></label>
+    <label for="f-scale">Lift size <output id="o-scale"></output><input id="f-scale" type="range" min="1" max="1.08" step="0.005"></label>
+    <div class="row2">
+      <label style="display:flex;gap:8px;align-items:center;margin:0"><input id="f-buzz" type="checkbox"> Buzz when it lifts</label>
+      <label style="display:flex;gap:8px;align-items:center;margin:0"><input id="f-instant" type="checkbox"> A selected panel moves without holding</label>
+    </div>
+    <div class="row2"><button class="btn ghost" id="reset" type="button">Reset the panels</button><button class="btn ghost" id="reset-feel" type="button">Reset the feel</button></div>
+  </details>
+</div>
+<div class="bar" id="selbar" hidden><span class="grow" id="selname"></span><button class="plain" type="button" data-act="auto">Auto height</button><button class="plain danger" type="button" data-act="remove">Remove</button><button class="btn" type="button" data-act="done">Done</button></div>
+<div class="bar" id="bar" hidden><span class="grow">Drag any panel. Bars and tabs change its size.</span><button class="btn" id="done" type="button">Done</button></div>
+<div class="toast" id="toast" hidden><span id="toast-text"></span><button id="toast-undo" type="button">Undo</button></div>
+
+<script>
+(() => {
+  // ---------- content ----------
+  const PANELS = [
+    { id: 'focus', title: 'Focus', meta: 'Mon 23 Nov', w: 'full', h: null, html: `<div class="focus-name">Focus Tracker v2</div><div style="display:flex;gap:8px"><button class="btn" type="button">Start session</button><button class="btn ghost" type="button">Swap</button></div>` },
+    { id: 'today', title: 'Today', meta: '3 left', w: 'full', h: null, html: `
+      <div class="row"><button class="tick round" type="button" aria-pressed="false" aria-label="Stretch"></button><span class="grow">Stretch</span><small>0/2</small></div>
+      <div class="row"><button class="tick round" type="button" aria-pressed="false" aria-label="Run"></button><span class="grow">Run</span><small>0/3 wk</small></div>
+      <div class="row"><button class="tick" type="button" aria-pressed="false" aria-label="Reply to landlord"></button><span class="grow">Reply to landlord</span></div>
+      <div class="row"><button class="tick" type="button" aria-pressed="false" aria-label="Book dentist"></button><span class="grow">Book dentist</span></div>` },
+    { id: 'groceries', title: '✎ Groceries', meta: '', w: 'half', h: 150, cls: 'note', html: `<textarea id="note-groceries" aria-label="Groceries">Oat milk
+Eggs
+Spinach</textarea>` },
+    { id: 'quote', title: 'Keep in mind', meta: '2/9', w: 'half', h: 150, html: `<div class="quote">Rest counts too.</div>` },
+    { id: 'week', title: 'This week', meta: '', w: 'full', h: null, html: `<div class="week"><div>Mon</div><div class="today">Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div></div>` },
+    { id: 'habits', title: 'Habits', meta: '0/2', w: 'full', h: null, html: `
+      <div class="row"><button class="tick round" type="button" aria-pressed="false" aria-label="Stretch habit"></button><span class="grow">Stretch</span><small>0/2</small></div>
+      <div class="row"><button class="tick round" type="button" aria-pressed="false" aria-label="Run habit"></button><span class="grow">Run</span><small>0/3 wk</small></div>` },
+  ];
+  const HOW = {
+    a: '<b>Hold</b> a panel until it lifts, then drag it. Let go and it stays selected: drag the <b>bar on its bottom edge</b> to change its height; <b>Auto height</b>, <b>Remove</b> and <b>Done</b> are at the bottom of the screen. Tapping anywhere else also finishes.',
+    b: 'Like the computer: <b>hold</b> to lift and drag. A selected panel shows a <b>corner</b>: drag it left to make the panel half width, right for full width, up and down for height.',
+    c: '<b>Hold</b> any panel and every panel wiggles with its grabbers. Drag any of them straight away, <b>✕</b> removes, the <b>bar</b> sets height, the <b>side tab</b> half or full width. <b>Done</b> to finish.',
+  };
+  const FEEL0 = { hold: 450, slop: 10, snap: 20, scale: 1.03, buzz: true, instant: true };
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem('pam.' + k); return v ? JSON.parse(v) : d; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem('pam.' + k, JSON.stringify(v)); } catch { /* private mode */ } },
+  };
+
+  // ---------- state ----------
+  let variant = 'a';
+  let feel = { ...FEEL0, ...store.get('feel', {}) };
+  const layouts = { a: null, b: null, c: null };
+  for (const v of ['a', 'b', 'c']) layouts[v] = store.get('layout.' + v, null) ?? fresh(v);
+  let selected = null;
+  let allMode = false;
+  let undoStack = null;
+
+  function fresh(v) {
+    return PANELS.map((p) => ({ id: p.id, w: v === 'a' ? 'full' : p.w, h: v === 'a' ? (p.w === 'half' ? p.h : null) : p.h }));
+  }
+  const layout = () => layouts[variant];
+  const save = () => store.set('layout.' + variant, layout());
+  const byId = (id) => PANELS.find((p) => p.id === id);
+
+  // ---------- drawing ----------
+  const board = document.getElementById('board');
+  const els = new Map();
+  function panelEl(p) {
+    const el = document.createElement('section');
+    el.className = 'panel' + (p.cls ? ' ' + p.cls : '');
+    el.dataset.id = p.id;
+    el.innerHTML = `<button class="x" type="button" aria-label="Remove ${p.title}">✕</button>
+      <h2><span>${p.title}</span><small>${p.meta}</small></h2><div class="body">${p.html}</div>
+      <span class="grab h" data-grab="h" aria-hidden="true"></span><span class="grab w" data-grab="w" aria-hidden="true"></span><span class="grab c" data-grab="c" aria-hidden="true"></span>
+      <span class="size-tip"></span>`;
+    return el;
+  }
+  function draw() {
+    board.className = 'board v-' + variant + (allMode ? ' all' : '');
+    const order = layout().map((l) => l.id);
+    for (const [id, el] of els) if (!order.includes(id)) { el.remove(); els.delete(id); }
+    for (const l of layout()) {
+      let el = els.get(l.id);
+      if (!el) els.set(l.id, (el = panelEl(byId(l.id))));
+      el.classList.toggle('half', l.w === 'half');
+      el.style.height = l.h ? l.h + 'px' : '';
+      el.classList.toggle('selected', selected === l.id && !allMode);
+      board.appendChild(el);
+    }
+    document.getElementById('bar').hidden = !allMode;
+    const sb = document.getElementById('selbar');
+    sb.hidden = !selected || allMode;
+    if (selected && !allMode) document.getElementById('selname').innerHTML = `<b>${byId(selected).title.replace('✎ ', '')}</b>`;
+  }
+
+  // ---------- helpers ----------
+  const rectDoc = (el) => { const r = el.getBoundingClientRect(); return { x: r.left + scrollX, y: r.top + scrollY, w: r.width, h: r.height }; };
+  const buzz = () => feel.buzz && navigator.vibrate?.(12);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function flip(fn, skip) {
+    const before = new Map();
+    for (const [id, el] of els) if (id !== skip) before.set(id, rectDoc(el));
+    fn();
+    if (reduce) return;
+    for (const [id, el] of els) {
+      if (id === skip || !before.has(id)) continue;
+      const a = before.get(id); const b = rectDoc(el);
+      const dx = a.x - b.x; const dy = a.y - b.y;
+      if (!dx && !dy) continue;
+      el.style.transition = 'none';
+      el.style.transform = `translate(${dx}px, ${dy}px)`;
+      el.getBoundingClientRect();
+      el.style.transition = 'transform 180ms ease';
+      el.style.transform = '';
+      el.addEventListener('transitionend', () => (el.style.transition = ''), { once: true });
+    }
+  }
+  function toast(text, undo) {
+    const t = document.getElementById('toast');
+    document.getElementById('toast-text').textContent = text;
+    undoStack = undo;
+    t.hidden = false;
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => (t.hidden = true), 4000);
+  }
+  document.getElementById('toast-undo').addEventListener('click', () => {
+    if (undoStack) { layouts[variant] = undoStack; undoStack = null; save(); draw(); }
+    document.getElementById('toast').hidden = true;
+  });
+  function remove(id) {
+    const before = structuredClone(layout());
+    flip(() => { layouts[variant] = layout().filter((l) => l.id !== id); if (selected === id) selected = null; draw(); });
+    save();
+    toast(`${byId(id).title.replace('✎ ', '')} removed`, before);
+  }
+
+  // ---------- the gesture ----------
+  // A press waits `hold` ms (the panel shrinks a little while it waits). Moving more than `slop` first
+  // means a scroll, so nothing happens. Then the panel lifts under the finger and follows it; the others
+  // make room. While a panel is lifted the page does not scroll (touchmove is cancelled), except near
+  // the top and bottom edges, where it scrolls on its own.
+  let press = null;   // { id, el, x, y, timer, pointerId }
+  let drag = null;    // { id, el, gx, gy, base, pointerId, lastX, lastY }
+  let size = null;    // { id, el, kind, x0, y0, h0, w0, pointerId }
+  let scroller = 0;
+
+  const NO_HOLD = 'textarea, input, .grab, .x';
+  board.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    const el = e.target.closest('.panel');
+    if (!el) return;
+    const g = e.target.closest('.grab');
+    if (g) return startSize(e, el, g.dataset.grab);
+    if (e.target.closest(NO_HOLD)) return;
+    const id = el.dataset.id;
+    // A selected panel (or any, while all are arranged) moves without waiting.
+    if ((feel.instant && selected === id) || allMode) { press = { id, el, x: e.clientX, y: e.clientY, pointerId: e.pointerId, instant: true }; return; }
+    press = { id, el, x: e.clientX, y: e.clientY, pointerId: e.pointerId };
+    el.style.setProperty('--hold', feel.hold + 'ms');
+    el.classList.add('pressing');
+    press.timer = setTimeout(() => lift(e), feel.hold);
+  });
+  addEventListener('pointermove', (e) => {
+    if (size && e.pointerId === size.pointerId) return moveSize(e);
+    if (drag && e.pointerId === drag.pointerId) return moveDrag(e);
+    if (!press || e.pointerId !== press.pointerId) return;
+    const moved = Math.hypot(e.clientX - press.x, e.clientY - press.y);
+    if (press.instant) { if (moved > feel.slop) lift(e, true); return; }
+    if (moved > feel.slop) cancelPress();
+  });
+  addEventListener('pointerup', end);
+  addEventListener('pointercancel', end);
+  // Once lifted, the finger drags the panel, not the page.
+  document.addEventListener('touchmove', (e) => { if (drag || size) e.preventDefault(); }, { passive: false });
+  // No long-press menu or text selection on a panel.
+  board.addEventListener('contextmenu', (e) => { if (e.target.closest('.panel') && !e.target.closest('textarea')) e.preventDefault(); });
+
+  function cancelPress() {
+    if (!press) return;
+    clearTimeout(press.timer);
+    press.el.classList.remove('pressing');
+    press = null;
+  }
+  function lift(e, moving) {
+    if (!press) return;
+    const { id, el } = press;
+    clearTimeout(press.timer);
+    el.classList.remove('pressing');
+    const r = el.getBoundingClientRect();
+    drag = { id, el, gx: press.x - r.left, gy: press.y - r.top, pointerId: press.pointerId, lastX: e.clientX ?? press.x, lastY: e.clientY ?? press.y, moved: !!moving };
+    press = null;
+    if (!allMode && selected !== id) { selected = id; draw(); }
+    if (variant === 'c' && !allMode) { allMode = true; selected = null; draw(); }
+    try { el.setPointerCapture(drag.pointerId); } catch { /* the pointer is gone */ }
+    buzz();
+    el.classList.add('dragging');
+    drag.base = rectDoc(el);
+    place();
+    // A tap that ends the hold must not also press a button inside the panel.
+    addEventListener('click', swallow, { capture: true, once: true });
+    setTimeout(() => removeEventListener('click', swallow, { capture: true }), 600);
+    scroller = requestAnimationFrame(autoScroll);
+  }
+  const swallow = (e) => { e.preventDefault(); e.stopPropagation(); };
+  function place() {
+    const s = feel.scale;
+    const x = drag.lastX + scrollX - drag.gx - drag.base.x;
+    const y = drag.lastY + scrollY - drag.gy - drag.base.y;
+    drag.el.style.transform = `translate(${x}px, ${y}px) scale(${s})`;
+  }
+  function moveDrag(e) {
+    drag.lastX = e.clientX; drag.lastY = e.clientY; drag.moved = true;
+    reorder();
+    place();
+  }
+  /** Put the lifted panel where the finger is: before or after the panel under it. */
+  function reorder() {
+    const px = drag.lastX + scrollX; const py = drag.lastY + scrollY;
+    const list = layout();
+    const from = list.findIndex((l) => l.id === drag.id);
+    let to = -1;
+    for (let i = 0; i < list.length; i++) {
+      if (list[i].id === drag.id) continue;
+      const r = rectDoc(els.get(list[i].id));
+      if (px < r.x || px > r.x + r.w || py < r.y || py > r.y + r.h) continue;
+      const half = list[i].w === 'half' && variant !== 'a';
+      const after = half ? px > r.x + r.w / 2 : py > r.y + r.h / 2;
+      to = i + (after ? 1 : 0);
+      break;
+    }
+    if (to < 0) {
+      const last = list[list.length - 1] === list[from] ? list[list.length - 2] : list[list.length - 1];
+      if (last && py > rectDoc(els.get(last.id)).y + rectDoc(els.get(last.id)).h) to = list.length;
+      const first = list[0] === list[from] ? list[1] : list[0];
+      if (first && py < rectDoc(els.get(first.id)).y) to = 0;
+    }
+    if (to < 0) return;
+    if (to > from) to--;
+    if (to === from) return;
+    flip(() => {
+      const next = list.slice();
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      layouts[variant] = next;
+      draw();
+    }, drag.id);
+    drag.el.style.transform = '';
+    drag.base = rectDoc(drag.el);
+  }
+  function autoScroll() {
+    if (!drag && !size) return;
+    const y = drag ? drag.lastY : size.lastY;
+    const edge = 70;
+    const v = y < edge ? -(edge - y) / 4 : y > innerHeight - edge ? (y - (innerHeight - edge)) / 4 : 0;
+    if (v) {
+      scrollBy(0, v);
+      if (drag) { reorder(); place(); }
+      if (size) moveSize({ clientX: size.lastX, clientY: size.lastY, scrolled: true });
+    }
+    scroller = requestAnimationFrame(autoScroll);
+  }
+  function end(e) {
+    if (press && e.pointerId === press.pointerId) cancelPress();
+    if (drag && e.pointerId === drag.pointerId) {
+      cancelAnimationFrame(scroller);
+      const { el } = drag;
+      el.classList.remove('dragging');
+      el.classList.add('settling');
+      el.style.transform = '';
+      el.addEventListener('transitionend', () => el.classList.remove('settling'), { once: true });
+      drag = null;
+      save();
+    }
+    if (size && e.pointerId === size.pointerId) {
+      cancelAnimationFrame(scroller);
+      size.el.classList.remove('resizing');
+      size = null;
+      save();
+    }
+  }
+
+  // ---------- sizes ----------
+  function startSize(e, el, kind) {
+    e.preventDefault();
+    const l = layout().find((x) => x.id === el.dataset.id);
+    const r = el.getBoundingClientRect();
+    size = { id: l.id, el, kind, x0: e.clientX, y0: e.clientY + scrollY, h0: r.height, w0: l.w, left: r.left, pointerId: e.pointerId, lastX: e.clientX, lastY: e.clientY };
+    try { e.target.setPointerCapture(e.pointerId); } catch { /* fine */ }
+    el.classList.add('resizing');
+    buzz();
+    scroller = requestAnimationFrame(autoScroll);
+    moveSize(e);
+  }
+  function moveSize(e) {
+    size.lastX = e.clientX; size.lastY = e.clientY;
+    const l = layout().find((x) => x.id === size.id);
+    const tip = size.el.querySelector('.size-tip');
+    const bits = [];
+    if (size.kind === 'h' || size.kind === 'c') {
+      const step = Math.max(1, feel.snap);
+      const raw = size.h0 + (e.clientY + scrollY - size.y0);
+      l.h = Math.max(70, Math.round(raw / step) * step);
+      bits.push(l.h + ' px tall');
+    }
+    if (size.kind === 'w' || size.kind === 'c') {
+      const boardR = board.getBoundingClientRect();
+      const want = e.clientX - boardR.left > boardR.width * 0.68 ? 'full' : 'half';
+      if (want !== l.w) flip(() => { l.w = want; draw(); }, size.id);
+      bits.push(l.w === 'full' ? 'full width' : 'half width');
+    }
+    size.el.style.height = l.h ? l.h + 'px' : '';
+    size.el.classList.toggle('half', l.w === 'half');
+    tip.textContent = bits.join(' · ');
+  }
+
+  // ---------- buttons inside panels ----------
+  board.addEventListener('click', (e) => {
+    const t = e.target.closest('.tick');
+    if (t) { const on = t.getAttribute('aria-pressed') !== 'true'; t.setAttribute('aria-pressed', on); t.closest('.row').classList.toggle('done', on); return; }
+    const x = e.target.closest('.x');
+    if (x) return remove(x.closest('.panel').dataset.id);
+  });
+  // The bar of the selected panel (A and B).
+  document.getElementById('selbar').addEventListener('click', (e) => {
+    const act = e.target.closest('[data-act]');
+    if (!act || !selected) return;
+    const id = selected;
+    if (act.dataset.act === 'remove') remove(id);
+    if (act.dataset.act === 'auto') { const l = layout().find((x) => x.id === id); flip(() => { l.h = null; draw(); }); save(); }
+    if (act.dataset.act === 'done') { selected = null; draw(); }
+  });
+  // A tap outside the selected panel finishes.
+  document.addEventListener('pointerdown', (e) => {
+    if (!selected || allMode) return;
+    if (e.target.closest(`.panel[data-id="${selected}"]`) || e.target.closest('.feel, .toast, #selbar')) return;
+    selected = null;
+    draw();
+  });
+  document.getElementById('done').addEventListener('click', () => { allMode = false; draw(); });
+
+  // ---------- versions and feel ----------
+  function choose(v) {
+    variant = ['a', 'b', 'c'].includes(v) ? v : 'a';
+    selected = null; allMode = false;
+    for (const a of document.querySelectorAll('.variants a')) a.setAttribute('aria-current', a.dataset.v === variant);
+    document.getElementById('how').innerHTML = HOW[variant];
+    for (const el of els.values()) el.remove();
+    els.clear();
+    draw();
+  }
+  addEventListener('hashchange', () => choose(location.hash.slice(1)));
+  const sliders = [['hold', (v) => v + ' ms'], ['slop', (v) => v + ' px'], ['snap', (v) => (v <= 1 ? 'free' : v + ' px')], ['scale', (v) => Math.round((v - 1) * 1000) / 10 + '%']];
+  function showFeel() {
+    for (const [k, fmt] of sliders) { document.getElementById('f-' + k).value = feel[k]; document.getElementById('o-' + k).textContent = fmt(feel[k]); }
+    document.getElementById('f-buzz').checked = feel.buzz;
+    document.getElementById('f-instant').checked = feel.instant;
+  }
+  for (const [k, fmt] of sliders) document.getElementById('f-' + k).addEventListener('input', (e) => { feel[k] = Number(e.target.value); document.getElementById('o-' + k).textContent = fmt(feel[k]); store.set('feel', feel); });
+  for (const k of ['buzz', 'instant']) document.getElementById('f-' + k).addEventListener('change', (e) => { feel[k] = e.target.checked; store.set('feel', feel); });
+  document.getElementById('reset').addEventListener('click', () => { layouts[variant] = fresh(variant); save(); choose(variant); });
+  document.getElementById('reset-feel').addEventListener('click', () => { feel = { ...FEEL0 }; store.set('feel', feel); showFeel(); });
+  showFeel();
+  choose(location.hash.slice(1));
+})();
+</script>
