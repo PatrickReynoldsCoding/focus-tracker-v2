@@ -1,92 +1,107 @@
 # Focus Tracker on the GNOME desktop
 
-Focus Tracker's Desktop page (`#/desktop`, DECISIONS D64) in a window of its own, for a window that
-stays on screen all day. Spec: `docs/desktop-widget-spec.md`.
+Focus Tracker's Desktop page (`#/desktop`, DECISIONS D64) in a window of its own that stays on screen
+all day, behind your other windows. Spec: `docs/desktop-widget-spec.md`.
 
-`install.sh` installs both parts below: the launcher and the GNOME Shell extension.
+Three parts, all installed by `install.sh`:
 
-## The launcher (part 2)
+- `app/`: the **Focus Tracker Desktop app**, a small GNOME window (GJS, GTK 3 and WebKitGTK) that shows
+  the Desktop page with no title bar, the way the Android app shows the web app: every panel is the
+  web app's own. A ⚙ in its top right corner opens a menu.
+- `focus-tracker-desktop.desktop`: its launcher (“Focus Tracker Desktop” in the app grid).
+- `extension/`: a **GNOME Shell extension** that pins the window behind the others. Wayland does not
+  let any window, native or not, place itself or stay below the others, so the shell does it.
 
-`focus-tracker-desktop.desktop` opens the Desktop page as a Chrome app window (no tabs or address
-bar) in the Chrome profile that is signed in to the tracker, so it needs no token.
-
-Install it (and its icon) for your user:
+## Install
 
 ```sh
 clients/gnome/install.sh
 ```
 
-Then open **Focus Tracker Desktop** from the app grid, or run `gtk-launch focus-tracker-desktop`.
-
 - `FT_URL` sets another address (self-hosting), for example
   `FT_URL=https://tracker.example.com clients/gnome/install.sh`. The default is the owner's Worker.
-- `FT_CHROME_PROFILE` sets another Chrome profile (the folder name in `~/.config/google-chrome`,
-  such as `Default`). The default is `Profile 2`.
-- Remove it with `clients/gnome/install.sh --remove`.
+- `FT_CHROME_PROFILE` sets the Chrome profile that **Open full app** uses (the folder name in
+  `~/.config/google-chrome`); the default is `Profile 2`, and an empty value uses the usual browser.
+- They are saved in `~/.config/focus-tracker-desktop/config.json`.
 
-### Finding the window
+Then **log out and in**: GNOME loads a new extension, or a new version of it, only at login. When the
+script finds an older copy loaded in this session it turns it off and says to run
+`gnome-extensions enable focus-tracker-desktop@focus-tracker` after logging in again (turning it on
+before would run the older copy).
 
-The page sets the window title to **Focus Tracker Desktop** (`TITLE` in
-`web/src/features/desktop/Desktop.tsx`), so the GNOME extension (part 3) finds the window by its
-title. Chrome ignores `--class=` on Wayland; an `--app=` window gets an app id made from the address
-(likely `chrome-focus-tracker.focus-tracker.workers.dev__-Profile_2`; not checked, GNOME does not let a
-script list windows), and any other `--app=` window of the site would share it, so the title is the
-reliable match. Before you are signed in the title is the
-app's usual one.
+**Sign in once** in the window: the app keeps its own sign-in (`~/.local/share/focus-tracker-desktop/web`),
+apart from Chrome's.
 
-## The extension (part 3)
+Remove everything with `clients/gnome/install.sh --remove` (the sign-in is kept).
 
-`extension/` is a GNOME Shell extension (`focus-tracker-desktop@focus-tracker`, GNOME Shell 50)
-that pins the window like a desktop widget. Wayland does not let a window place itself or stay below
-the others, so the shell does it. When a window titled exactly “Focus Tracker Desktop” appears (a
-browser tab's title ends in “ - Google Chrome”, so only the app window matches), it:
+## The app (`app/main.js`)
+
+Run on its own with `gjs -m clients/gnome/app/main.js` (`FT_URL` sets the address). Its app id is
+`dev.focustracker.Desktop`; opening it again shows the window that is open. The ⚙ menu:
+
+- **Add panel…** and **Remove panel ▸** (the panels on the Desktop by name): the page's own Add panel
+  and Remove, through `window.ftDesktop` (`web/src/features/desktop/app.ts`).
+- **Position ▸ Left, Middle, Right, Custom**, **Move and resize**, **More settings…** (the extension's
+  settings window): the extension's settings, so the app and that window change the same thing.
+- **Open full app**: Focus Tracker in its Chrome app window (or the usual browser) at Today.
+- **Reload**, **Close**.
+
+The page knows it is inside the app by `FocusTrackerDesktop` in the user agent: it hides its own + in
+the corner, and a link to any other page (a project, a list) opens that page in the full app while the
+window stays on the Desktop. Links to other sites open in the usual browser.
+
+## The extension (`extension/`)
+
+`focus-tracker-desktop@focus-tracker`, GNOME Shell 50. It pins the app's window (app id
+`dev.focustracker.Desktop`), or any window titled exactly “Focus Tracker Desktop” (a Chrome app window
+on `#/desktop`; a browser tab's title ends in “ - Google Chrome”, so it never matches). It:
 
 - makes it a desktop-type window: below every normal window, above the desktop icons, and left out of
   the dock, Alt+Tab and the overview;
 - shows it on every workspace;
 - places it on the main screen's free area (under the top bar, beside a fixed dock) where its
-  settings say: **Left** (the default) or **Right**, full height; or **Middle**, centred, at the height
-  set for the middle (0 = full height); at the width set (default 600 px). It goes back there when it
-  is moved, resized, maximised or minimised;
-- opens it at login if it is not open (after about 8 seconds, so a window Chrome reopens counts).
+  settings say: **Left** (the default) or **Right**, full height; **Middle**, centred, at the height set
+  for the middle (0 = full height); at the width set (default 600 px); or **Custom**, where you left it
+  with Move and resize, kept on the screen. It goes back there when it is moved, resized, maximised or
+  minimised;
+- opens the app at login if it is not open (after about 8 seconds).
+
+**Move and resize**: the app shows a bar (“⠿ Drag here to move”, “⤡ Drag to resize”, **Done**) and a
+corner handle. Pressing one sets the `drag` setting; the extension then moves the window, or its
+bottom right corner, with the pointer until the button is let go, and saves the place as Custom. The
+window stays pinned throughout.
 
 Clicks and typing work as in any window. Turning the extension off gives the window back as a normal
-window.
-
-### Install
-
-`clients/gnome/install.sh` copies it to `~/.local/share/gnome-shell/extensions/`, builds its settings
-schema and adds it to the enabled extensions. **Log out and in once**: GNOME only loads a new
-extension (or a new version of it) at login. Check it with
-`gnome-extensions info focus-tracker-desktop@focus-tracker`.
-
-Settings (position, width, height in the middle, open at login): `gnome-extensions prefs focus-tracker-desktop@focus-tracker`, or the
+window. Settings: the ⚙ menu, `gnome-extensions prefs focus-tracker-desktop@focus-tracker`, or the
 Extensions app.
 
-### Remove
+Two things learned the hard way (see `extension.js`):
 
-`clients/gnome/install.sh --remove` turns it off, deletes it and the launcher. Or turn it off in the
-Extensions app; the window becomes a normal window at once.
+- **Never put the window back on every workspace while GNOME is closing it.** GNOME takes a closing
+  window off every workspace; an earlier version answered by sticking it again, and GNOME Shell
+  crashed (`meta_window_unmanage` assertion), which logs you out. The extension lets go of the window
+  as soon as GNOME starts closing it (`unmanaging`).
+- **Do not switch a pinned window between normal and desktop types.** An earlier Move and resize did,
+  and the overview logged errors; it now moves the window itself.
 
-### Testing a change without risking your session
+GNOME logs a harmless `meta_window_config_new_from` warning when a menu opens from the pinned window.
 
-GNOME Shell 50 runs a second, hidden shell with its own D-Bus, settings and data folders, so a broken
-extension cannot affect the desktop you are using:
+## Testing a change without risking your session
+
+`test/run.sh` runs a second, hidden GNOME Shell (headless, its own D-Bus, settings and data folders),
+so a broken extension cannot affect the desktop you are using:
 
 ```sh
-S=/tmp/ft-gnome-test   # a folder for the test shell
-mkdir -p $S/xdg/gnome-shell/extensions $S/cfg/glib-2.0/settings
-cp -r clients/gnome/extension $S/xdg/gnome-shell/extensions/focus-tracker-desktop@focus-tracker
-glib-compile-schemas $S/xdg/gnome-shell/extensions/focus-tracker-desktop@focus-tracker/schemas
-printf "[org/gnome/shell]\nenabled-extensions=['focus-tracker-desktop@focus-tracker']\n" > $S/cfg/glib-2.0/settings/keyfile
-XDG_DATA_HOME=$S/xdg XDG_CONFIG_HOME=$S/cfg GSETTINGS_BACKEND=keyfile dbus-run-session -- \
-  gnome-shell --headless --wayland --no-x11 --virtual-monitor 1680x1050 --wayland-display ft-test-0
+npm run build && npx wrangler dev --port 8791 &      # a local tracker (optional)
+FT_URL=http://localhost:8791 clients/gnome/test/run.sh /tmp/ft-gnome-test
 ```
 
-Open a window in it with `WAYLAND_DISPLAY=ft-test-0` and the test shell's D-Bus address, for example
-`google-chrome --user-data-dir=$S/chrome --ozone-platform=wayland --app=file:///path/to/page.html` with a
-page titled “Focus Tracker Desktop”. The extension logs “Focus Tracker Desktop: pinned …” to the
-shell's output. A small helper extension that writes the windows' places, types and stacking order to a
-file every half second is the easiest way to see what happened (the shell's `Eval` is off). With
-`mutter-dev-bin` installed, `gnome-shell --devkit --wayland` shows the test shell in a window instead.
-
+It installs `../extension` and a test probe (`test/probe@focus-tracker-test`) and opens the app at
+“login” (without `FT_URL`, a Chrome window on `test/pages/desktop.html`). The probe writes the windows'
+places, types, stacking, focus, the Alt+Tab list and the overview's windows to
+`/tmp/ft-gnome-test/probe/state.json` every 400 ms, and runs commands written to
+`/tmp/ft-gnome-test/probe/cmd` (click, drag, type, close, screenshot, overview, workspaces, turning
+extensions on and off; see its `extension.js`). `/tmp/ft-gnome-test/shell.log` has the shell's output:
+look for `Bail out` (a crash) and `JS ERROR`. Always close the window in a test: the crash above only
+happened then. With `mutter-dev-bin` installed, `gnome-shell --devkit --wayland` shows a test shell in
+a window instead.

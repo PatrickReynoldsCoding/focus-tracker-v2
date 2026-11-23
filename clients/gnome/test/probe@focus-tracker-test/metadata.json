@@ -1,0 +1,1 @@
+{ "uuid": "probe@focus-tracker-test", "name": "Focus Tracker test probe", "description": "Test only: reports windows to a file and runs commands from a file (clients/gnome/test).", "shell-version": ["50"] }

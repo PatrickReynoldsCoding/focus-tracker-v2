@@ -1,5 +1,5 @@
-// Settings for Focus Tracker Desktop: the window's width, position (left, middle, right), height in
-// the middle, and opening it at login.
+// Settings for Focus Tracker Desktop: the window's position (left, middle, right, custom), Move and
+// resize, width, height in the middle, and opening it at login.
 import Adw from 'gi://Adw';
 import Gio from 'gi://Gio';
 import Gtk from 'gi://Gtk';
@@ -20,11 +20,18 @@ export default class FocusTrackerDesktopPrefs extends ExtensionPreferences {
     settings.bind('width', width, 'value', Gio.SettingsBindFlags.DEFAULT);
     group.add(width);
 
-    const places = ['left', 'center', 'right'];
-    const position = new Adw.ComboRow({ title: 'Position', subtitle: 'On the left or right it fills the height', model: Gtk.StringList.new(['Left', 'Middle', 'Right']) });
+    const places = ['left', 'center', 'right', 'custom'];
+    const position = new Adw.ComboRow({ title: 'Position', subtitle: 'Left and right fill the height; Custom is where you move it', model: Gtk.StringList.new(['Left', 'Middle', 'Right', 'Custom']) });
     position.selected = Math.max(0, places.indexOf(settings.get_string('position')));
     position.connect('notify::selected', () => settings.set_string('position', places[position.selected]));
+    settings.connect('changed::position', () => (position.selected = Math.max(0, places.indexOf(settings.get_string('position')))));
     group.add(position);
+
+    const arrange = new Adw.ActionRow({ title: 'Move and resize', subtitle: 'Drag the window anywhere and resize it from its corner, then press Done in it' });
+    const go = new Gtk.Button({ label: 'Move and resize', valign: Gtk.Align.CENTER });
+    go.connect('clicked', () => settings.set_boolean('arranging', true));
+    arrange.add_suffix(go);
+    group.add(arrange);
 
     const height = new Adw.SpinRow({
       title: 'Height in the middle',
@@ -32,7 +39,11 @@ export default class FocusTrackerDesktopPrefs extends ExtensionPreferences {
       adjustment: new Gtk.Adjustment({ lower: 0, upper: 4000, step_increment: 20, page_increment: 100 }),
     });
     settings.bind('height', height, 'value', Gio.SettingsBindFlags.DEFAULT);
-    const showHeight = () => (height.sensitive = settings.get_string('position') === 'center');
+    const showHeight = () => {
+      const p = settings.get_string('position');
+      height.sensitive = p === 'center';
+      width.sensitive = p !== 'custom';
+    };
     settings.connect('changed::position', showHeight);
     showHeight();
     group.add(height);

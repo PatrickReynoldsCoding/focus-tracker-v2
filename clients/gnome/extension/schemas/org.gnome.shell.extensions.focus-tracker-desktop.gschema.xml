@@ -12,16 +12,37 @@
         <choice value="left"/>
         <choice value="center"/>
         <choice value="right"/>
+        <choice value="custom"/>
       </choices>
       <default>'left'</default>
       <summary>Where the window sits</summary>
-      <description>left or right: against that edge of the screen's free area, full height. center: in the middle, at the height below.</description>
+      <description>left or right: against that edge of the screen's free area, full height. center: in the middle, at the height below. custom: where you put it with Move and resize (custom-rect).</description>
     </key>
     <key name="height" type="i">
       <range min="0" max="4000"/>
       <default>0</default>
       <summary>Height in the middle</summary>
       <description>The window's height in pixels when it sits in the middle; 0 is full height. On the left or right it is always full height.</description>
+    </key>
+    <key name="custom-rect" type="ai">
+      <default>[]</default>
+      <summary>Custom place</summary>
+      <description>x, y, width and height in pixels for the custom position, saved by Move and resize. Empty: where the window is.</description>
+    </key>
+    <key name="arranging" type="b">
+      <default>false</default>
+      <summary>Moving and resizing</summary>
+      <description>True while the app shows its Move and resize handles. The position is custom while you drag them.</description>
+    </key>
+    <key name="drag" type="s">
+      <choices>
+        <choice value=""/>
+        <choice value="move"/>
+        <choice value="resize"/>
+      </choices>
+      <default>''</default>
+      <summary>A drag in progress</summary>
+      <description>Set by the app when a Move and resize handle is pressed: the window follows the pointer (move) or its bottom right corner does (resize) until the button is let go.</description>
     </key>
     <key name="open-at-login" type="b">
       <default>true</default>
