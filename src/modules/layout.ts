@@ -6,6 +6,7 @@
 //   layout.<page>.pills  [{ id, name, icon, panels: [<panel id>] }]                       (pills, undoable)
 //   layout.<page>.grids  { <pill id>: { items, removed: [] } }                              (each pill's own desktop grid)
 //   layout.<page>.view   { focusCard, pillCounts, pillSwipe, pillLast, pillAll }           (switches)
+//   layout.desktop.panels [<panel id>]                                                   (the Desktop page's own panels, src/modules/desktop.ts)
 // The browser draws everything (web/src/features/layout/); the server only checks and keeps it.
 // Pop-out windows are kept on each device (localStorage), not here. Today's view switches can each be
 // set for this profile or for every profile (D46); the grids and pills name the profile's own files, so
@@ -18,6 +19,7 @@ import { bad } from '../core/errors';
 import type { Module } from '../core/registry';
 import { parseScope, scopedSetting, SCOPES, writeScoped, type Scope, type ScopedSetting } from '../core/setting-scope';
 import { setSettingWithUndo } from '../core/store';
+import { DESKTOP_PANELS_MAX, DESKTOP_USUAL, FLAG as DESKTOP_FLAG, readDesktopPanels, saveDesktopPanels } from './desktop';
 
 export const COLUMNS = 12;
 export const MAX_PILLS = 12;
@@ -122,13 +124,15 @@ export function cleanView(body: unknown): View {
 }
 
 export async function readLayout(ctx: Ctx, p: string) {
-  const [grid, pills, grids, view] = await Promise.all([
+  const [grid, pills, grids, view, panels] = await Promise.all([
     ctx.jsonSetting<Grid | null>(`layout.${p}`, null),
     ctx.jsonSetting<Pill[] | null>(`layout.${p}.pills`, null),
     ctx.jsonSetting<Record<string, Grid>>(`layout.${p}.grids`, {}),
     ctx.jsonSetting<View>(`layout.${p}.view`, {}),
+    p === 'desktop' ? readDesktopPanels(ctx) : Promise.resolve(null),
   ]);
-  return { grid, pills, grids, view };
+  // panels: only the Desktop page keeps its own list (null = the usual ones).
+  return { grid, pills, grids, view, ...(p === 'desktop' ? { panels, usual: DESKTOP_USUAL } : {}) };
 }
 
 export function pillId(raw: string): string {
@@ -338,13 +342,16 @@ export const layoutModule: Module = {
     {
       name: 'get_page_layout',
       description:
-        'Where panels sit on Today or on project pages (one layout for every project page): each panel id with its column x (0–11), width w in columns (1–12), order y, and optional fixed heights h (computer) and ph (phone), in pixels; and removed (panels taken off the page). ' +
-        'With pill (a pill id from get_today_pills), the layout inside that pill of Today. grid null means the usual layout. The phone shows panels in y order.',
+        'Where panels sit on Today, on project pages (one layout for every project page) or on the Desktop page (page "desktop", a bare page for a window behind the others on a computer): each panel id with its column x (0–11), width w in columns (1–12), order y, and optional fixed heights h (computer) and ph (phone), in pixels; and removed (panels taken off the page). ' +
+        'With pill (a pill id from get_today_pills), the layout inside that pill of Today. grid null means the usual layout. The phone shows panels in y order. ' +
+        'The Desktop also gives panels: the panel ids on it, in order (null = the usual ones, listed in usual); the same panel ids as get_today_pills.',
       readOnly: true,
       feature: 'movable-panels',
-      input: z.object({ page: z.enum(['today', 'project']), pill: z.string().optional() }),
+      input: z.object({ page: z.enum(['today', 'project', 'desktop']), pill: z.string().optional() }),
       run: async (ctx, a) => {
+        if (a.page === 'desktop') await requireFeature(ctx, DESKTOP_FLAG);
         const l = await readLayout(ctx, a.page);
+        if (a.page === 'desktop') return { page: a.page, grid: l.grid, panels: l.panels, usual: l.usual };
         if (a.pill) return { page: a.page, pill: a.pill, grid: l.grids[pillId(a.pill)] ?? null };
         return { page: a.page, grid: l.grid };
       },
@@ -352,16 +359,28 @@ export const layoutModule: Module = {
     {
       name: 'set_page_layout',
       description:
-        'Replace the layout of Today, of project pages or of one of Today’s pills (pill id): the whole grid as get_page_layout returns it (items and removed; null = back to the usual layout). x + w may not pass 12; h and ph are 60–4000 or left out for “follow the content”. Can be undone.',
+        'Replace the layout of Today, of project pages, of the Desktop page or of one of Today’s pills (pill id): the whole grid as get_page_layout returns it (items and removed; null = back to the usual layout). x + w may not pass 12; h and ph are 60–4000 or left out for “follow the content”. ' +
+        'For the Desktop, panels (optional) replaces its list of panel ids, in order (null = the usual ones); leave out grid to keep it. Can be undone.',
       feature: 'movable-panels',
       input: z.object({
-        page: z.enum(['today', 'project']),
+        page: z.enum(['today', 'project', 'desktop']),
         pill: z.string().optional(),
-        grid: z.object({ items: z.record(z.string(), z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number().nullable().optional(), ph: z.number().nullable().optional() })), removed: z.array(z.string()).optional() }).nullable(),
+        grid: z.object({ items: z.record(z.string(), z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number().nullable().optional(), ph: z.number().nullable().optional() })), removed: z.array(z.string()).optional() }).nullable().optional(),
+        panels: z.array(z.string()).nullable().optional(),
       }),
       run: async (ctx, a) => {
         const grid = a.grid ? cleanGrid(a.grid) : null;
         ctx.label = 'change a page’s layout';
+        if (a.page === 'desktop') {
+          await requireFeature(ctx, DESKTOP_FLAG);
+          if (a.pill) throw bad('The Desktop has no pills');
+          if (a.panels !== undefined) await saveDesktopPanels(ctx, a.panels && panelIds(a.panels, 'panels', DESKTOP_PANELS_MAX));
+          if (a.grid !== undefined) await setSettingWithUndo(ctx, `layout.${a.page}`, grid ? JSON.stringify(grid) : null);
+          const l = await readLayout(ctx, a.page);
+          return { page: a.page, grid: l.grid, panels: l.panels };
+        }
+        if (a.panels !== undefined) throw bad('Only the Desktop has its own list of panels');
+        if (a.grid === undefined) throw bad('Give grid (or null for the usual layout)');
         if (a.pill) {
           await requireFeature(ctx, 'today-pills');
           await savePillGrid(ctx, a.page, pillId(a.pill), grid && { ...grid, removed: [] }, true);

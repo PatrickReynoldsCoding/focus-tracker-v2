@@ -4,6 +4,7 @@ import { addPanelModule } from './add-panel';
 import { basicsModule } from './basics';
 import { categoriesModule } from './categories';
 import { boardsModule } from './boards';
+import { desktopModule } from './desktop';
 import { doneColumnModule } from './done-column';
 import { filesModule } from './files';
 import { habitsModule } from './habits';
@@ -68,6 +69,7 @@ export const MODULES: Module[] = [
   offlineModule,
   layoutModule,
   addPanelModule,
+  desktopModule,
   stickiesModule,
   insightsModule,
   tagsModule,

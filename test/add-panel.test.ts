@@ -84,7 +84,7 @@ describe('add panel', () => {
     expect(await bad('/layout/today/add', { panel: 'no spaces' })).toContain('panel id');
     const note = await call('POST', '/lists', { name: 'N', kind: 'note' }, m);
     expect(await bad('/layout/project/add', { file: { type: 'note', id: note.id } })).toContain('project’s folder');
-    expect(await bad('/layout/elsewhere/add', { panel: 'habits' })).toContain('today or project');
+    expect(await bad('/layout/elsewhere/add', { panel: 'habits' })).toContain('today, project or desktop');
     await call('POST', '/layout/today/add', { file: { type: 'note', id: 'missing' } }, { ...m, expect: 404 });
   });
 
@@ -96,6 +96,62 @@ describe('add panel', () => {
     const gone = await tool('remove_panel', { panel: `list-${note.id}` });
     expect(gone.file.on_today).toBe(false);
     expect(await toolError('add_panel', { page: 'project', file_type: 'note', file_id: note.id })).toContain('move_files');
+    await tool('delete_item', { kind: 'lists', id: note.id });
+  });
+});
+
+describe('desktop page (D64)', () => {
+  it('keeps its own panels: a file goes on the Desktop, not on Today', async () => {
+    const m = await freshMode();
+    const note = await call('POST', '/lists', { name: 'Groceries', kind: 'note' }, m);
+    let l = await call('GET', '/layout/desktop', undefined, m);
+    expect(l.panels).toBeNull();
+    expect(l.usual).toEqual(['focus', 'today-list', 'todos']);
+    const out = await call('POST', '/layout/desktop/add', { file: { type: 'note', id: note.id } }, m);
+    expect(out.panel).toBe(`list-${note.id}`);
+    expect((await call('GET', `/lists/${note.id}`, undefined, m)).show_today).toBe(false);
+    l = await call('GET', '/layout/desktop', undefined, m);
+    expect(l.panels).toEqual(['focus', 'today-list', 'todos', `list-${note.id}`]);
+    // Adding again changes nothing; Today's own layout has no panels list.
+    await call('POST', '/layout/desktop/add', { panel: `list-${note.id}` }, m);
+    expect((await call('GET', '/layout/desktop', undefined, m)).panels).toHaveLength(4);
+    expect((await call('GET', '/layout/today', undefined, m)).panels).toBeUndefined();
+    await call('POST', '/layout/desktop/remove', { panel: 'focus' }, m);
+    expect((await call('GET', '/layout/desktop', undefined, m)).panels).toEqual(['today-list', 'todos', `list-${note.id}`]);
+    await call('POST', '/undo', {}, m);
+    expect((await call('GET', '/layout/desktop', undefined, m)).panels).toContain('focus');
+  });
+
+  it('taking a file off Today leaves it on the Desktop', async () => {
+    const m = await freshMode();
+    const list = await call('POST', '/lists', { name: 'Shop', kind: 'todo', show_today: true }, m);
+    await call('POST', '/layout/desktop/add', { file: { type: 'todo', id: list.id } }, m);
+    await call('POST', '/layout/today/remove', { file: { type: 'todo', id: list.id } }, m);
+    expect((await call('GET', '/layout/desktop', undefined, m)).panels).toContain(`list-${list.id}`);
+    await call('POST', '/layout/desktop/remove', { file: { type: 'todo', id: list.id } }, m);
+    expect((await call('GET', '/layout/desktop', undefined, m)).panels).not.toContain(`list-${list.id}`);
+  });
+
+  it('refuses pills on the Desktop', async () => {
+    const m = await freshMode();
+    const err = (await call('POST', '/layout/desktop/add', { panel: 'habits', pill: 'a' }, { ...m, expect: 400 })).error as string;
+    expect(err).toContain('no pills');
+  });
+
+  it('Claude can read and change the Desktop', async () => {
+    const note = await tool('create_list', { name: `Desk note ${Math.random().toString(36).slice(2, 6)}`, kind: 'note' });
+    await tool('set_page_layout', { page: 'desktop', panels: null, grid: null });
+    const out = await tool('add_panel', { page: 'desktop', file_type: 'note', file_id: note.id });
+    expect(out.panel).toBe(`list-${note.id}`);
+    let l = await tool('get_page_layout', { page: 'desktop' });
+    expect(l.panels).toContain(`list-${note.id}`);
+    await tool('set_page_layout', { page: 'desktop', panels: ['habits', `list-${note.id}`] });
+    l = await tool('get_page_layout', { page: 'desktop' });
+    expect(l.panels).toEqual(['habits', `list-${note.id}`]);
+    await tool('remove_panel', { page: 'desktop', panel: 'habits' });
+    expect((await tool('get_page_layout', { page: 'desktop' })).panels).toEqual([`list-${note.id}`]);
+    expect(await toolError('set_page_layout', { page: 'today', panels: [] })).toContain('Only the Desktop');
+    await tool('set_page_layout', { page: 'desktop', panels: null });
     await tool('delete_item', { kind: 'lists', id: note.id });
   });
 });

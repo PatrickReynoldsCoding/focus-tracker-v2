@@ -17,17 +17,18 @@ import { requireFeature } from '../core/features';
 import type { FileSource } from '../core/files';
 import type { Module } from '../core/registry';
 import { setSettingWithUndo } from '../core/store';
+import { DESKTOP_USUAL, FLAG as DESKTOP_FLAG, readDesktopPanels, saveDesktopPanels } from './desktop';
 import { fileSources } from './files';
 import { cleanPills, PANEL_ID, PILL_PANELS_MAX, pillId, readLayout, savePills, type Grid, type Pill } from './layout';
 
 export const FLAG = 'add-panel';
-const PAGES = ['today', 'project'] as const;
+const PAGES = ['today', 'project', 'desktop'] as const;
 type Page = (typeof PAGES)[number];
 
 type Target = { page: Page; panel?: string; file?: { type: string; id: string }; pill?: string; pills?: unknown };
 
 function pageOf(raw: string): Page {
-  if (!(PAGES as readonly string[]).includes(raw)) throw bad('Panels can be added to today or project pages');
+  if (!(PAGES as readonly string[]).includes(raw)) throw bad('Panels can be added to today, project or desktop pages');
   return raw as Page;
 }
 
@@ -63,6 +64,7 @@ async function saveGridUndoable(ctx: Ctx, page: Page, grid: Grid | null) {
 export async function addPanel(ctx: Ctx, t: Target) {
   const page = pageOf(t.page);
   const { panel, file } = await resolve(ctx, t);
+  if (page === 'desktop') return addToDesktop(ctx, t, panel, file);
   const layout = await readLayout(ctx, page);
   if (page === 'project') {
     if (file) throw bad('A file goes on a project by moving it into the project’s folder (Files, or move_files).');
@@ -97,6 +99,7 @@ export async function addPanel(ctx: Ctx, t: Target) {
 export async function removePanel(ctx: Ctx, t: Target) {
   const page = pageOf(t.page);
   const { panel, file } = await resolve(ctx, t);
+  if (page === 'desktop') return removeFromDesktop(ctx, t, panel, file);
   const layout = await readLayout(ctx, page);
   if (file && page === 'today') {
     await file.source.today!.set(ctx, file.id, false);
@@ -114,6 +117,26 @@ export async function removePanel(ctx: Ctx, t: Target) {
   const g = layout.grid ?? { items: {}, removed: [] };
   if (!g.removed.includes(panel)) await saveGridUndoable(ctx, page, { ...g, removed: [...g.removed, panel] });
   return { page, panel };
+}
+
+type Resolved = Awaited<ReturnType<typeof resolve>>['file'];
+const fileOut = (file: Resolved) => (file ? { type: file.source.type, id: file.id } : null);
+
+/** The Desktop keeps its own list (D64): a file goes on it without going on Today. */
+async function addToDesktop(ctx: Ctx, t: Target, panel: string, file: Resolved) {
+  await requireFeature(ctx, DESKTOP_FLAG);
+  if (t.pill) throw bad('The Desktop has no pills');
+  const list = (await readDesktopPanels(ctx)) ?? DESKTOP_USUAL;
+  if (!list.includes(panel)) await saveDesktopPanels(ctx, [...list, panel]);
+  return { page: 'desktop' as const, panel, pill: null, file: fileOut(file) };
+}
+
+async function removeFromDesktop(ctx: Ctx, t: Target, panel: string, file: Resolved) {
+  await requireFeature(ctx, DESKTOP_FLAG);
+  if (t.pill) throw bad('The Desktop has no pills');
+  const list = (await readDesktopPanels(ctx)) ?? DESKTOP_USUAL;
+  if (list.includes(panel)) await saveDesktopPanels(ctx, list.filter((x) => x !== panel));
+  return { page: 'desktop' as const, panel, file: fileOut(file) };
 }
 
 const body = z.object({
@@ -155,7 +178,7 @@ export const addPanelModule: Module = {
     {
       name: 'add_panel',
       description:
-        'Add a panel to Today, to one of Today’s pills (pill: an id from get_today_pills), or back onto project pages. Give a panel id (feature panels such as today-list, habits, plan-week, neglected; see get_today_pills) or a file (file_type and file_id from list_files: a note, list, to-do list, whiteboard or a project’s notes); a file is put on Today. ' +
+        'Add a panel to Today, to one of Today’s pills (pill: an id from get_today_pills), back onto project pages, or to the Desktop page (page "desktop": its own panels, a file put there is not put on Today). Give a panel id (feature panels such as today-list, habits, plan-week, neglected; see get_today_pills) or a file (file_type and file_id from list_files: a note, list, to-do list, whiteboard or a project’s notes); on Today or in a pill a file is put on Today. ' +
         'With no pills saved, a file on Today shows in the usual Notes pill, so leave out pill. A file goes on a project by moving it into the project’s folder (move_files) instead. Can be undone.',
       feature: FLAG,
       input: z.object({
@@ -173,7 +196,7 @@ export const addPanelModule: Module = {
     {
       name: 'remove_panel',
       description:
-        'Take a panel off Today, out of one of Today’s pills, or off project pages. A file (file_type and file_id, or its panel id such as list-<id>, wb-<id>, pnote-<project id>) leaves Today and every pill. Another panel leaves the pill given, else the page (Add panel brings it back). Can be undone.',
+        'Take a panel off Today, out of one of Today’s pills, off project pages, or off the Desktop page (page "desktop": only off the Desktop). On Today a file (file_type and file_id, or its panel id such as list-<id>, wb-<id>, pnote-<project id>) leaves Today and every pill. Another panel leaves the pill given, else the page (Add panel brings it back). Can be undone.',
       feature: FLAG,
       input: z.object({
         page: z.enum(PAGES).default('today'),
