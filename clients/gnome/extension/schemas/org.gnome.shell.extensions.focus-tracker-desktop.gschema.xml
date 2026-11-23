@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.focus-tracker-desktop" path="/org/gnome/shell/extensions/focus-tracker-desktop/">
+    <key name="width" type="i">
+      <range min="240" max="2000"/>
+      <default>600</default>
+      <summary>Width of the window</summary>
+      <description>The Desktop window's width in pixels (logical pixels, as in the display settings). It is never wider than the screen's free area.</description>
+    </key>
+    <key name="open-at-login" type="b">
+      <default>true</default>
+      <summary>Open at login</summary>
+      <description>Open the Focus Tracker Desktop window when you log in, if it is not open.</description>
+    </key>
+    <key name="title" type="s">
+      <default>'Focus Tracker Desktop'</default>
+      <summary>Window title to look for</summary>
+      <description>The exact title of the window to pin (the Desktop page sets it).</description>
+    </key>
+  </schema>
+</schemalist>

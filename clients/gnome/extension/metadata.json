@@ -1,0 +1,9 @@
+{
+  "uuid": "focus-tracker-desktop@focus-tracker",
+  "name": "Focus Tracker Desktop",
+  "description": "Keeps the Focus Tracker Desktop window on the left of the screen, behind other windows, on every workspace, out of the dock, Alt+Tab and the overview; opens it at login.",
+  "shell-version": ["50"],
+  "session-modes": ["user", "unlock-dialog"],
+  "settings-schema": "org.gnome.shell.extensions.focus-tracker-desktop",
+  "url": "https://github.com/PatrickReynoldsCoding/focus-tracker-v2/tree/main/clients/gnome"
+}

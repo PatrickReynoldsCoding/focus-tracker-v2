@@ -329,3 +329,5 @@ My suggestion: 1.
 1. Should the sticky notes float over the Desktop too, so the Sticky notes panel can go on it? Options: (a) no, left out (now); (b) yes, the same notes as Today. My suggestion: (a) until the window is in daily use.
 2. In a narrow Desktop window panels are arranged with a long press (as on a phone). Options: (a) keep it (now); (b) add the wide grid's ⋯ menu to each panel. My suggestion: (a), try it first.
 3. Should the reminder banners show on the Desktop? Options: (a) no (now); (b) yes, at the top. My suggestion: (a).
+4. A link on the Desktop (a project's name, a list's title) opens that page in the Desktop window itself, with the app's usual header and Back. Options: (a) keep it (now; Back or Alt+Left returns); (b) open links in a normal Chrome window and keep the Desktop window on the Desktop page. My suggestion: (b) if it gets in the way.
+
