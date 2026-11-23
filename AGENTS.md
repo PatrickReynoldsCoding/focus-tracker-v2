@@ -5,7 +5,6 @@ Read this file, then `docs/HANDOVER-2026-11-21.md` (latest session: what is depl
 ## Rules carried over from v1
 
 - **Never link or copy sensitive material.** Only link a file the owner named. If it holds bank or card details, passwords, ID or passport numbers, tax references or health records, stop and ask. Never copy a linked file's contents into the tracker or this repository. Never commit real ids, addresses, tokens or the owner's data.
-- **Check that a change is needed now.** This tracker exists to cut procrastination, so building it can become procrastination. When the owner asks for a new feature or tweak, ask once: "Are you sure you need this right now, or is it procrastination?" Fixing a bug that stops them using the tracker is not a new feature: fix it without asking.
 - **Each day starts empty.** Never pick the day's focus project automatically.
 
 ## How the code is organised
