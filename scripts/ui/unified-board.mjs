@@ -16,6 +16,8 @@ import { apiCtx, B, launch, open, OUT } from './lib.mjs';
 mkdirSync(OUT, { recursive: true });
 const browser = await launch();
 const api = await apiCtx(browser);
+// This check is about the older grid (and what is drawn in it): free arranging (D65) is off while it runs.
+await api.put('/features/free-panels', { enabled: false });
 const errors = [];
 const ok = (cond, msg) => {
   if (!cond) throw new Error(`FAILED: ${msg}`);
@@ -359,5 +361,6 @@ for (const theme of ['dark', 'eink']) for (const [v, vp] of [['phone', PHONE], [
 
 for (const id of made.lists) await api.call('DELETE', `/lists/${id}`).catch(() => {});
 for (const id of made.projects) await api.call('DELETE', `/projects/${id}`).catch(() => {});
+await api.put('/features/free-panels', { enabled: true });
 await browser.close();
 ok(errors.length === 0, `no console errors${errors.length ? `: ${errors.join(' | ')}` : ''}`);

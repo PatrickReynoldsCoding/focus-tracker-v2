@@ -12,6 +12,8 @@ import { apiCtx, B, launch, open, OUT } from './lib.mjs';
 mkdirSync(OUT, { recursive: true });
 const browser = await launch();
 const api = await apiCtx(browser);
+// This check is about the older grid (and what is drawn in it): free arranging (D65) is off while it runs.
+await api.put('/features/free-panels', { enabled: false });
 const errors = [];
 const ok = (cond, msg) => {
   if (!cond) throw new Error(`FAILED: ${msg}`);
@@ -217,6 +219,7 @@ await api.call('POST', '/layout/desktop/remove', { panel: 'habits' }).catch(() =
 await api.call('POST', '/layout/desktop/remove', { panel: noteId }).catch(() => {});
 await api.call('DELETE', '/layout/desktop/grid').catch(() => {});
 await api.call('DELETE', `/lists/${note.id}`).catch(() => {});
+await api.put('/features/free-panels', { enabled: true });
 await browser.close();
 if (errors.length) throw new Error(`console errors:\n${errors.join('\n')}`);
 console.log('all desktop checks passed');

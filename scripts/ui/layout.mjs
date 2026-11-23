@@ -11,6 +11,8 @@ mkdirSync(OUT, { recursive: true });
 const only = process.argv[2];
 const browser = await launch();
 const api = await apiCtx(browser);
+// This check is about the older grid (and what is drawn in it): free arranging (D65) is off while it runs.
+await api.put('/features/free-panels', { enabled: false });
 const errors = [];
 const ok = (cond, msg) => {
   if (!cond) throw new Error(`FAILED: ${msg}`);
@@ -807,5 +809,6 @@ async function offlineAndFlags() {
 if (!only || only === 'offline') await offlineAndFlags();
 
 console.log(errors.length ? `console errors:\n${errors.join('\n')}` : 'no console errors');
+await api.put('/features/free-panels', { enabled: true });
 await browser.close();
 if (errors.length) process.exit(1);
