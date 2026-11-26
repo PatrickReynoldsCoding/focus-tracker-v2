@@ -24,9 +24,7 @@ import java.util.concurrent.TimeUnit
  */
 class RefreshWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
     override fun doWork(): Result {
-        TodayWidget.refresh(applicationContext)
-        FilesWidget.refresh(applicationContext)
-        SingleFileWidget.refresh(applicationContext)
+        refreshWidgets(applicationContext)
         notifyNew(applicationContext)
         return Result.success()
     }
@@ -39,6 +37,13 @@ class RefreshWorker(context: Context, params: WorkerParameters) : Worker(context
                 "refresh", ExistingPeriodicWorkPolicy.KEEP,
                 PeriodicWorkRequestBuilder<RefreshWorker>(15, TimeUnit.MINUTES).build(),
             )
+        }
+
+        /** Redraw the Today, Files and Single file widgets, each in its own profile. Blocking: call off the main thread. */
+        fun refreshWidgets(context: Context) {
+            TodayWidget.refresh(context)
+            FilesWidget.refresh(context)
+            SingleFileWidget.refresh(context)
         }
 
         /** Once, as soon as WorkManager can (a session started from a widget: its alarm, within a broadcast's few seconds). */

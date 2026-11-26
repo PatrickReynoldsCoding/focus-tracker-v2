@@ -103,11 +103,7 @@ class MainActivity : Activity() {
         // Changes made in the app show on the widget when you go back to the home screen.
         // Each widget keeps its own profile (D51); the alarm follows the app's profile, as the notifications do.
         val app = applicationContext
-        thread {
-            TodayWidget.refresh(app)
-            FilesWidget.refresh(app)
-            SingleFileWidget.refresh(app)
-        }
+        thread { RefreshWorker.refreshWidgets(app) }
         readProfile { thread { RefreshWorker.scheduleAlarm(app) } }
     }
 

@@ -2,6 +2,7 @@ package com.patrickreynolds.focustracker
 
 import android.app.Activity
 import android.webkit.JavascriptInterface
+import kotlin.concurrent.thread
 
 /**
  * `window.FocusTrackerAndroid` in the web app, present only inside this app. The web app's Settings
@@ -21,6 +22,13 @@ class UpdateBridge(private val activity: Activity) {
     fun install() = activity.runOnUiThread {
         (Updater.state as? Updater.State.Available)?.let { Updater.downloadAndInstall(activity, it.release) }
             ?: (Updater.state as? Updater.State.Failed)?.release?.let { Updater.downloadAndInstall(activity, it) }
+    }
+
+    /** The web app saved a change: redraw the widgets now, not only when the app is left. */
+    @JavascriptInterface
+    fun refreshWidgets() {
+        val app = activity.applicationContext
+        thread { RefreshWorker.refreshWidgets(app) }
     }
 
     /** Open Android's "install unknown apps" page for this app. */

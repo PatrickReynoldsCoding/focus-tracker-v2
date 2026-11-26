@@ -5,6 +5,7 @@
 
 import * as offline from './offline';
 import { signal } from './signal';
+import { widgetsChanged } from './widgets';
 
 export const mode = signal<string>(localStorageGet('ft.mode') ?? 'personal');
 export const signedIn = signal<boolean | null>(null);
@@ -148,6 +149,7 @@ async function write<T>(method: string, path: string, body: unknown, keepalive: 
   }
   offline.cameOnline();
   savingStep(0, !res.ok);
+  if (res.ok) widgetsChanged();
   return answer<T>(res);
 }
 
@@ -264,6 +266,7 @@ offline.hooks.send = (method, path, body, m) => send(method, path, body, m);
 offline.hooks.signedOut = signedOut;
 offline.hooks.done = (sent, problems) => {
   version.value++; // screens load the server's state
+  if (sent) widgetsChanged();
   const n = `${sent} change${sent === 1 ? '' : 's'} sent`;
   if (!problems.length) say(`Back online: ${n}.`);
   else say(`${sent ? `Back online: ${n}. ` : ''}${problems[0]}${problems.length > 1 ? ` (${problems.length - 1} more in Settings → Offline.)` : ''}`, 'error');
