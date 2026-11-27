@@ -13,6 +13,7 @@ import { AddInput, fmtDay, go, Linkify, useData } from '../../core/ui';
 import { buildTodayList, type TodayItem, type TodayList as List } from '../../../../src/core/today-list';
 import { record, type SetHabits } from '../habits/actions';
 import { HabitCards } from '../habits/HabitRow';
+import { HabitGroups } from '../habits/Groups';
 import { NotesMark } from '../habits/HabitName';
 import { openHabit } from '../habits/open';
 import { HabitsPopup } from '../habits/Popup';
@@ -185,6 +186,37 @@ function Section({ label, items, tick, notToday, open, notesOf }: { label: strin
   const labels = useFlag('project-labels');
   const habitsOn = useFlag('habits');
   const [popup, setPopup] = useState(false);
+  const list = (rows: TodayItem[]) => (
+    <ul class="tl-rows">
+      {rows.map((x) => (
+        <li key={x.key} class="tl-row">
+          <button class={`tl-tick ${x.kind === 'habit' ? '' : 'sq'}`} aria-label={x.kind === 'habit' ? `Done a session of ${x.title}` : `Done: ${x.title}`} onClick={() => tick(x)} />
+          <Name x={x} open={open} notes={notesOf(x)} />
+          <span class="tl-meta">
+            {x.planned && <span class="tag">planned</span>}
+            {x.late && (
+              <span class="tag late c-red" title={`For ${fmtDay(x.late)}`}>
+                {fmtDay(x.late)}
+              </span>
+            )}
+            {x.project_id && <ProjectLabel projectId={x.project_id} />}
+            {x.from && !(labels && x.kind === 'card' && x.project_id) && (
+              <span class="tl-from" title={x.from}>
+                {x.from}
+              </span>
+            )}
+            {x.progress}
+            {x.subtasks && <span class="tag" title="Subtasks done">☑ {x.subtasks[0]}/{x.subtasks[1]}</span>}
+          </span>
+          {x.can_skip && (
+            <button class="link small tl-act" aria-label={`Not today: ${x.title}`} onClick={() => notToday(x, true)}>
+              Not today
+            </button>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
   return (
     <div class="tl-sec">
       {label === 'Habits' && habitsOn ? (
@@ -197,35 +229,13 @@ function Section({ label, items, tick, notToday, open, notesOf }: { label: strin
       ) : (
         <div class="tl-label">{label}</div>
       )}
-      <ul class="tl-rows">
-        {items.map((x) => (
-          <li key={x.key} class="tl-row">
-            <button class={`tl-tick ${x.kind === 'habit' ? '' : 'sq'}`} aria-label={x.kind === 'habit' ? `Done a session of ${x.title}` : `Done: ${x.title}`} onClick={() => tick(x)} />
-            <Name x={x} open={open} notes={notesOf(x)} />
-            <span class="tl-meta">
-              {x.planned && <span class="tag">planned</span>}
-              {x.late && (
-                <span class="tag late c-red" title={`For ${fmtDay(x.late)}`}>
-                  {fmtDay(x.late)}
-                </span>
-              )}
-              {x.project_id && <ProjectLabel projectId={x.project_id} />}
-              {x.from && !(labels && x.kind === 'card' && x.project_id) && (
-                <span class="tl-from" title={x.from}>
-                  {x.from}
-                </span>
-              )}
-              {x.progress}
-              {x.subtasks && <span class="tag" title="Subtasks done">☑ {x.subtasks[0]}/{x.subtasks[1]}</span>}
-            </span>
-            {x.can_skip && (
-              <button class="link small tl-act" aria-label={`Not today: ${x.title}`} onClick={() => notToday(x, true)}>
-                Not today
-              </button>
-            )}
-          </li>
-        ))}
-      </ul>
+      {label === 'Habits' ? (
+        <HabitGroups place="today-list" items={items} habitId={(x) => x.id} summary={(group) => `${group.length} left`}>
+          {list}
+        </HabitGroups>
+      ) : (
+        list(items)
+      )}
     </div>
   );
 }

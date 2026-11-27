@@ -756,3 +756,14 @@ Why: a tick on Today from a computer or from Claude left the widgets unticked fo
 
 Limits: OEM battery savers can stop the alarm; the widgets then wait for the fallback. Android 12 with exact alarms switched off uses an inexact alarm (it can be a little late). Doze or app standby can also hold an alarm back, but only while the screen is off.
 
+
+## D70. Habits grouped by category, with headings that fold (owner chose design B from docs/mockups/habit-categories.html, 2026-11-27)
+
+Code: `web/src/features/habits/` (`groups.ts`, `Groups.tsx`, `groups.css`). Tests `test/habit-groups.test.ts`, browser check `scripts/ui/habit-groups.mjs`. Web only: no migration, no server change.
+
+- Every web screen that lists habits groups them under category headings: the Today list, the Habits panels (full and small), the Habits tab and its pop-out, a project page, Plan my week, the this-week strip and Insights. Categories keep their order; No category is last.
+- A tap on a heading folds the group; it keeps its count. Folds are remembered per device, profile and screen (`ft.habit-fold.<profile>.<screen>.<category>`).
+- When no habit in a list has a category, the list has no headings.
+- On the Habits tab ▲▼ move a habit among those of its status and category.
+- No feature flag.
+- Not yet: the Android widget and the SwiftBar menu do not group (SwiftBar cannot fold in place).

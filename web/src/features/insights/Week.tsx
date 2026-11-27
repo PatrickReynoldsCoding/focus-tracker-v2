@@ -1,5 +1,6 @@
 import { useFlag } from '../../core/features';
 import { HabitName } from '../habits/HabitName';
+import { HabitGroups } from '../habits/Groups';
 import { fmtMinutes, Loading } from '../../core/ui';
 import { DayBars, rangeLabel, TargetBar } from './charts';
 import { usePref, useInsights } from './prefs';
@@ -22,6 +23,13 @@ function Tile({ label, value, other, otherLabel }: { label: string; value: strin
 }
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
+/** A group's counted sessions against its target, paused habits left out (as the totals are). */
+function countedOfTarget(habits: WeekSummary['habits']) {
+  const counting = habits.filter((h) => h.status !== 'paused');
+  const sum = (of: (h: WeekSummary['habits'][number]) => number) => counting.reduce((n, h) => n + of(h), 0);
+  return `${sum((h) => h.counted)} of ${sum((h) => h.target)}`;
+}
 
 function habitNote(h: WeekSummary['habits'][number]): string {
   switch (h.status) {
@@ -81,20 +89,24 @@ export function Week() {
         {w.habits.length === 0 ? (
           <p class="muted">No habits this week.</p>
         ) : (
-          <ul class="plain ins-habit-list">
-            {w.habits.map((h) => (
-              <li key={h.id} class="ins-habit-row">
-                <div class="ins-habit-head">
-                  <HabitName id={h.id} name={h.name} class="ins-habit-name">
-                    {h.name}
-                  </HabitName>
-                  <span class="muted small">{h.level}</span>
-                </div>
-                <TargetBar counted={h.counted} over={h.over} target={h.status === 'paused' || h.status === 'partial' ? 0 : h.target} light={h.status === 'open'} />
-                <span class="small ins-habit-note">{habitNote(h)}</span>
-              </li>
-            ))}
-          </ul>
+          <HabitGroups place="insights-week" items={w.habits} habitId={(h) => h.id} summary={countedOfTarget}>
+            {(habits) => (
+              <ul class="plain ins-habit-list">
+                {habits.map((h) => (
+                  <li key={h.id} class="ins-habit-row">
+                    <div class="ins-habit-head">
+                      <HabitName id={h.id} name={h.name} class="ins-habit-name">
+                        {h.name}
+                      </HabitName>
+                      <span class="muted small">{h.level}</span>
+                    </div>
+                    <TargetBar counted={h.counted} over={h.over} target={h.status === 'paused' || h.status === 'partial' ? 0 : h.target} light={h.status === 'open'} />
+                    <span class="small ins-habit-note">{habitNote(h)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </HabitGroups>
         )}
         <p class="ins-legend small muted">
           <i class="sw solid" /> Done <i class="sw hatch" /> Extra above the target <i class="sw tick" /> Target

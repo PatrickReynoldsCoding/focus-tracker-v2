@@ -7,6 +7,7 @@ import { useFlag } from '../../core/features';
 import { record, type SetHabits } from './actions';
 import { HabitCards } from './HabitRow';
 import { HabitName } from './HabitName';
+import { HabitGroups } from './Groups';
 import type { Progress } from './types';
 import '../today-list/today-list.css';
 
@@ -50,16 +51,22 @@ function HabitRowSlim({ h, set }: { h: Progress; set: SetHabits }) {
   );
 }
 
-/** The slim rows, prompts first (also in the small version: a phone shows only that). `prompts: false` leaves them out. */
-export function HabitRows({ habits, set, prompts = true }: { habits: Progress[]; set: SetHabits; prompts?: boolean }) {
+const metCount = (habits: Progress[]) => `${habits.filter(isMet).length}/${habits.length}`;
+
+/** The slim rows grouped by category, prompts first (also in the small version: a phone shows only that). `prompts: false` leaves them out. */
+export function HabitRows({ habits, set, place, prompts = true }: { habits: Progress[]; set: SetHabits; place: string; prompts?: boolean }) {
   return (
     <>
       {prompts && habits.map((h) => <HabitCards key={h.id} h={h} set={set} />)}
-      <ul class="tl-rows hr-rows">
-        {habits.map((h) => (
-          <HabitRowSlim key={h.id} h={h} set={set} />
-        ))}
-      </ul>
+      <HabitGroups place={place} items={habits} habitId={(h) => h.id} summary={metCount}>
+        {(group) => (
+          <ul class="tl-rows hr-rows">
+            {group.map((h) => (
+              <HabitRowSlim key={h.id} h={h} set={set} />
+            ))}
+          </ul>
+        )}
+      </HabitGroups>
     </>
   );
 }

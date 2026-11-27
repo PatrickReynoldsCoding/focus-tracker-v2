@@ -1,6 +1,7 @@
 // A small view of this week for Today and the Habits tab: per day what it is for, planned sessions and
 // to-dos, with the way into Plan my week.
 import { Loading, useData } from '../../core/ui';
+import { HabitGroups } from '../habits/Groups';
 import { leadName } from './PlanWeek';
 import type { Plan } from './types';
 import './plan.css';
@@ -14,7 +15,7 @@ export function WeekStrip({ title }: { title: string }) {
   const today = plan.days.find((d) => d.today);
   const planned = (d: Plan['days'][number]) => d.habits.reduce((n, h) => n + Math.max(0, h.planned - h.done), 0);
   const todayPlanned = today ? today.habits.filter((h) => h.planned > h.done) : [];
-  const names = todayPlanned.map((h) => plan.habits.find((x) => x.id === h.habit_id)?.name).filter(Boolean);
+  const plannedHabits = plan.habits.filter((h) => todayPlanned.some((x) => x.habit_id === h.id));
   // From Saturday, next week is the one to plan.
   const late = today && (today.weekday === 'saturday' || today.weekday === 'sunday');
   return (
@@ -44,7 +45,14 @@ export function WeekStrip({ title }: { title: string }) {
           );
         })}
       </a>
-      {names.length > 0 && <p class="small muted">Planned today: {names.join(', ')}.</p>}
+      {plannedHabits.length > 0 && (
+        <div>
+          <p class="small muted">Planned today:</p>
+          <HabitGroups place="week-strip" items={plannedHabits} habitId={(h) => h.id}>
+            {(habits) => <p class="small muted">{habits.map((h) => h.name).join(', ')}.</p>}
+          </HabitGroups>
+        </div>
+      )}
     </section>
   );
 }

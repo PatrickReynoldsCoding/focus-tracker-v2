@@ -3,6 +3,7 @@ import { record } from './actions';
 import { HabitCards, HabitLine } from './HabitRow';
 import { HabitRows, useRestyle } from './HabitRows';
 import { HabitName } from './HabitName';
+import { HabitGroups } from './Groups';
 import './HabitDialog';
 import type { Progress } from './types';
 import './habits.css';
@@ -10,6 +11,7 @@ import './habits.css';
 type TodayData = { habits: Progress[] };
 
 const metCount = (habits: Progress[]) => `${habits.filter((h) => h.left === 0).length}/${habits.length}`;
+const idOf = (h: Progress) => h.id;
 
 /** The habits on Today: waiting cards first (Accept a new level, step-up prompt), then one slim row
  *  per habit (flag panel-restyle; off: each habit with its dots and day strip). */
@@ -29,7 +31,7 @@ export function HabitPanel({ data, setData }: { data: TodayData; setData: (fn: (
             </a>
           </span>
         </div>
-        <HabitRows habits={data.habits} set={set} />
+        <HabitRows habits={data.habits} set={set} place="panel" />
       </section>
     );
   return (
@@ -43,13 +45,17 @@ export function HabitPanel({ data, setData }: { data: TodayData; setData: (fn: (
       {data.habits.map((h) => (
         <HabitCards key={h.id} h={h} set={set} />
       ))}
-      <ul class="habit-list">
-        {data.habits.map((h) => (
-          <li key={h.id}>
-            <HabitLine h={h} set={set} strip="toggle" />
-          </li>
-        ))}
-      </ul>
+      <HabitGroups place="panel" items={data.habits} habitId={idOf} summary={metCount}>
+        {(habits) => (
+          <ul class="habit-list">
+            {habits.map((h) => (
+              <li key={h.id}>
+                <HabitLine h={h} set={set} strip="toggle" />
+              </li>
+            ))}
+          </ul>
+        )}
+      </HabitGroups>
     </section>
   );
 }
@@ -66,7 +72,7 @@ function HabitsSmall({ data, setData }: { data: TodayData; setData: (fn: (d: Tod
           <h2>Habits</h2>
           <span class="muted">{metCount(data.habits)}</span>
         </div>
-        <HabitRows habits={data.habits} set={set} />
+        <HabitRows habits={data.habits} set={set} place="small" />
       </section>
     );
   return (
@@ -75,21 +81,25 @@ function HabitsSmall({ data, setData }: { data: TodayData; setData: (fn: (d: Tod
         <h2>Habits</h2>
         <span class="muted">{metCount(data.habits)}</span>
       </div>
-      <ul class="plain">
-        {data.habits.map((h) => (
-          <li key={h.id} class="row spread">
-            <span>
-              <HabitName id={h.id} name={h.name} notes={h.notes}>
-                {h.name}
-              </HabitName>{' '}
-              <span class="muted small">{h.left === 0 ? 'done' : `${h.left} left`}</span>
-            </span>
-            <button class="icon small" aria-label={`Done a session of ${h.name}`} onClick={() => record(set, h, h.day, 1)}>
-              +
-            </button>
-          </li>
-        ))}
-      </ul>
+      <HabitGroups place="small" items={data.habits} habitId={idOf} summary={metCount}>
+        {(habits) => (
+          <ul class="plain">
+            {habits.map((h) => (
+              <li key={h.id} class="row spread">
+                <span>
+                  <HabitName id={h.id} name={h.name} notes={h.notes}>
+                    {h.name}
+                  </HabitName>{' '}
+                  <span class="muted small">{h.left === 0 ? 'done' : `${h.left} left`}</span>
+                </span>
+                <button class="icon small" aria-label={`Done a session of ${h.name}`} onClick={() => record(set, h, h.day, 1)}>
+                  +
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </HabitGroups>
     </section>
   );
 }

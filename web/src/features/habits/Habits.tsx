@@ -4,6 +4,7 @@ import { Panels, registerTab, type HabitsSectionProps } from '../../core/registr
 import { AddInput, InlineEdit, Loading, useData } from '../../core/ui';
 import { withDays } from './DayPicker';
 import { HabitDialog } from './HabitDialog';
+import { HabitGroups } from './Groups';
 import { HabitName, NotesMark } from './HabitName';
 import { openHabit } from './open';
 import { HabitCards, HabitLine } from './HabitRow';
@@ -27,9 +28,9 @@ export function Habits({ inDialog }: { inDialog?: boolean } = {}) {
   if (!habits) return <Loading error={error} />;
   const setProg = (fn: (l: Progress[]) => Progress[]) => setProgress(fn);
 
-  /** Move a habit one place up or down among the habits of its group (the order is shared by all groups). */
+  /** Move a habit one place up or down among the habits of its status and category (the order is shared by all of them). */
   const mover = (h: Habit) => {
-    const group = habits.filter((x) => x.status === h.status);
+    const group = habits.filter((x) => x.status === h.status && x.category_id === h.category_id);
     const i = group.findIndex((x) => x.id === h.id);
     const swap = (to: number, body: Record<string, string>) => () =>
       optimistic(
@@ -81,60 +82,64 @@ export function Habits({ inDialog }: { inDialog?: boolean } = {}) {
               {status === 'aspiring' && <span class="muted small">Ideas for later. They never show on Today.</span>}
             </div>
             {status === 'aspiring' && <AddInput placeholder="An idea for a habit…" onAdd={addIdea} />}
-            <ul class="habit-list">
-              {hs.map((h) => {
-                const p = progress?.find((x) => x.id === h.id);
-                const m = mover(h);
-                if (status === 'aspiring')
-                  return (
-                    <li key={h.id} class="idea">
-                      <div class="idea-name">
-                        <span class="row tight">
-                          <InlineEdit value={h.name} placeholder="Name" onSave={(v) => v && change(() => patch(`/habits/${h.id}`, { name: v }))} />
-                          <NotesMark notes={h.notes} />
-                        </span>
-                        {h.intention || h.description ? <span class="muted small">{h.intention ?? h.description}</span> : null}
-                      </div>
-                      <button class="icon small" aria-label={`Move ${h.name} up`} disabled={!m.up} onClick={m.up}>
-                        ▲
-                      </button>
-                      <button class="icon small" aria-label={`Move ${h.name} down`} disabled={!m.down} onClick={m.down}>
-                        ▼
-                      </button>
-                      <button class="small" aria-label={`Notes for ${h.name}`} onClick={() => openHabit(h.id)}>
-                        Notes
-                      </button>
-                      <button class="small" onClick={() => setCreating(h)}>
-                        Start
-                      </button>
-                      <button class="icon small danger" aria-label={`Delete ${h.name}`} onClick={() => change(() => del(`/habits/${h.id}`), 'Idea deleted')}>
-                        ✕
-                      </button>
-                    </li>
-                  );
-                return (
-                  <li key={h.id} class="habit-item">
-                    {status === 'active' && p ? (
-                      <div class="habit-main">
-                        <HabitCards h={p} set={setProg} />
-                        <HabitLine h={p} set={setProg} strip="toggle" />
-                        <span class="muted small">Level {withDays(p.level, p.on_days)}{p.goal ? ` · goal ${p.goal}` : ''}</span>
-                      </div>
-                    ) : (
-                      <div class="habit-main">
-                        <HabitName id={h.id} name={h.name} notes={h.notes}>
-                          <strong>{h.name}</strong>
-                        </HabitName>
-                        <span class="muted small">{withDays([h.sessions ? `${h.sessions} a ${h.per ?? 'day'}` : null, h.size].filter(Boolean).join(', '), h.days) || h.intention}</span>
-                      </div>
-                    )}
-                    <button class="small" aria-label={`Edit ${h.name}`} onClick={() => setEditing(h)}>
-                      Edit
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+            <HabitGroups place={`habits-${status}`} items={hs} habitId={(h) => h.id}>
+              {(inCategory) => (
+                <ul class="habit-list">
+                  {inCategory.map((h) => {
+                    const p = progress?.find((x) => x.id === h.id);
+                    const m = mover(h);
+                    if (status === 'aspiring')
+                      return (
+                        <li key={h.id} class="idea">
+                          <div class="idea-name">
+                            <span class="row tight">
+                              <InlineEdit value={h.name} placeholder="Name" onSave={(v) => v && change(() => patch(`/habits/${h.id}`, { name: v }))} />
+                              <NotesMark notes={h.notes} />
+                            </span>
+                            {h.intention || h.description ? <span class="muted small">{h.intention ?? h.description}</span> : null}
+                          </div>
+                          <button class="icon small" aria-label={`Move ${h.name} up`} disabled={!m.up} onClick={m.up}>
+                            ▲
+                          </button>
+                          <button class="icon small" aria-label={`Move ${h.name} down`} disabled={!m.down} onClick={m.down}>
+                            ▼
+                          </button>
+                          <button class="small" aria-label={`Notes for ${h.name}`} onClick={() => openHabit(h.id)}>
+                            Notes
+                          </button>
+                          <button class="small" onClick={() => setCreating(h)}>
+                            Start
+                          </button>
+                          <button class="icon small danger" aria-label={`Delete ${h.name}`} onClick={() => change(() => del(`/habits/${h.id}`), 'Idea deleted')}>
+                            ✕
+                          </button>
+                        </li>
+                      );
+                    return (
+                      <li key={h.id} class="habit-item">
+                        {status === 'active' && p ? (
+                          <div class="habit-main">
+                            <HabitCards h={p} set={setProg} />
+                            <HabitLine h={p} set={setProg} strip="toggle" />
+                            <span class="muted small">Level {withDays(p.level, p.on_days)}{p.goal ? ` · goal ${p.goal}` : ''}</span>
+                          </div>
+                        ) : (
+                          <div class="habit-main">
+                            <HabitName id={h.id} name={h.name} notes={h.notes}>
+                              <strong>{h.name}</strong>
+                            </HabitName>
+                            <span class="muted small">{withDays([h.sessions ? `${h.sessions} a ${h.per ?? 'day'}` : null, h.size].filter(Boolean).join(', '), h.days) || h.intention}</span>
+                          </div>
+                        )}
+                        <button class="small" aria-label={`Edit ${h.name}`} onClick={() => setEditing(h)}>
+                          Edit
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </HabitGroups>
             {status === 'aspiring' && !hs.length && <p class="muted small">Nothing here yet. Type an idea above and press Enter.</p>}
           </section>
         );

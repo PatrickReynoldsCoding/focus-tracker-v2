@@ -1,0 +1,83 @@
+<title>Habit category grouping</title>
+<style>
+/* layout: one switch on top, then a grid of numbered screens that all follow it */
+:root{--bg:#eef0f4;--card:#fff;--fg:#1b2130;--mute:#626b7e;--line:#dde1ea;--acc:#2f62e0;--accfg:#fff;--red:#c4453c;--green:#247a4b;--blue:#2f62e0;--grey:#7a8294}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12151b;--card:#1c212a;--fg:#e8ebf2;--mute:#99a2b4;--line:#2d3441;--acc:#7da0ff;--accfg:#10131a;--red:#ef8078;--green:#5ccb8e;--blue:#7da0ff;--grey:#939cae;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#12151b;--card:#1c212a;--fg:#e8ebf2;--mute:#99a2b4;--line:#2d3441;--acc:#7da0ff;--accfg:#10131a;--red:#ef8078;--green:#5ccb8e;--blue:#7da0ff;--grey:#939cae;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.4 system-ui,sans-serif;padding-left:16px;padding-right:16px;padding-bottom:32px}
+.wrap{max-width:1100px;margin:0 auto}h1{font-size:20px}
+.switch{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding:8px 0;z-index:2;display:flex;gap:6px;flex-wrap:wrap}
+button{font:inherit;color:inherit;cursor:pointer}
+.switch button{padding:9px 14px;border-radius:99px;border:1px solid var(--line);background:var(--card)}
+.switch button[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:var(--accfg);font-weight:600}
+#why{color:var(--mute);margin:4px 0 16px}
+#screens{columns:3 320px;column-gap:16px}
+.screen{break-inside:avoid;margin-bottom:18px}.screen>h2{font-size:14px;margin:0 0 6px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0}
+.title{display:flex;justify-content:space-between;font-weight:700;font-size:16px;margin-bottom:6px}
+small,.m{color:var(--mute);font-size:12.5px;font-weight:400}
+.sec{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);margin:10px 0 4px}
+.gh{display:flex;align-items:center;gap:8px;width:100%;border:0;background:none;padding:9px 0 3px;font-size:13px;font-weight:700;text-align:left}
+.gh .count{margin-left:auto}
+.dot{width:10px;height:10px;border-radius:3px;background:var(--c);flex:none}
+button.gh{min-height:40px;border-top:1px solid var(--line);padding:6px 0}
+.chev{width:12px;color:var(--mute)}
+.box{border:1px solid var(--line);border-left:4px solid var(--c);border-radius:8px;padding:0 10px 4px;margin-top:8px;background:color-mix(in srgb,var(--c) 7%,transparent)}
+.row{display:flex;align-items:center;gap:10px;padding:7px 0}
+.tick{width:22px;height:22px;border-radius:50%;border:2px solid var(--mute);flex:none;display:grid;place-items:center;font-size:12px}
+.tick.on{background:var(--acc);border-color:var(--acc);color:var(--accfg)}
+.name{flex:1;min-width:0}.done .name{text-decoration:line-through;color:var(--mute)}
+.dots{display:flex;gap:6px;margin-top:4px}.dots i{width:24px;height:24px;border-radius:50%;border:2px solid var(--mute)}.dots i.on{background:var(--acc);border-color:var(--acc)}
+.pill{border:1px solid var(--line);border-radius:99px;padding:4px 10px;font-size:13px;display:inline-block}
+.pills{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0}
+.btn{border:1px solid var(--line);border-radius:8px;padding:2px 9px;font-size:12.5px}
+.bar{height:7px;background:var(--line);border-radius:9px;overflow:hidden;margin-top:4px}.bar i{display:block;height:100%;background:var(--c)}
+.bars{display:flex;align-items:flex-end;gap:5px;height:40px;margin:4px 0 8px}.bars i{flex:1;background:var(--c);border-radius:3px 3px 0 0}
+table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}td,th{padding:5px 4px;border-bottom:1px solid var(--line);text-align:right}td:first-child,th:first-child{text-align:left}
+.mono{font:13px/1.7 ui-monospace,monospace}
+</style>
+<div class="wrap">
+<h1>Habits grouped by category</h1>
+<p class="m">Example habits and categories. One switch changes every screen below.</p>
+<div class="switch" id="switch"></div>
+<p id="why"></p>
+<div id="screens"></div>
+</div>
+<script>
+const CATS=[['Health','green'],['Home','red'],['Learning','blue'],['No category','grey']];
+const H=[['Stretch',0,1,1,'10 min'],['Walk',0,0,2,'20 min'],['Tidy desk',1,0,1,'5 min'],['Water plants',1,1,1,''],['Spanish',2,0,1,'1 lesson'],['Read',2,0,1,'10 pages'],['Call a friend',3,0,1,'']].map(([n,c,d,t,s])=>({n,c,d,t,s}));
+const V={A:['A · Headings','Plain headings. Always open.'],B:['B · Collapsible','Tap a heading to fold it. A folded group still shows its count. Tap them here to try it. In the app, each device would remember what you folded.'],C:['C · Colour boxes','Each category is a tinted box with a colour edge. Always open.']};
+let v='B';
+const shut=new Set(['1:Home','3:Home']);
+const met=h=>h.d>=h.t, count=hs=>hs.filter(met).length+'/'+hs.length;
+function groups(scr,hs,row,extra=count){
+ return CATS.map(([name,col],i)=>{const g=hs.filter(h=>h.c===i);if(!g.length)return'';
+  const head=`<span class="dot"></span><span>${name}</span><span class="count m">${extra(g)}</span>`, st=`style="--c:var(--${col})"`, body=g.map(h=>row(h,col)).join('');
+  if(v==='B'){const k=scr+':'+name,o=!shut.has(k);return `<div ${st}><button class="gh" data-k="${k}" aria-expanded="${o}"><span class="chev">${o?'▾':'▸'}</span>${head}</button>${o?body:''}</div>`}
+  return `<div ${st} class="${v==='C'?'box':''}"><div class="gh">${head}</div>${body}</div>`}).join('')}
+const slim=h=>`<div class="row ${met(h)?'done':''}"><span class="tick ${met(h)?'on':''}">${met(h)?'✓':''}</span><span class="name">${h.n}${h.s?` <small>· ${h.s}</small>`:''}</span><small>${h.d}/${h.t}</small></div>`;
+const full=h=>`<div class="row"><div class="name"><b>${h.n}</b> <small>${h.d} of ${h.t} today</small><div class="dots">${Array.from({length:h.t},(_,i)=>`<i class="${i<h.d?'on':''}"></i>`).join('')}</div></div><span class="btn">Edit</span></div>`;
+const small=h=>`<div class="row"><span class="name">${h.n} <small>${met(h)?'done':h.t-h.d+' left'}</small></span><span class="btn">+</span></div>`;
+const title=(a,b='')=>`<div class="title"><span>${a}</span><small>${b}</small></div>`;
+const S=[
+['Today list',()=>title('Today','6 left')+'<div class="sec">Habits ›</div>'+groups(1,H.filter(h=>!met(h)),slim,g=>g.length+' left')+'<div class="sec">To-dos</div><div class="row"><span class="tick" style="border-radius:6px"></span><span class="name">Post the parcel</span></div>'],
+['Habits panel (Today and Desktop)',()=>title('Habits',count(H)+' · All')+groups(2,H,slim)],
+['Small Habits panel',()=>title('Habits',count(H))+groups(3,H,small)],
+['Habits page and its pop-out',()=>title('Habits','+ New')+'<div class="sec">Active</div>'+groups(4,H,full)+'<div class="sec">Aspiring, Paused, Ended</div><small>Grouped the same way inside each section.</small>'],
+['Project page',()=>title('Habits · Get fitter','All')+groups(5,H.filter(h=>[0,1,6].includes(H.indexOf(h))),slim)],
+['Plan my week: habit picker',()=>title('Habit sessions')+groups(6,H,h=>`<span class="pill" style="margin:2px 4px 2px 0">${h.n} <small>1 of 3</small></span>`,g=>g.length)],
+['Plan my week: one day',()=>title('Monday','Health day')+groups(7,H.slice(0,6),h=>`<div class="row"><span class="name">${h.n}</span><span>${met(h)?'●':'○'}</span><span class="btn">+</span></div>`,g=>g.length)],
+['This week strip (Today and Habits)',()=>title('This week','Plan')+'<small>Planned today</small>'+groups(8,[H[1],H[2],H[4]],h=>`<div class="row">${h.n}</div>`,g=>g.length)],
+['Insights: week',()=>title('Habits against target')+groups(9,H,(h,c)=>`<div class="row"><div class="name">${h.n} <small>${h.d*3+1} of 7</small><div class="bar" style="--c:var(--${c})"><i style="width:${(h.d*3+1)/7*100}%"></i></div></div></div>`,g=>g.reduce((n,h)=>n+h.d*3+1,0)+' of '+g.length*7)],
+['Insights: Habits tab, chart',()=>title('Habits','8 weeks')+groups(10,H,(h,c)=>`<div>${h.n}<div class="bars" style="--c:var(--${c})">${[3,5,4,6,2,5,7,4].map(x=>`<i style="height:${x/7*100}%"></i>`).join('')}</div></div>`,g=>g.length)],
+['Insights: Habits tab, table',()=>title('Habits','Table')+groups(11,H,h=>`<table><tr><td style="width:55%">${h.n}</td><td>4/7</td><td>5/7</td><td>${h.d}/7</td></tr></table>`,g=>g.length)],
+['Android Today widget',()=>title('Today','Focus: Garden')+groups(12,H.filter(h=>!met(h)),h=>`<div class="row"><b>+</b><span class="name">${h.n}</span><small>✕</small></div>`,g=>g.length)],
+['SwiftBar menu (Mac): can’t fold in place; B would need submenus',()=>'<div class="mono">'+groups(13,H.filter(h=>!met(h)),h=>`<div style="padding-left:18px">${h.n} — ${h.t-h.d} left</div>`,g=>g.length)+'</div>']];
+function draw(){
+ switchEl.innerHTML=Object.entries(V).map(([k,[l]])=>`<button data-v="${k}" aria-pressed="${k===v}">${l}</button>`).join('');
+ why.textContent=V[v][1];
+ screens.innerHTML=S.map(([n,f],i)=>`<section class="screen"><h2>${i+1}. ${n}</h2><div class="card">${f()}</div></section>`).join('')}
+const switchEl=document.getElementById('switch'),why=document.getElementById('why'),screens=document.getElementById('screens');
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.v)v=b.dataset.v;else if(b.dataset.k)shut.has(b.dataset.k)?shut.delete(b.dataset.k):shut.add(b.dataset.k);draw()});
+draw();
+</script>

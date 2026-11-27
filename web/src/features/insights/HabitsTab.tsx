@@ -1,5 +1,6 @@
 import { Loading } from '../../core/ui';
 import { HabitName } from '../habits/HabitName';
+import { HabitGroups, HabitTableBodies } from '../habits/Groups';
 import { HabitBars, dayLabel } from './charts';
 import { usePref, useInsights } from './prefs';
 import type { HabitHistory, HabitsData } from './types';
@@ -31,8 +32,12 @@ function Table({ data }: { data: HabitsData }) {
             <th scope="col">On target</th>
           </tr>
         </thead>
-        <tbody>
-          {data.habits.map((h) => (
+        <HabitTableBodies
+          place="insights-table"
+          items={data.habits}
+          habitId={(h) => h.id}
+          columns={data.weeks.length + 2}
+          row={(h) => (
             <tr key={h.id}>
               <th scope="row">
                 <HabitName id={h.id} name={h.name}>
@@ -46,8 +51,8 @@ function Table({ data }: { data: HabitsData }) {
                 {h.on_target_weeks} of {h.counted_weeks}
               </td>
             </tr>
-          ))}
-        </tbody>
+          )}
+        />
       </table>
     </div>
   );
@@ -82,31 +87,35 @@ export function HabitsTab() {
           <p class="ins-legend small muted">
             <i class="sw solid" /> Done <i class="sw hatch" /> Extra above the target <i class="sw tick" /> Target that week
           </p>
-          <div class="ins-grid">
-          {data.habits.map((h) => (
-            <section class="card" key={h.id}>
-              <div class="ins-habit-head">
-                <h2>
-                  <HabitName id={h.id} name={h.name}>
-                    {h.name}
-                  </HabitName>
-                </h2>
-                <span class="muted small">{h.level}</span>
+          <HabitGroups place="insights-chart" items={data.habits} habitId={(h) => h.id}>
+            {(habits) => (
+              <div class="ins-grid">
+              {habits.map((h) => (
+                <section class="card" key={h.id}>
+                  <div class="ins-habit-head">
+                    <h2>
+                      <HabitName id={h.id} name={h.name}>
+                        {h.name}
+                      </HabitName>
+                    </h2>
+                    <span class="muted small">{h.level}</span>
+                  </div>
+                  <p class="ins-ontarget">
+                    {h.counted_weeks === 0 ? (
+                      <span class="muted">No full weeks yet</span>
+                    ) : (
+                      <>
+                        On target <strong>{h.on_target_weeks}</strong> of <strong>{h.counted_weeks}</strong> {h.counted_weeks === 1 ? 'week' : 'weeks'}
+                      </>
+                    )}
+                    {h.status === 'paused' && <span class="tag">Paused</span>}
+                  </p>
+                  <HabitBars weeks={h.weeks} name={h.name} />
+                </section>
+              ))}
               </div>
-              <p class="ins-ontarget">
-                {h.counted_weeks === 0 ? (
-                  <span class="muted">No full weeks yet</span>
-                ) : (
-                  <>
-                    On target <strong>{h.on_target_weeks}</strong> of <strong>{h.counted_weeks}</strong> {h.counted_weeks === 1 ? 'week' : 'weeks'}
-                  </>
-                )}
-                {h.status === 'paused' && <span class="tag">Paused</span>}
-              </p>
-              <HabitBars weeks={h.weeks} name={h.name} />
-            </section>
-          ))}
-          </div>
+            )}
+          </HabitGroups>
           <p class="muted small">Weeks that are not over, that began part-way through or that had a pause are left out of the count.</p>
         </>
       )}

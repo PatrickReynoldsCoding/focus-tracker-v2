@@ -5,6 +5,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { showsOn } from '../../../../src/core/habit-days';
 import { withDays } from '../habits/DayPicker';
 import { HabitName } from '../habits/HabitName';
+import { HabitGroups } from '../habits/Groups';
 import { localStorageSet } from '../../core/api';
 import { useFlag } from '../../core/features';
 import { AddInput, go, Linkify, Loading, useData } from '../../core/ui';
@@ -56,13 +57,19 @@ function HabitPicker({ plan, pick, setPick }: { plan: Plan; pick: string | null;
         <h2>Habit sessions</h2>
         <span class="muted small">Pick a habit, then tap + on a day. Tap a ring to take it off.</span>
       </div>
-      <div class="chips" role="radiogroup" aria-label="Habit to plan">
-        {plan.habits.map((h) => (
-          <button key={h.id} role="radio" aria-checked={h.id === pick} class={`chip plan-chip ${h.id === pick ? 'on' : ''}`} onClick={() => setPick(h.id)}>
-            <strong>{h.name}</strong>
-            <span class={`small ${h.target && h.planned >= h.target ? 'plan-full' : 'muted'}`}>{plannedText(h)}</span>
-          </button>
-        ))}
+      <div role="radiogroup" aria-label="Habit to plan">
+        <HabitGroups place="plan-picker" items={plan.habits} habitId={(h) => h.id}>
+          {(habits) => (
+          <div class="chips">
+            {habits.map((h) => (
+              <button key={h.id} role="radio" aria-checked={h.id === pick} class={`chip plan-chip ${h.id === pick ? 'on' : ''}`} onClick={() => setPick(h.id)}>
+                <strong>{h.name}</strong>
+                <span class={`small ${h.target && h.planned >= h.target ? 'plan-full' : 'muted'}`}>{plannedText(h)}</span>
+              </button>
+            ))}
+          </div>
+          )}
+        </HabitGroups>
       </div>
       {chosen && (
         <p class="muted small">
@@ -77,6 +84,8 @@ function HabitPicker({ plan, pick, setPick }: { plan: Plan; pick: string | null;
     </section>
   );
 }
+
+const hasRow = (d: PlanDay, h: PlanHabit) => d.habits.some((x) => x.habit_id === h.id);
 
 function Rings({ plan, set, d, h }: { plan: Plan; set: SetPlan; d: PlanDay; h: PlanHabit }) {
   const row = d.habits.find((x) => x.habit_id === h.id);
@@ -190,11 +199,15 @@ function DayCard({ plan, set, d, pick, moving, setMoving, findTodo }: { plan: Pl
           Put here
         </button>
       )}
-      <ul class="plan-habs">
-        {plan.habits.map((h) => (
-          <Rings key={h.id} plan={plan} set={set} d={d} h={h} />
-        ))}
-      </ul>
+      <HabitGroups place="plan-day" items={plan.habits.filter((h) => hasRow(d, h))} habitId={(h) => h.id}>
+        {(habits) => (
+          <ul class="plan-habs">
+            {habits.map((h) => (
+              <Rings key={h.id} plan={plan} set={set} d={d} h={h} />
+            ))}
+          </ul>
+        )}
+      </HabitGroups>
       {canPlan && pick && showsOn(pick.days, d.day) && (
         <button class="small plan-add" aria-label={`Plan a session of ${pick.name} on ${longDay(d.day)}`} onClick={() => planSession(set, plan, pick.id, d.day, 1)}>
           + {pick.name}

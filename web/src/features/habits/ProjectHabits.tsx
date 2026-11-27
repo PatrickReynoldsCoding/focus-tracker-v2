@@ -3,6 +3,7 @@ import { registerPanel } from '../../core/registry';
 import { Loading, useData } from '../../core/ui';
 import { HabitLine } from './HabitRow';
 import { HabitRows, useRestyle } from './HabitRows';
+import { HabitGroups } from './Groups';
 import type { Progress } from './types';
 import './habits.css';
 
@@ -22,7 +23,7 @@ function ProjectHabits({ projectId }: { projectId: string }) {
             All
           </a>
         </div>
-        <HabitRows habits={mine} set={set} />
+        <HabitRows habits={mine} set={set} place="project" />
       </section>
     );
   return (
@@ -33,13 +34,17 @@ function ProjectHabits({ projectId }: { projectId: string }) {
           All
         </a>
       </div>
-      <ul class="habit-list">
-        {mine.map((h) => (
-          <li key={h.id}>
-            <HabitLine h={h} set={set} strip="toggle" />
-          </li>
-        ))}
-      </ul>
+      <HabitGroups place="project" items={mine} habitId={(h) => h.id}>
+        {(habits) => (
+          <ul class="habit-list">
+            {habits.map((h) => (
+              <li key={h.id}>
+                <HabitLine h={h} set={set} strip="toggle" />
+              </li>
+            ))}
+          </ul>
+        )}
+      </HabitGroups>
     </section>
   );
 }
