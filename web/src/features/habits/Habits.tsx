@@ -17,7 +17,8 @@ const GROUPS: [string, string][] = [
   ['ended', 'Ended'],
 ];
 
-export function Habits() {
+/** The Habits page. `inDialog`: drawn inside the Today list's pop-out (HabitsPopup), whose title is Habits. */
+export function Habits({ inDialog }: { inDialog?: boolean } = {}) {
   const { data: habits, error, setData: setHabits } = useData<Habit[]>('/habits');
   const { data: progress, setData: setProgress } = useData<Progress[]>('/habits/progress');
   const [creating, setCreating] = useState<Habit | null | undefined>(undefined); // null = new, a habit = start an aspiring one
@@ -62,8 +63,8 @@ export function Habits() {
 
   return (
     <div class="stack habits-page">
-      <div class="page-head row">
-        <h1>Habits</h1>
+      <div class={`page-head row ${inDialog ? 'in-dialog' : ''}`}>
+        {inDialog ? <span /> : <h1>Habits</h1>}
         <button class="primary" onClick={() => setCreating(null)}>
           + New
         </button>

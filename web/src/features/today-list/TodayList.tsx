@@ -15,6 +15,7 @@ import { record, type SetHabits } from '../habits/actions';
 import { HabitCards } from '../habits/HabitRow';
 import { NotesMark } from '../habits/HabitName';
 import { openHabit } from '../habits/open';
+import { HabitsPopup } from '../habits/Popup';
 import type { Progress } from '../habits/types';
 import { CardDialog, type Card, type Column } from '../board';
 
@@ -182,9 +183,20 @@ export function TodayList({ today, setToday }: { today: TodayData; setToday: Tod
 function Section({ label, items, tick, notToday, open, notesOf }: { label: string; items: TodayItem[]; tick: (x: TodayItem) => void; notToday: (x: TodayItem, on: boolean) => void; open: (x: TodayItem) => void; notesOf: (x: TodayItem) => string | null | undefined }) {
   // With project labels a card's project shows as its label, not as plain text too.
   const labels = useFlag('project-labels');
+  const habitsOn = useFlag('habits');
+  const [popup, setPopup] = useState(false);
   return (
     <div class="tl-sec">
-      <div class="tl-label">{label}</div>
+      {label === 'Habits' && habitsOn ? (
+        <>
+          <button class="tl-label tl-label-btn" aria-haspopup="dialog" title="Open the Habits page" onClick={() => setPopup(true)}>
+            {label} <span aria-hidden="true">↗</span>
+          </button>
+          {popup && <HabitsPopup onClose={() => setPopup(false)} />}
+        </>
+      ) : (
+        <div class="tl-label">{label}</div>
+      )}
       <ul class="tl-rows">
         {items.map((x) => (
           <li key={x.key} class="tl-row">
