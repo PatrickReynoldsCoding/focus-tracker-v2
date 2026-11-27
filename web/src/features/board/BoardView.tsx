@@ -8,6 +8,7 @@ import { AddInput, InlineEdit, Linkify, plainPreview } from '../../core/ui';
 import { addCard, addColumn, columnPlace, deleteColumn, moveCard, moveColumn, renameColumn, type BoardCtx } from './actions';
 import { DoneStripLabel } from './done';
 import { useCardDrag } from './drag';
+import { Tick } from './ListView';
 import type { Card, Column } from './model';
 
 /** A column's heading: its name (click to rename), count, ‹ › to reorder and ✕; the Done column has neither. */
@@ -37,6 +38,16 @@ export function ColumnHead({ b, cols, col, count, what, earlier = '‹', later =
   );
 }
 
+/** The tick on an open card: one tap moves it into Done, without opening the card. */
+function QuickDone({ b, c }: { b: BoardCtx; c: Card }) {
+  const stop = (e: Event) => e.stopPropagation();
+  return (
+    <span class="kcard-done" onClick={stop} onKeyDown={stop}>
+      <Tick b={b} c={c} done={false} />
+    </span>
+  );
+}
+
 function CardTile({ b, c, onOpen }: { b: BoardCtx; c: Card; onOpen: (c: Card) => void }) {
   const preview = c.note ? plainPreview(c.note) : '';
   return (
@@ -53,6 +64,7 @@ function CardTile({ b, c, onOpen }: { b: BoardCtx; c: Card; onOpen: (c: Card) =>
         </span>
       )}
       <Panels<CardTileProps> place="card-tile" props={{ card: c }} />
+      {b.done && c.column_id !== b.done.id && <QuickDone b={b} c={c} />}
       <Panels place="card-extra" props={{ card: c, b, view: 'board' }} />
     </li>
   );

@@ -67,7 +67,7 @@ function Group({ b, col, named, drag, onOpen }: { b: BoardCtx; col: Column; name
 /** A plain list's group in a panel (D58): its own box when more than one group has items, else just the rows. */
 function PlainGroup({ b, col, groups, index, named, drag, onOpen }: { b: BoardCtx; col: Column; groups: Column[]; index: number; named: boolean; drag: string; onOpen: (c: Card) => void }) {
   const list = useRef<HTMLUListElement>(null);
-  useCardDrag(list, drag, (id, to, i) => moveCard(b, id, to, i), true, 'a, button, .ll-more');
+  useCardDrag(list, drag, (id, to, i) => moveCard(b, id, to, i), true, 'a, button, .ll-more, .sub-block');
   const rows = (folded: boolean) => (
     <ul class="pi-items ll-items ub-drag" ref={list} data-col={col.id} hidden={folded}>
       {col.cards.map((c) => (

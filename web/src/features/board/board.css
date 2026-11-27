@@ -64,3 +64,5 @@ html[data-theme='eink'] ul.pi-items li { min-height: 44px; }
 .ub-item { flex-wrap: wrap; }
 .kcard { flex-wrap: wrap; }
 .kcard-body { flex: 1 1 0; }
+.kcard-done { flex: none; align-self: center; margin: -10px -6px -10px 0; }
+.kcard-done .ub-tick { margin: 0; }

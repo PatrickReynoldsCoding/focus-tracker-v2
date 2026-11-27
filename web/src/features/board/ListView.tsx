@@ -43,7 +43,7 @@ function Row({ b, c, done, onOpen }: { b: BoardCtx; c: Card; done: boolean; onOp
 /** A plain list's group (D58, mockup B): its own box with a coloured edge, folds, items with a ⋯ menu. */
 function PlainGroup({ b, cols, col, index, group, onOpen }: { b: BoardCtx; cols: Column[]; col: Column; index: number; group: string; onOpen: (c: Card) => void }) {
   const list = useRef<HTMLUListElement>(null);
-  useCardDrag(list, group, (id, to, i) => moveCard(b, id, to, i), true, 'a, button, .ll-more');
+  useCardDrag(list, group, (id, to, i) => moveCard(b, id, to, i), true, 'a, button, .ll-more, .sub-block');
   const groups = openColumns(cols, b.done);
   return (
     <GroupBox col={col} index={index} head={<ColumnHead b={b} cols={cols} col={col} count={col.cards.length} what="items" earlier="↑" later="↓" />}>

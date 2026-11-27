@@ -8,6 +8,7 @@ import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { Menu, MenuItem } from '../../core/menu';
 import { tidyLinks } from '../../core/links';
+import { Panels } from '../../core/registry';
 import { plainPreview } from '../../core/ui';
 import { deleteCard, moveCard, type BoardCtx } from './actions';
 import { justDragged } from './drag';
@@ -104,6 +105,7 @@ export function ListItem({ b, c, groups, onOpen, menu = true, extra }: { b: Boar
         <Chips links={links} />
       </div>
       {extra}
+      {menu && <Panels place="card-extra" props={{ card: c, b, view: 'list' }} />}
       {menu && <ItemMenu b={b} c={c} groups={groups} onOpen={onOpen} />}
     </li>
   );
