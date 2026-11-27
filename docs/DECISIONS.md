@@ -719,3 +719,12 @@ Code: `src/modules/focus-queue.ts` (flag `focus-queue`, "Focus queue", on by def
 - A task ticked done, whichever way (tick, moved into Done, Claude), leaves the queue, so the next one becomes Now. Deleting a task removes it. Both are part of the same undo step.
 - No check-ins.
 - REST: GET/POST /api/focus-queue, DELETE /api/focus-queue/:id, POST /api/focus-queue/:id/move. Claude: `get_focus_queue`, `add_to_focus_queue`, `remove_from_focus_queue`, `move_in_focus_queue`.
+
+Web app (`web/src/features/focus-queue/`, mockup `docs/mockups/focus-queue.html`):
+
+- The focus bar (Today's focus card, and its short phone version) shows only Now (`today.focus_now`): a tick circle (POST /tasks/:id/tick; the server drops it from the queue and the next one shows as Now), its title (a project card opens its project, a to-do its list) and a project label. An empty queue adds nothing: no text, no hint. What is up next is never on the focus bar. The project picker and session controls are unchanged.
+- The focus card has a ⋯ (core/menu) with "Queue" and its count; it opens the Queue page, `#/queue`: the items in order, the first marked Now, drag to reorder (Sortable through `useCardDrag`), a tick, ◎ Now (move to first), ✕ (off the queue, the card stays on its board) and a project label. Empty: "Nothing queued. Add cards from a card’s dialog."
+- Adding is in the card dialog (project cards and to-dos; not a plain list's items, not a card already done): ◎ Focus on this now (`at: 'now'`) and ＋ Add to queue (`at: 'end'`); once queued it says Queued · #n (or Now) with Take off queue. A card whose project is not today's focus project is queued anyway, with a message saying so (no question); nothing is said while no focus is chosen.
+- Board cards and List view rows have a small Now / Queued chip (`card-tile`). The queue is loaded once into a shared signal (again after each change, on a profile change, when the Queue page opens and when Today's Now differs from it), never a request per card.
+- Today's focus card gained two plug-in places for this, `registerPanel('focus', …)` and `registerPanel('focus-head', …)`; the rest is in the feature's folder. Everything is behind the flag.
+- Not built (decided against): Up next on the focus bar, a size limit and its swap warning, check-ins when the timer ends.

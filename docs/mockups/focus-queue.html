@@ -73,129 +73,92 @@ textarea{width:100%;min-height:64px;border:1px solid var(--line);border-radius:9
 .open ol{margin:6px 0 0;padding-left:20px}.open li{margin:6px 0}
 .theme{margin-left:auto}
 </style></head><body>
-<header class="top"><h1>Focus queue (idea C): every place it shows</h1>
+<header class="top"><h1>Focus queue: every place it shows (D67, as built)</h1>
 <button class="btn s theme" onclick="var r=document.documentElement;r.dataset.theme=(r.dataset.theme==='dark'||(!r.dataset.theme&&matchMedia('(prefers-color-scheme: dark)').matches))?'light':'dark'">◐ Light / dark</button></header>
-<p class="n">One card <b>Now</b>, up to 2 <b>Up next</b>. Ticking Now moves the next one up. When the timer ends you're asked how it went. The open questions are at the bottom.</p>
+<p class="n">Cards and to-dos, from any project, in one ordered queue with no size limit. The first is <b>Now</b>, the only one the focus bar shows. Ticking Now takes it off, so the next one becomes Now. All behind the flag <code>focus-queue</code>.</p>
 
-<h2>1 · Computer: Today's focus bar</h2>
+<h2>1 · Today's focus bar</h2>
 <div class="grid">
-<div><p class="lbl">Before starting</p>
+<div><p class="lbl">Something queued</p>
 <div class="card focus">
- <div class="fhead">◎ Focus today · <span class="proj">House renovation</span></div>
- <div class="now"><span class="circle"></span><b><span class="k">Now</span>Ask plasterer for a quote</b><span class="ic" title="Take off">✕</span></div>
- <ul class="q"><li><span class="ic">⠿</span><b>Measure kitchen</b><span class="m">up next</span><span class="ic">✕</span></li><li><span class="ic">⠿</span><b>Order tiles</b><span class="m">then</span><span class="ic">✕</span></li></ul>
- <div class="row" style="margin-top:10px"><button class="btn p">▶ Start 25 min</button><button class="btn g">+ Add a card</button></div>
+ <div class="fhead">◎ Focus today · <span class="proj">House renovation</span><span class="ic" style="margin-left:auto">⋯</span></div>
+ <div class="now"><span class="circle"></span><b><span class="k">Now</span>Ask plasterer for a quote</b><span class="chip n2">House renovation</span></div>
+ <div class="row" style="margin-top:10px"><button class="btn p">▶ Start 25 min</button><button class="btn g">Swap</button></div>
 </div></div>
-<div><p class="lbl">During a session</p>
+<div><p class="lbl">Nothing queued: nothing new</p>
 <div class="card focus">
- <div class="fhead">◎ Focus today · <span class="proj">House renovation</span><span class="timer">18:42</span></div>
- <div class="now"><span class="circle"></span><b><span class="k">Now</span>Ask plasterer for a quote</b></div>
- <ul class="q"><li><b>Measure kitchen</b><span class="m">up next</span></li><li><b>Order tiles</b><span class="m">then</span></li></ul>
- <div class="row" style="margin-top:10px"><button class="btn">⏸ Pause</button><button class="btn g">Stop</button></div>
+ <div class="fhead">◎ Focus today · <span class="proj">House renovation</span><span class="ic" style="margin-left:auto">⋯</span></div>
+ <div class="row" style="margin-top:10px"><button class="btn p">▶ Start 25 min</button><button class="btn g">Swap</button></div>
+</div></div>
+<div><p class="lbl">⋯ on the focus bar</p>
+<div class="card focus">
+ <div class="fhead">◎ Focus today · <span class="proj">House renovation</span><span class="ic" style="margin-left:auto">⋯</span></div>
+ <div class="menu"><div class="hi">☰ Queue <span class="m" style="color:var(--muted)">3</span></div></div>
+</div></div>
+</div>
+<p class="why">Only Now: a tick circle (ticks it done), its title (a project card opens its project, a to-do its list) and a small project label. What is up next is not shown here; it is on the Queue page. The project picker and session controls are unchanged.</p>
+
+<h2>2 · The Queue page (#/queue, from ⋯)</h2>
+<div class="grid">
+<div><p class="lbl">Queue</p>
+<div class="card">
+ <b style="font-size:19px">Queue</b>
+ <ul class="q" style="margin-top:8px">
+  <li style="background:var(--soft);border-radius:9px"><span class="ic">⠿</span><span class="circle"></span><b><span class="k">Now</span>Ask plasterer for a quote <span class="chip n2">House renovation</span></b><span class="ic">✕</span></li>
+  <li><span class="ic">⠿</span><span class="circle"></span><b>Fix the gate <span class="chip n2">Garden shed</span></b><button class="btn s">◎ Now</button><span class="ic">✕</span></li>
+  <li><span class="ic">⠿</span><span class="circle"></span><b>Ring the plumber</b><button class="btn s">◎ Now</button><span class="ic">✕</span></li>
+ </ul>
 </div></div>
 <div><p class="lbl">Nothing queued</p>
-<div class="card focus">
- <div class="fhead">◎ Focus today · <span class="proj">House renovation</span></div>
- <div class="empty" style="margin:10px 0">What's the one thing? Pick from Doing:</div>
- <ul class="q"><li><b>Ask plasterer for a quote</b><button class="btn s">◎ Now</button></li><li><b>Measure kitchen</b><button class="btn s">◎ Now</button></li></ul>
- <div class="row" style="margin-top:10px"><button class="btn p">▶ Start without a card</button></div>
-</div></div>
+<div class="card"><b style="font-size:19px">Queue</b><p class="m" style="color:var(--muted)">Nothing queued. Add cards from a card’s dialog.</p></div></div>
 </div>
-<p class="why">Drag ⠿ to reorder. ✕ takes a card off the queue; it stays on the board. A session can still start with no card.</p>
+<p class="why">Drag ⠿ (on a phone, press and hold) to reorder. ◎ Now moves one first. ✕ takes it off the queue; it stays on its board. The tick ticks it done.</p>
 
-<h2>2 · Computer: putting a card in the queue</h2>
+<h2>3 · Adding: the card dialog</h2>
 <div class="grid">
-<div><p class="lbl">Board: ⋯ on a card</p>
-<div class="cols"><div class="col"><h4>Doing <span>3</span></h4>
- <div class="kc on"><span class="t">Ask plasterer for a quote</span><span class="chip">◎ Now</span></div>
- <div class="kc"><span class="t">Measure kitchen</span><span class="chip n2">Next</span></div>
- <div class="kc"><span class="t">Book skip</span><span class="ic">⋯</span></div>
- <div class="menu"><div class="hi">◎ Focus on this now</div><div>＋ Add to up next</div><div class="dim">Open</div><div class="dim">Move to…</div></div>
-</div><div class="col"><h4>To do <span>2</span></h4><div class="kc"><span class="t">Order tiles</span><span class="chip n2">Then</span></div><div class="kc"><span class="t">Paint hall</span></div></div></div>
-</div>
-<div><p class="lbl">Card dialog</p>
+<div><p class="lbl">Not queued</p>
 <div class="card">
  <div class="row" style="justify-content:space-between"><b style="font-size:17px">Book skip</b><span class="ic">✕</span></div>
- <div class="row" style="margin:10px 0"><button class="btn p">◎ Focus on this now</button><button class="btn">＋ Up next</button></div>
- <p class="lbl">Status</p><div class="row"><span class="chip n2">Doing</span></div>
- <p class="lbl" style="margin-top:10px">Day</p><div class="row"><button class="btn s">Today</button><button class="btn s">Tomorrow</button></div>
+ <div class="row" style="margin:10px 0"><button class="btn p">◎ Focus on this now</button><button class="btn">＋ Add to queue</button></div>
+ <p class="lbl">Note, colour, day, status…</p>
 </div></div>
-<div><p class="lbl">Queue full (3 cards)</p>
-<div class="warn"><b>The queue holds 3.</b> Swap "Order tiles" (last) for "Book skip"?
- <div class="row" style="margin-top:8px"><button class="btn p">Swap</button><button class="btn g">Cancel</button></div></div>
-<p class="lbl" style="margin-top:14px">Card from another project</p>
-<div class="warn"><b>"Fix gate" is in Garden shed.</b> Today's focus is House renovation.
- <div class="row" style="margin-top:8px"><button class="btn p">Add anyway</button><button class="btn">Switch focus to Garden shed</button></div></div>
+<div><p class="lbl">Queued</p>
+<div class="card">
+ <div class="row" style="justify-content:space-between"><b style="font-size:17px">Book skip</b><span class="ic">✕</span></div>
+ <div class="row" style="margin:10px 0"><span class="chip n2">Queued · #3</span><button class="btn g s">Take off queue</button></div>
+ <p class="lbl">(the first one says Now)</p>
 </div></div>
-<p class="why">Cards in the queue show a small Now / Next / Then label everywhere: board, list view, Today list.</p>
+<div><p class="lbl">A card from another project: a message, not a question</p>
+<div class="corner" style="border-radius:10px;padding:10px 14px">Queued · #2. It is not in today’s focus project (House renovation). &nbsp;<b>Undo</b></div>
+</div></div>
+<p class="why">Project cards and to-dos (both use the card dialog); not a plain list's items. A card done is not offered.</p>
 
-<h2>3 · When the timer ends</h2>
-<div class="grid">
-<div><p class="lbl">Computer</p>
-<div class="card"><b>Time's up. How did "Ask plasterer for a quote" go?</b>
- <div class="row" style="margin-top:10px"><button class="btn p">✓ Done, next: Measure kitchen</button></div>
- <div class="row" style="margin-top:8px"><button class="btn">Keep going 25 min</button><button class="btn">Break</button><button class="btn g">Stuck…</button></div>
-</div></div>
-<div><p class="lbl">Stuck…</p>
-<div class="card"><b>What's in the way?</b>
- <textarea>Waiting for plasterer to call back</textarea>
- <div class="row"><button class="btn p">Move it to the back</button><button class="btn">Split into subtasks</button><button class="btn g">Just save note</button></div>
- <p class="why" style="margin-top:8px">The note goes on the card and in the session log.</p>
-</div></div>
-<div><p class="lbl">Queue now empty</p>
-<div class="card focus"><b>✓ Queue done.</b> 3 cards finished today.
- <div class="row" style="margin-top:10px"><button class="btn p">Pick the next one</button><button class="btn">Stop for now</button></div></div>
-</div></div>
+<h2>4 · Chips on cards</h2>
+<div class="cols" style="max-width:520px"><div class="col"><h4>Doing <span>3</span></h4>
+ <div class="kc"><span class="t">Ask plasterer for a quote</span><span class="chip">◎ Now</span></div>
+ <div class="kc"><span class="t">Book skip</span><span class="chip n2">Queued</span></div>
+ <div class="kc"><span class="t">Measure kitchen</span></div>
+</div><div class="col"><h4>To do <span>2</span></h4><div class="kc"><span class="t">Order tiles</span></div><div class="kc"><span class="t">Paint hall</span></div></div></div>
+<p class="why">On board cards and in List view rows (a project's or a to-do's).</p>
 
-<h2>4 · Phone</h2>
+<h2>5 · Phone</h2>
 <div class="grid">
-<div><p class="lbl">Today, during a session</p>
+<div><p class="lbl">Today</p>
 <div class="phone"><div class="scr"><div class="status"><span>10:42</span><span>▮▮▮ 82%</span></div>
 <div class="body">
- <div class="mini"><div class="r"><span class="circle"></span><b>Ask plasterer for a quote</b><span class="timer" style="font-size:17px">18:42</span></div>
- <div class="r" style="margin-top:6px;color:var(--muted);font-size:13px">▸ 2 up next · House renovation<span style="margin-left:auto">⏸</span></div></div>
- <div class="card" style="padding:10px"><p class="lbl">Today</p><ul class="q"><li><span class="circle" style="width:18px;height:18px"></span><b>Stretch</b><span class="m">habit</span></li><li><span class="circle" style="width:18px;height:18px"></span><b>Ask plasterer for a quote</b><span class="chip">◎ Now</span></li><li><span class="circle" style="width:18px;height:18px"></span><b>Reply to landlord</b></li></ul></div>
+ <div class="mini"><div class="r"><span style="color:var(--muted);font-size:13px">Focus ·</span><b>House renovation</b><span class="ic">⋯</span><button class="btn s">More</button></div>
+ <div class="now"><span class="circle"></span><b><span class="k">Now</span>Ask plasterer for a quote</b></div>
+ <div class="r"><button class="btn p s">▶ Start session</button></div></div>
+ <div class="card" style="padding:10px"><p class="lbl">Today</p><ul class="q"><li><span class="circle" style="width:18px;height:18px"></span><b>Stretch</b><span class="m">habit</span></li><li><span class="circle" style="width:18px;height:18px"></span><b>Reply to landlord</b></li></ul></div>
 </div>
-<div class="bar"><span class="on">◎<i class="badge">3</i>Today</span><span>▤Projects</span><span>❑Files</span><span>✓Habits</span><span>⋯More</span></div></div></div>
+<div class="bar"><span class="on">◎Today</span><span>▤Projects</span><span>❑Files</span><span>✓Habits</span><span>⋯More</span></div></div></div>
 </div>
-<div><p class="lbl">Long press a card</p>
+<div><p class="lbl">Queue</p>
 <div class="phone"><div class="scr"><div class="status"><span>10:43</span><span>▮▮▮ 82%</span></div>
-<div class="body"><div class="cols"><div class="col"><h4>Doing</h4><div class="kc on"><span class="t">Ask plasterer</span></div><div class="kc"><span class="t">Book skip</span></div></div><div class="col"><h4>To do</h4><div class="kc"><span class="t">Order tiles</span></div></div></div></div>
-<div class="sheet"><div class="in"><div class="grab"></div><b>Book skip</b>
- <div class="opt">◎<span>Focus on this now<small>"Ask plasterer" moves to up next</small></span></div>
- <div class="opt">＋<span>Add to up next<small>2 of 3 places used</small></span></div>
- <div class="opt">✎<span>Open</span></div></div></div></div></div>
-</div>
-<div><p class="lbl">Timer ends, phone locked</p>
-<div class="phone"><div class="scr lock"><div class="time">10:59</div>
- <div class="notif" style="color:var(--fg)"><div class="app">◎ Focus Tracker · now</div><b>Time's up: Ask plasterer for a quote</b><div style="color:var(--muted)">How did it go?</div>
- <div class="acts"><span>✓ DONE, NEXT</span><span>+25 MIN</span><span>STUCK</span></div></div></div></div>
+<div class="body"><b style="font-size:19px">Queue</b>
+ <ul class="q"><li style="background:var(--soft);border-radius:9px"><span class="ic">⠿</span><span class="circle"></span><b><span class="k">Now</span>Ask plasterer</b><span class="ic">✕</span></li>
+ <li><span class="ic">⠿</span><span class="circle"></span><b>Fix the gate</b><button class="btn s">◎ Now</button><span class="ic">✕</span></li></ul></div>
+<div class="bar"><span class="on">◎Today</span><span>▤Projects</span><span>❑Files</span><span>✓Habits</span><span>⋯More</span></div></div></div>
 </div></div>
-<p class="why">On a phone the focus bar is one line: tap ▸ to see the queue. Long press keeps working for dragging, so the sheet opens on a long press without movement.</p>
-
-<h2>5 · Small places</h2>
-<div class="grid">
-<div><p class="lbl">Desktop widget (GNOME)</p>
-<div class="widget"><div class="row"><span class="circle"></span><b style="flex:1">Ask plasterer for a quote</b><b style="font-variant-numeric:tabular-nums">18:42</b></div>
-<div style="color:var(--muted);font-size:13px;margin-top:4px">Next: Measure kitchen · Order tiles</div></div></div>
-<div><p class="lbl">Corner timer on other tabs</p>
-<span class="corner">◎ 18:42 · Ask plasterer for a quote ⏸</span></div>
-<div><p class="lbl">Collapsed sidebar</p>
-<div class="side"><nav><span style="position:relative">◎<i class="badge">3</i></span><span>▤</span><span>❑</span></nav><div class="main"><span class="corner">◎ 18:42 · Ask plasterer…</span><span style="color:var(--muted);font-size:13px">(any page)</span></div></div></div>
-</div>
-
-<h2>6 · Afterwards: session log</h2>
-<div class="card" style="max-width:560px"><p class="lbl">House renovation · Sessions</p>
-<ul class="q log">
- <li><b>Thu 27 Nov · 50 min</b><span class="m">✓ Ask plasterer for a quote · ✓ Measure kitchen</span></li>
- <li><b>Wed 26 Nov · 25 min</b><span class="m">⚠ Order tiles: stuck, "waiting for samples"</span></li>
-</ul></div>
-
-<h2>Open questions</h2>
-<div class="open"><ol>
- <li><b>Other projects:</b> can the queue mix cards from different projects (my default: yes, with the warning above)?</li>
- <li><b>Queue size:</b> 3 cards (Now + 2)?</li>
- <li><b>Check-in:</b> every time the timer ends, or only when a session stops?</li>
- <li><b>To-dos:</b> to-dos from to-do lists can join the queue too, not only project cards?</li>
-</ol></div>
+<p class="why">Every button is a 44 px target; nothing scrolls sideways at 390 px. E-ink draws Now and the chips with a black outline.</p>
 </body></html>

@@ -1,0 +1,54 @@
+/* The focus queue (D67): the Now card on Today's focus card, its ⋯, the Queue page, the card dialog's part, the chip. */
+
+/* The focus card's heading keeps the date and the ⋯ together at the right. */
+.card.focus > .card-head:has(.fq-menu-btn) { align-items: center; }
+.card.focus > .card-head:has(.fq-menu-btn) > :first-child { margin-right: auto; }
+.fq-menu-btn { font-size: 1.1rem; }
+
+/* Now on the focus bar */
+.fq-now { display: flex; align-items: center; gap: 6px; margin: 10px 0 6px; padding: 2px 10px 2px 2px; border-radius: 10px; background: var(--accent-soft); min-width: 0; }
+.fq-now-body { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 6px 0; }
+.fq-k { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+.fq-now-title { font-weight: 600; color: var(--fg); overflow-wrap: anywhere; }
+.fq-now .project-label { flex: none; max-width: 40%; }
+.card.focus.compact .fq-now { margin: 8px 0 4px; }
+
+/* The tick circle */
+.fq-tick { flex: none; width: 44px; height: 44px; min-height: 44px; padding: 0; border: 0; background: transparent; display: grid; place-items: center; cursor: pointer; }
+.fq-circle { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--muted); background: var(--surface); }
+.fq-tick:hover .fq-circle { border-color: var(--accent); }
+
+/* The Queue page */
+.fq-page { max-width: 760px; }
+.fq-empty { margin: 0; }
+.fq-list { list-style: none; margin: 0; padding: 0; }
+.fq-item { display: flex; align-items: center; gap: 4px; min-height: 52px; border-top: 1px solid var(--line); touch-action: manipulation; user-select: none; -webkit-user-select: none; background: var(--surface); }
+.fq-item:first-child { border-top: 0; }
+.fq-item.now { background: var(--accent-soft); border-radius: 10px; }
+.fq-grip { flex: none; width: 18px; text-align: center; color: var(--muted); cursor: grab; }
+.fq-body { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; row-gap: 2px; padding: 6px 0; }
+.fq-body .fq-k { flex: 1 0 100%; }
+.fq-title { min-width: 0; overflow-wrap: anywhere; cursor: pointer; color: var(--fg); }
+@media (hover: hover) { .fq-title:hover { text-decoration: underline; } }
+.fq-body .project-label { max-width: 100%; }
+.fq-item button.fq-now-btn { flex: none; white-space: nowrap; min-height: 44px; }
+.fq-item button.fq-x { flex: none; min-width: 44px; min-height: 44px; }
+.fq-count { color: var(--muted); margin-left: 6px; }
+
+/* The card dialog's part and the chip */
+.fq-section { gap: 8px; }
+.fq-mark { font-weight: 700; }
+.fq-mark.now { background: var(--accent-soft); color: var(--accent); }
+
+@media (max-width: 699px) {
+  button.icon.small.fq-menu-btn { min-width: 44px; min-height: 44px; }
+  .fq-section button.small { min-height: 44px; }
+}
+
+/* E-ink: no tints, so Now is a black outline; the chip an outline too. */
+html[data-theme='eink'] .fq-now,
+html[data-theme='eink'] .fq-item.now { border: 3px solid var(--fg); }
+html[data-theme='eink'] .fq-circle { border-width: 3px; border-color: var(--fg); }
+html[data-theme='eink'] .fq-mark { border: 2px solid var(--fg); color: var(--fg); background: var(--surface); }
+html[data-theme='eink'] .fq-mark.now { border-width: 3px; }
+html[data-theme='eink'] .fq-k { color: var(--fg); }
