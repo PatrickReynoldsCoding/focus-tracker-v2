@@ -14,7 +14,8 @@ import type { Module } from '../core/registry';
 import { leadOn, loadRotation, setWeekChanges, weekdayOf, type Rotation } from '../core/rotation';
 import { create, get, list, remove, update } from '../core/store';
 import { categoriesEntity } from './basics';
-import { AWAY_FLAG, HABITS_FLAG, habitLogEntity, habitsEntity, levelForDay, levelHistory } from './habits';
+import { formatDays } from '../core/habit-days';
+import { AWAY_FLAG, habitOn, HABITS_FLAG, habitLogEntity, habitsEntity, levelForDay, levelHistory } from './habits';
 import { listsEntity } from './lists';
 import { readTodos, updateTodo } from './todos';
 
@@ -86,9 +87,10 @@ export async function weekPlan(ctx: Ctx, which: Which = 'this') {
     let leftOut = 0;
     if (level.per === 'week') target = level.sessions ?? 0;
     else {
-      // A daily habit's week: each day from its start, less away days while the flag is on.
-      const asked = days.filter((d) => d >= started && !(awayOn && awayDays.includes(d)));
-      leftOut = awayOn ? days.filter((d) => d >= started && awayDays.includes(d)).length : 0;
+      // A daily habit's week: each of its weekdays (D68) from its start, less away days while the flag is on.
+      const mine = days.filter((d) => d >= started && habitOn(h, d));
+      const asked = mine.filter((d) => !(awayOn && awayDays.includes(d)));
+      leftOut = awayOn ? mine.filter((d) => awayDays.includes(d)).length : 0;
       target = asked.length * (level.sessions ?? 0);
     }
     const planned = sum(days.map((d) => countOf(h.id, 'plan', d)));
@@ -99,6 +101,8 @@ export async function weekPlan(ctx: Ctx, which: Which = 'this') {
       per: level.per,
       sessions: level.sessions,
       level: formatLevel(level),
+      /** The weekdays it can be planned on ("tue,thu"), null = any day (D68). */
+      days: (h.days as string | null) || null,
       /** Sessions the week asks for. */
       target,
       planned,
@@ -138,6 +142,8 @@ export async function planSession(ctx: Ctx, habitId: string, day: string, opts: 
   const next = opts.count != null ? opts.count : now + (opts.add ?? 1);
   if (!Number.isInteger(next)) throw bad('count must be a whole number');
   const count = Math.max(0, Math.min(MAX_PLANNED, next));
+  // Only on the habit's own weekdays (D68); taking a plan off another day is still allowed.
+  if (count > now && !habitOn(h, day)) throw bad(`${h.name} is only on ${formatDays(h.days as string | null)}, so it cannot be planned on ${day}`);
   if (count === 0) {
     if (existing) await remove(ctx, habitLogEntity, existing.id);
   } else if (existing) await update(ctx, habitLogEntity, existing.id, { count });
@@ -208,7 +214,7 @@ export const planModule: Module = {
     },
     {
       name: 'plan_habit_session',
-      description: 'Plan sessions of an active habit on a day from today to next Sunday (adds `count`, default 1). A plan is only a plan: a session done on another day of the week still counts.',
+      description: 'Plan sessions of an active habit on a day from today to next Sunday (adds `count`, default 1); a habit with `days` can only be planned on those weekdays. A plan is only a plan: a session done on another day of the week still counts.',
       feature: [PLAN_FLAG, HABITS_FLAG],
       input: z.object({ habit_id: z.string(), day: z.string(), count: z.number().int().min(1).max(MAX_PLANNED).default(1) }),
       run: (ctx, a) => planSession(ctx, a.habit_id, a.day, { add: a.count }),

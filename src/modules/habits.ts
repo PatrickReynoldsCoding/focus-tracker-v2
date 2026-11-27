@@ -20,6 +20,7 @@ import type { Module } from '../core/registry';
 import { create, get, list, remove, removeWhere, update } from '../core/store';
 import { awayLookup, mondayOf } from '../core/rotation';
 import { formatLevel, levelFromRow, nextSteps, parseEvery, parseLevel, weekTarget, type Level, type Step } from '../core/habit-levels';
+import { normaliseDays, showsOn } from '../core/habit-days';
 
 export const HABIT_STATUS = ['active', 'paused', 'ended', 'aspiring'] as const;
 /** The whole Habits feature: tab, panels, Today list, notifications, Insights and Plan my week parts, routes and Claude's tools. Data stays while off. */
@@ -58,11 +59,16 @@ export const habitsEntity: Entity = {
     project_id: { type: 'text', ref: 'projects', desc: 'The one project this habit belongs to (empty: none). The habit then also shows on that project’s page.' },
     description: { type: 'markdown', desc: 'The why and any anchor: "after coffee"' },
     notes: { type: 'markdown', desc: 'The habit’s notes: anything useful for doing it (Markdown). Shown at the top of the habit’s dialog in the app.' },
+    days: {
+      type: 'text',
+      desc: 'The weekdays the habit shows on Today, comma-separated: "tue,thu" (mon tue wed thu fri sat sun). Empty = every day. A weekly habit keeps its target; a daily one only asks on these days.',
+    },
     status: { type: 'text', enum: HABIT_STATUS, default: 'active' },
     started: { type: 'day' },
     next_prompt: { type: 'time', desc: 'When the next step-up prompt falls due (the app sets it)' },
   },
   async beforeCreate(ctx, row) {
+    if ('days' in row) row.days = daysInput(row.days);
     const today = await ctx.today();
     if (row.status === 'active') row.started ??= today;
     if (row.status !== 'aspiring') await setPromptDue(ctx, row, today);
@@ -74,6 +80,7 @@ export const habitsEntity: Entity = {
     await writeLevel(ctx, row.id, periodStart(level.per, String(row.started ?? (await ctx.today()))), level);
   },
   async beforeUpdate(ctx, before, patch) {
+    if ('days' in patch) patch.days = daysInput(patch.days);
     const today = await ctx.today();
     const after = { ...before, ...patch } as Record<string, unknown>;
     const wasStatus = before.status as string;
@@ -122,6 +129,27 @@ export const habitLogEntity: Entity = {
 };
 
 // ---------- dates and small helpers ----------
+
+/** The days field as stored ("tue,thu", or null for every day); a word that is not a weekday is refused. */
+function daysInput(value: unknown): string | null {
+  try {
+    return normaliseDays(value);
+  } catch (err) {
+    throw bad((err as Error).message);
+  }
+}
+
+/** Does this habit show on `day`? (Its `days`, D68: null = every day.) */
+export const habitOn = (h: Row, day: string): boolean => showsOn(h.days as string | null, day);
+
+/**
+ * The days a daily habit asks nothing: away days (flag away-lowers-targets) and the weekdays the habit
+ * does not show on (D68). Undefined when neither applies, so callers keep their fast path.
+ */
+export function restDays(h: Row, away?: (day: string) => boolean): ((day: string) => boolean) | undefined {
+  if (!h.days) return away;
+  return (day) => !habitOn(h, day) || !!away?.(day);
+}
 
 /** Monday of the week that holds `day` (kept here too for the modules that import it from habits). */
 export { mondayOf };
@@ -353,12 +381,16 @@ export interface HabitProgress {
   small_version: string | null;
   /** The habit's notes (Markdown), null when it has none. */
   notes: string | null;
+  /** The weekdays it shows on ("tue,thu"), null = every day (D68). */
+  on_days: string | null;
+  /** This day is not one of them: it is left off Today, and a daily habit asks nothing (left 0). */
+  off_day: boolean;
   /** The level that applies to this period, as text: "3 a week, 30 min". */
   level: string;
   size: string | null;
   goal: string | null;
   /** The days the dots can be tapped on: this week (weekly habits) or the last 7 days (daily ones). planned: sessions planned that day (Plan my week). */
-  days: { day: string; count: number; future: boolean; planned: number }[];
+  days: { day: string; count: number; future: boolean; planned: number; off: boolean }[];
   /** Sessions planned for this day in Plan my week. */
   planned_today: number;
   /** Sessions planned on the days after this one, to the end of the week (Monday to Sunday). */
@@ -398,10 +430,13 @@ export async function habitProgress(ctx: Ctx, day?: string): Promise<HabitProgre
     const period = per === 'week' ? doneOn(() => true) : doneToday;
     const target = level.sessions;
     const skipped = mine.some((l) => l.kind === 'skip' && l.day === asOf);
+    const offDay = !habitOn(h, asOf);
+    // A daily habit asks nothing on a day it does not show on; a weekly one keeps its target (D68).
+    const asksNothing = skipped || (offDay && per !== 'week');
     const first = per === 'week' ? monday : stripFrom;
     const days = Array.from({ length: 7 }, (_, i) => {
       const d = addDays(first, i);
-      return { day: d, count: doneOn((x) => x === d), future: d > real, planned: plannedOn((x) => x === d) };
+      return { day: d, count: doneOn((x) => x === d), future: d > real, planned: plannedOn((x) => x === d), off: !habitOn(h, d) };
     });
     const pend = meta.find((m) => m.habit_id === h.id && m.kind === 'pending');
     const su = stepUps.get(h.id as string) ?? null;
@@ -415,9 +450,11 @@ export async function habitProgress(ctx: Ctx, day?: string): Promise<HabitProgre
       done_today: doneToday,
       done_this_period: period,
       skipped_today: skipped,
-      left: target == null || skipped ? 0 : Math.max(0, target - period),
+      left: target == null || asksNothing ? 0 : Math.max(0, target - period),
       small_version: (h.small_version as string | null) ?? null,
       notes: (h.notes as string | null) || null,
+      on_days: (h.days as string | null) || null,
+      off_day: offDay,
       level: formatLevel(level),
       size: level.size == null ? null : formatLevel({ ...level, sessions: null }),
       goal: (h.goal as string | null) ?? null,
@@ -456,10 +493,10 @@ async function stepUpsFor(ctx: Ctx, habits: Row[], meta: Row[], today: string): 
     if (!askStop && (waiting || !due || cardGiven)) continue;
     const since = history.length ? history[history.length - 1].day : String(h.started ?? h.created).slice(0, 10);
     const weeks = fullWeeks(since, today, pauseIntervals(meta.filter((m) => m.habit_id === h.id), today));
-    let met: WeeksMet = weeksMet(level, weeks, [], away);
+    let met: WeeksMet = weeksMet(level, weeks, [], restDays(h, away));
     if (weeks.length) {
       const done = await list(ctx, habitLogEntity, { where: { habit_id: h.id, kind: 'done' }, sql: 'day >= ? AND day <= ?', params: [weeks[0], addDays(weeks[weeks.length - 1], 6)], limit: 2000 });
-      met = weeksMet(level, weeks, done, away);
+      met = weeksMet(level, weeks, done, restDays(h, away));
     }
     if (!askStop && !isMet(met)) continue;
     out.set(h.id, {
@@ -569,7 +606,7 @@ export async function stepUpReview(ctx: Ctx) {
     const opts = stepOptions(h, level);
     const since = history.length ? history[history.length - 1].day : String(h.started ?? h.created).slice(0, 10);
     const weeks = fullWeeks(since, today, pauseIntervals(meta.filter((m) => m.habit_id === h.id), today));
-    const met = weeksMet(level, weeks, done.filter((d) => d.habit_id === h.id), away);
+    const met = weeksMet(level, weeks, done.filter((d) => d.habit_id === h.id), restDays(h, away));
     const pend = meta.find((m) => m.habit_id === h.id && m.kind === 'pending');
     return {
       id: h.id,
@@ -659,7 +696,8 @@ export const habitsModule: Module = {
       name: 'habit_progress',
       description:
         'Active habits with sessions done today / this week, how many are left, the level that applies now, the last 7 days (or the week), ' +
-        'a waiting level change (pending), a step-up prompt that is due (step_up, with options) and the habit’s notes (Markdown; change them with update_item, field notes).',
+        'a waiting level change (pending), a step-up prompt that is due (step_up, with options), the habit’s notes (Markdown; change them with update_item, field notes) ' +
+        'and its weekdays (on_days, e.g. "tue,thu"; off_day true when this day is not one of them, so it is not on Today; set them with update_item, field days).',
       readOnly: true,
       feature: HABITS_FLAG,
       input: z.object({ day: z.string().optional() }),
@@ -718,4 +756,9 @@ export const habitsModule: Module = {
 /** Habits for the Today list, counts, menu bar, widgets and notifications: none while the Habits feature is off. */
 export async function habitProgressIfOn(ctx: Ctx, day?: string): ReturnType<typeof habitProgress> {
   return (await ctx.feature(HABITS_FLAG)) ? habitProgress(ctx, day) : [];
+}
+
+/** The habits that show on that day's Today (GET /api/today, the Today list, status, widgets, menu bar): those whose days hold it (D68). */
+export async function habitsForDay(ctx: Ctx, day?: string): ReturnType<typeof habitProgress> {
+  return (await habitProgressIfOn(ctx, day)).filter((h) => !h.off_day);
 }

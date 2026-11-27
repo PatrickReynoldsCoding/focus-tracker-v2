@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks';
 import { change, patch, post } from '../../core/api';
 import { Dialog, useData } from '../../core/ui';
 import { formatLevel, formatSize, stepsToGoal, suggestStart, type Level } from '../../../../src/core/habit-levels';
+import { DayPicker } from './DayPicker';
 import type { Habit } from './types';
 
 type Category = { id: string; label: string };
@@ -37,6 +38,7 @@ export function NewHabitDialog({ habit, onClose }: { habit?: Habit | null; onClo
   const [small, setSmall] = useState('');
   const [every, setEvery] = useState(2);
   const [prompts, setPrompts] = useState(true);
+  const [days, setDays] = useState<string | null>(habit?.days ?? null);
 
   const goalLevel = toLevel(goal, per, unit);
   // Until the owner types a start level, it follows the goal (a third of the sessions, half the size).
@@ -59,6 +61,7 @@ export function NewHabitDialog({ habit, onClose }: { habit?: Habit | null; onClo
       small_version: small.trim() || null,
       step_up_every: `${every} ${every === 1 ? 'week' : 'weeks'}`,
       prompts: prompts ? 'on' : 'off',
+      days,
       status: 'active',
     };
     onClose();
@@ -172,6 +175,7 @@ export function NewHabitDialog({ habit, onClose }: { habit?: Habit | null; onClo
             </div>
             {startAboveGoal && <p class="error small">The start is above the goal. Check the numbers.</p>}
           </fieldset>
+          <DayPicker value={days} per={per} onChange={setDays} />
           <label>
             Small version for bad days (counts as a session)
             <input value={small} placeholder="5 minutes, or just put the trainers on" onInput={(e) => setSmall((e.target as HTMLInputElement).value)} />

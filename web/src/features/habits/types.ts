@@ -16,6 +16,8 @@ export type Habit = {
   description: string | null;
   /** Notes and useful information (Markdown, D56). */
   notes?: string | null;
+  /** The weekdays it shows on Today ("tue,thu"), null = every day (D68). */
+  days?: string | null;
   status: string;
   updated_at?: string;
   started: string | null;
@@ -44,11 +46,14 @@ export type Progress = {
   small_version: string | null;
   /** The habit's notes (Markdown), null when none. */
   notes?: string | null;
+  /** Its weekdays ("tue,thu"), null = every day; off_day: this day is not one of them (D68). */
+  on_days?: string | null;
+  off_day?: boolean;
   level: string;
   size: string | null;
   goal: string | null;
   /** planned: sessions planned that day in Plan my week. */
-  days: { day: string; count: number; future: boolean; planned?: number }[];
+  days: { day: string; count: number; future: boolean; planned?: number; off?: boolean }[];
   /** Sessions planned for this day, and for the days after it this week (Plan my week). */
   planned_today?: number;
   planned_later?: number;

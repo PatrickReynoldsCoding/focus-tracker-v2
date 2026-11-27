@@ -10,7 +10,7 @@ import { bad } from '../core/errors';
 import type { Module } from '../core/registry';
 import { create, find, get, list, update } from '../core/store';
 import { focusNow } from './focus-queue';
-import { habitProgressIfOn } from './habits';
+import { habitsForDay } from './habits';
 import { listsEntity } from './lists';
 import { subtaskCounts } from './subtasks';
 import { todosForDay } from './todos';
@@ -210,7 +210,7 @@ export async function today(ctx: Ctx) {
     rotation(ctx, day),
     currentSession(ctx),
     todosForDay(ctx, day),
-    habitProgressIfOn(ctx, day),
+    habitsForDay(ctx, day),
     list(ctx, listsEntity, { where: { show_today: true } }),
     neglected(ctx, day),
     withList ? cardsForDay(ctx, day) : [],
@@ -252,7 +252,7 @@ export async function status(ctx: Ctx) {
     focusOf(ctx, day),
     currentSession(ctx),
     todosForDay(ctx, day),
-    habitProgressIfOn(ctx, day),
+    habitsForDay(ctx, day),
     pendingNotifications(ctx),
     ctx.feature(TODAY_LIST_FLAG).then(async (on) => (on ? { cards: await cardsForDay(ctx, day), names: await todoListNames(ctx) } : null)),
     notTodayKeys(ctx, day),

@@ -23,6 +23,8 @@ export type PlanHabit = {
   per: 'day' | 'week';
   sessions: number | null;
   level: string;
+  /** The weekdays it can be planned on ("tue,thu"), null = any day (D68). */
+  days?: string | null;
   target: number;
   planned: number;
   done: number;

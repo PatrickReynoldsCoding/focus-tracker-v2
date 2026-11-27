@@ -23,6 +23,7 @@ import m0027 from '../../migrations/0027_subtasks.sql';
 import m0028 from '../../migrations/0028_profile_theme.sql';
 import m0029 from '../../migrations/0029_today_stickies.sql';
 import m0030 from '../../migrations/0030_focus_queue.sql';
+import m0031 from '../../migrations/0031_habit_days.sql';
 
 /** Every migration, in order. A new file in migrations/ needs a line here (a test checks). */
 export const MIGRATIONS: [name: string, sql: string][] = [
@@ -47,6 +48,7 @@ export const MIGRATIONS: [name: string, sql: string][] = [
   ['0028_profile_theme.sql', m0028],
   ['0029_today_stickies.sql', m0029],
   ['0030_focus_queue.sql', m0030],
+  ['0031_habit_days.sql', m0031],
 ];
 
 let done = false;

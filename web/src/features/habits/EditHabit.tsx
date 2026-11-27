@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 import { change, del, patch } from '../../core/api';
 import { useData } from '../../core/ui';
+import { DayPicker } from './DayPicker';
 import type { Habit } from './types';
 
 type Category = { id: string; label: string };
@@ -52,6 +53,7 @@ export function EditHabitForm({
                 small_version: fields.small_version,
                 step_up_every: fields.step_up_every,
                 prompts: fields.prompts,
+                days: fields.days ?? null,
               }),
             'Saved',
           );
@@ -108,6 +110,7 @@ export function EditHabitForm({
             <input value={h.size ?? ''} placeholder="30 min" onInput={text('size')} />
           </label>
         </div>
+        <DayPicker value={h.days ?? null} per={h.per} onChange={(days) => setH({ ...h, days })} />
         {levelChanged && <p class="muted small">A new level applies from {h.per === 'week' ? 'this week' : 'today'}; earlier weeks keep the level they had. A waiting step-up is dropped.</p>}
         <label>
           Goal
