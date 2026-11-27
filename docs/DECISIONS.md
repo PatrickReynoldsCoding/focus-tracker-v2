@@ -707,3 +707,15 @@ Code: web `features/today-panels/ListSettings.tsx` (`LinkedListSource`, `resolve
 - All project pages share one layout, and `removed`, `cells` and `phone` hold at most 200 entries each. Each arranged or removed list adds one, and nothing prunes them.
 
 Why: the owner saw two unrelated lists grouped in one panel.
+
+## D67. Focus queue (owner, 2026-11-27)
+
+Code: `src/modules/focus-queue.ts` (flag `focus-queue`, "Focus queue", on by default), table `focus_queue` (migration 0030), `focus_now` in GET /api/today.
+
+- The owner queues cards: project cards and to-dos, both rows of `tasks`, in an ordered queue per profile. There is no size limit.
+- The first item is "Now". The focus bar shows only that one.
+- Cards from any project may be queued. The web app warns; the server allows it.
+- A task is in the queue at most once: adding it again moves it (`at: 'now'` puts it first, otherwise last).
+- A task ticked done, whichever way (tick, moved into Done, Claude), leaves the queue, so the next one becomes Now. Deleting a task removes it. Both are part of the same undo step.
+- No check-ins.
+- REST: GET/POST /api/focus-queue, DELETE /api/focus-queue/:id, POST /api/focus-queue/:id/move. Claude: `get_focus_queue`, `add_to_focus_queue`, `remove_from_focus_queue`, `move_in_focus_queue`.

@@ -9,6 +9,7 @@ import type { Entity, Row } from '../core/entity';
 import { bad } from '../core/errors';
 import type { Module } from '../core/registry';
 import { create, find, get, list, update } from '../core/store';
+import { focusNow } from './focus-queue';
 import { habitProgressIfOn } from './habits';
 import { listsEntity } from './lists';
 import { subtaskCounts } from './subtasks';
@@ -204,7 +205,7 @@ export async function logSession(ctx: Ctx, input: { project_id?: string; date?: 
 export async function today(ctx: Ctx) {
   const day = await ctx.today();
   const withList = await ctx.feature(TODAY_LIST_FLAG);
-  const [focus, rot, session, todos, habits, lists, nudge, cards, todoLists, todoListProject] = await Promise.all([
+  const [focus, rot, session, todos, habits, lists, nudge, cards, todoLists, todoListProject, now] = await Promise.all([
     focusOf(ctx, day),
     rotation(ctx, day),
     currentSession(ctx),
@@ -215,6 +216,7 @@ export async function today(ctx: Ctx) {
     withList ? cardsForDay(ctx, day) : [],
     withList ? todoListNames(ctx) : {},
     withList ? todoListProjects(ctx) : {},
+    focusNow(ctx),
   ]);
   // Subtasks follow their to-do or card here (D57): only a count, they are never rows of their own.
   const subtasks = withList ? await subtaskCounts(ctx, [...todos.map((t) => t.id), ...cards.map((c) => c.id)]) : {};
@@ -222,6 +224,8 @@ export async function today(ctx: Ctx) {
     mode: ctx.mode,
     day,
     focus,
+    // The focus queue's first item (D67, flag focus-queue): what the focus bar shows. Null when empty or off.
+    focus_now: now,
     // Session controls are hidden in the app when no focus is chosen (owner's rule from v1).
     show_session_controls: !!focus || !!session,
     rotation: rot.today,

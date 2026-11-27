@@ -218,6 +218,10 @@ const QUEUE_RULES: [method: string, path: RegExp][] = [
   ['POST', /^\/files\/move$/],
   // a file's tags (Tags…: one tag added or taken off each time)
   ['POST', /^\/tags\/set$/],
+  // the focus queue (adding a task again only moves it, so a repeat is harmless)
+  ['POST', /^\/focus-queue$/],
+  ['POST', /^\/focus-queue\/[\w-]+\/move$/],
+  ['DELETE', /^\/focus-queue\/[\w-]+$/],
   // note saves (the editor sends its base)
   ['PUT', /^\/notes\/of\/(project|list)\/[\w-]+$/],
   // page layouts (the whole layout each time, so the last one wins)

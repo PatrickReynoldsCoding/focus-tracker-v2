@@ -7,6 +7,7 @@ import { boardsModule } from './boards';
 import { desktopModule } from './desktop';
 import { doneColumnModule } from './done-column';
 import { filesModule } from './files';
+import { focusQueueModule } from './focus-queue';
 import { habitsModule } from './habits';
 import { insightsModule } from './insights';
 import { layoutModule } from './layout';
@@ -44,6 +45,7 @@ export const MODULES: Module[] = [
   boardsModule,
   doneColumnModule,
   subtasksModule,
+  focusQueueModule,
   basicsModule,
   categoriesModule,
   profilesModule,
