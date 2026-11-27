@@ -283,7 +283,9 @@ html[data-theme='eink'] .files-menu { border-width: 2px; border-color: #000; }
 @media (min-width: 900px) {
   .shell.no-side { grid-template-columns: 64px 1fr; }
   .shell.no-side .side { padding: 16px 6px; }
-  .shell.no-side .side-label, .shell.no-side .brand-name, .shell.no-side .side a .badge { display: none; }
+  .shell.no-side .side-label, .shell.no-side .brand-name { display: none; }
+  /* Collapsed: the count sits on the icon's corner, so it still shows. */
+  .shell.no-side .side a .badge { position: absolute; top: 2px; right: 4px; margin: 0; min-width: 16px; height: 16px; line-height: 16px; padding: 0 4px; font-size: 0.65rem; }
   .shell.no-side .side a { justify-content: center; padding: 9px 0; position: relative; }
   .shell.no-side .side a.on { background: var(--accent-soft); }
   .shell.no-side .brand { justify-content: center; padding: 4px 0 12px; }

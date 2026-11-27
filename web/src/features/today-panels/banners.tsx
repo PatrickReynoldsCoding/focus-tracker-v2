@@ -2,12 +2,14 @@
 // Today tab so they show from other tabs too.
 
 import { change, get, mode, optimistic, post, put, signedIn, version } from '../../core/api';
-import { tabBadges, type TodayPanelProps } from '../../core/registry';
+import { type TodayPanelProps } from '../../core/registry';
 import { signal, useSignal } from '../../core/signal';
 
 export type Banner = { id: string; kind: string; title: string; body: string | null; due: string; project_id: string | null; project_name: string | null };
 
 const banners = signal<Banner[]>([]);
+/** How many reminders are due now (the Today tab's badge adds them to what is left today: features/today-list/badge.ts). */
+export const dueReminders = signal(0);
 let started = false;
 
 async function refresh() {
@@ -23,7 +25,7 @@ async function refresh() {
 export function startBanners() {
   if (started) return;
   started = true;
-  banners.subscribe((list) => (tabBadges.value = { ...tabBadges.value, today: list.length }));
+  banners.subscribe((list) => (dueReminders.value = list.length));
   signedIn.subscribe(refresh);
   version.subscribe(refresh);
   mode.subscribe(refresh);

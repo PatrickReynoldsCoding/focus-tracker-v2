@@ -10,7 +10,10 @@ import { registerOverlay, registerPanel, type CardSectionProps, type CardTilePro
 import { fmtDay, todayLocal } from '../../core/ui';
 import { countOf, TodayList, type TodayData } from './TodayList';
 import { isPlainItem } from '../board/CardDialog';
+import { startTodayBadge } from './badge';
 import './today-list.css';
+
+startTodayBadge();
 
 export const FLAG = 'today-panel';
 
