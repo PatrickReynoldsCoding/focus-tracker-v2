@@ -113,7 +113,7 @@ export function Loading({ error }: { error?: string | null }) {
 /** How many dialogs are open, so the back button closes only the top one when they are nested. */
 let openDialogs = 0;
 
-export function Dialog({ title, onClose, children, wide }: { title: ComponentChildren; onClose: () => void; children: ComponentChildren; wide?: boolean }) {
+export function Dialog({ title, onClose, children, wide, cls }: { title: ComponentChildren; onClose: () => void; children: ComponentChildren; wide?: boolean; cls?: string }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     ref.current?.showModal();
@@ -133,7 +133,7 @@ export function Dialog({ title, onClose, children, wide }: { title: ComponentChi
   return (
     <dialog
       ref={ref}
-      class={wide ? 'sheet wide' : 'sheet'}
+      class={`${wide ? 'sheet wide' : 'sheet'}${cls ? ` ${cls}` : ''}`}
       onCancel={(e) => (e.preventDefault(), onClose())}
       onClick={(e) => e.target === ref.current && onClose()}
     >
