@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks';
+import { CategorySelect } from '../projects/CategorySelect';
 import { change, patch, post } from '../../core/api';
 import { Dialog, useData } from '../../core/ui';
 import { formatLevel, formatSize, stepsToGoal, suggestStart, type Level } from '../../../../src/core/habit-levels';
@@ -91,14 +92,7 @@ export function NewHabitDialog({ habit, onClose }: { habit?: Habit | null; onClo
           </label>
           <label>
             Category (optional)
-            <select value={category} onChange={(e) => setCategory((e.target as HTMLSelectElement).value)}>
-              <option value="">None</option>
-              {(cats ?? []).map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
+            <CategorySelect value={category || null} cats={cats} onPick={(id) => setCategory(id ?? '')} />
           </label>
           <label>
             Project (optional)

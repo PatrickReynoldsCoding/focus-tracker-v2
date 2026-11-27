@@ -18,7 +18,11 @@ data class Status(
     /** What the Today widget lists: the server's Today list (today_list: habits, to-dos and cards, without what was put
      *  off with Not today) when it sends one, else the to-dos due and the habits left (flag today-panel off). */
     val items: List<Item> = todos + habits,
+    /** The habits by category, in the categories' order; empty when no habit has one (or from an older server). */
+    val habitGroups: List<HabitGroup> = emptyList(),
 ) {
+    data class HabitGroup(val id: String, val label: String, val habitIds: List<String>)
+
     data class Session(
         val projectName: String?,
         val elapsedSeconds: Long,
@@ -76,6 +80,10 @@ data class Status(
                 notifications = o.optJSONArray("notifications").objects().map { Notice(it.getString("id"), it.getString("title"), it.str("body"), !it.isNull("seen_at")) },
                 mode = o.str("mode"),
                 items = todayList ?: (todos + habits),
+                habitGroups = o.optJSONArray("habit_groups").objects().map { g ->
+                    val ids = g.getJSONArray("habit_ids")
+                    HabitGroup(g.getString("id"), g.getString("label"), (0 until ids.length()).map { ids.getString(it) })
+                },
             )
         }
     }

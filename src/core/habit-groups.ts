@@ -1,5 +1,6 @@
 // Habits in category groups: which habit belongs where. Categories keep their own order,
-// "No category" is last, and each group keeps the order the list came in.
+// "No category" is last, and each group keeps the order the list came in. Pure: the web app
+// (features/habits/Groups.tsx) and the server (/api/status, for the widget and menu bar) both use it.
 export const NO_CATEGORY = 'none';
 
 export type GroupCategory = { id: string; label: string; color: string | null };

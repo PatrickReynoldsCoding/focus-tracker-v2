@@ -5,29 +5,40 @@ import { change, newId, post } from '../../core/api';
 export function CategorySelect({ value, cats, onPick }: { value: string | null; cats: { id: string; label: string }[] | undefined; onPick: (id: string | null) => void }) {
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
+  const stop = () => {
+    setAdding(false);
+    setName('');
+  };
+  const add = async () => {
+    const label = name.trim();
+    if (!label) return;
+    const id = newId();
+    const made = await change(async () => {
+      await post('/categories', { id, label });
+      return true;
+    });
+    stop();
+    if (made) onPick(id);
+  };
+  // Not a form of its own: the habit dialogs use this inside theirs, so Enter and Escape stop here.
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key !== 'Enter' && e.key !== 'Escape') return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.key === 'Enter') void add();
+    else stop();
+  };
   if (adding)
     return (
-      <form
-        class="row tight"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          const label = name.trim();
-          if (!label) return;
-          const id = newId();
-          const made = await change(() => post('/categories', { id, label }));
-          setAdding(false);
-          setName('');
-          if (made) onPick(id);
-        }}
-      >
-        <input value={name} autoFocus placeholder="New category name" aria-label="New category name" onInput={(e) => setName((e.target as HTMLInputElement).value)} onKeyDown={(e) => e.key === 'Escape' && setAdding(false)} />
-        <button class="primary small" disabled={!name.trim()}>
+      <span class="row tight">
+        <input value={name} autoFocus placeholder="New category name" aria-label="New category name" onInput={(e) => setName((e.target as HTMLInputElement).value)} onKeyDown={onKeyDown} />
+        <button type="button" class="primary small" disabled={!name.trim()} onClick={add}>
           Add
         </button>
-        <button type="button" class="ghost small" onClick={() => setAdding(false)}>
+        <button type="button" class="ghost small" onClick={stop}>
           Cancel
         </button>
-      </form>
+      </span>
     );
   return (
     <select

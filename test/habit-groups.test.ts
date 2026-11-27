@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { groupByCategory, isFlat, NO_CATEGORY, type GroupCategory } from '../web/src/features/habits/groups';
+import { call } from './helpers';
+import { groupByCategory, isFlat, NO_CATEGORY, type GroupCategory } from '../src/core/habit-groups';
 
 const categories: GroupCategory[] = [
   { id: 'health', label: 'Health', color: 'green' },
@@ -25,5 +26,20 @@ describe('habit category groups', () => {
   it('is flat only when no habit has a category', () => {
     expect(isFlat(group([habit('a', null)]))).toBe(true);
     expect(isFlat(group([habit('a', null), habit('b', 'home')]))).toBe(false);
+  });
+});
+
+describe('habit groups in /api/status (widget and menu bar)', () => {
+  it('is empty until a habit has a category, then lists today’s habits by category', async () => {
+    const m = { mode: (await call('POST', '/modes', { label: `Habit groups ${Math.random().toString(36).slice(2, 8)}` })).id as string };
+    const run = await call('POST', '/habits', { name: 'Run', sessions: 1, per: 'day' }, m);
+    const stretch = await call('POST', '/habits', { name: 'Stretch', sessions: 1, per: 'day' }, m);
+    expect((await call('GET', '/status', undefined, m)).habit_groups).toEqual([]);
+    const health = await call('POST', '/categories', { label: 'Health', color: 'green' }, m);
+    await call('PATCH', `/habits/${stretch.id}`, { category_id: health.id }, m);
+    expect((await call('GET', '/status', undefined, m)).habit_groups).toEqual([
+      { id: health.id, label: 'Health', habit_ids: [stretch.id] },
+      { id: 'none', label: 'No category', habit_ids: [run.id] },
+    ]);
   });
 });

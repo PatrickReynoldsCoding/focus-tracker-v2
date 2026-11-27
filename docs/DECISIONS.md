@@ -759,11 +759,13 @@ Limits: OEM battery savers can stop the alarm; the widgets then wait for the fal
 
 ## D70. Habits grouped by category, with headings that fold (owner chose design B from docs/mockups/habit-categories.html, 2026-11-27)
 
-Code: `web/src/features/habits/` (`groups.ts`, `Groups.tsx`, `groups.css`). Tests `test/habit-groups.test.ts`, browser check `scripts/ui/habit-groups.mjs`. Web only: no migration, no server change.
+Code: `src/core/habit-groups.ts`, `web/src/features/habits/` (`Groups.tsx`, `groups.css`). Tests `test/habit-groups.test.ts`, browser check `scripts/ui/habit-groups.mjs`. Web only: no migration, no server change.
 
 - Every web screen that lists habits groups them under category headings: the Today list, the Habits panels (full and small), the Habits tab and its pop-out, a project page, Plan my week, the this-week strip and Insights. Categories keep their order; No category is last.
 - A tap on a heading folds the group; it keeps its count. Folds are remembered per device, profile and screen (`ft.habit-fold.<profile>.<screen>.<category>`).
 - When no habit in a list has a category, the list has no headings.
 - On the Habits tab ▲▼ move a habit among those of its status and category.
 - No feature flag.
-- Not yet: the Android widget and the SwiftBar menu do not group (SwiftBar cannot fold in place).
+- Both habit forms (the habit dialog and + New) use the project page's category picker, with "+ New category…" (`features/projects/CategorySelect.tsx`; it is not a form of its own, as it sits inside theirs).
+- The Android Today widget (app 0.7.0, `TodayRows.kt`) groups from `habit_groups` in `/api/status` (empty when no habit has a category); a fold is remembered per widget.
+- Not yet: the SwiftBar menu does not group (SwiftBar cannot fold in place).

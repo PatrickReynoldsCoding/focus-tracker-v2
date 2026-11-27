@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A habit category heading on the Today widget (TodayRows.Heading); a tap folds the group. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/row" android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="36dp" android:paddingStart="4dp" android:paddingEnd="4dp">
+    <TextView android:id="@+id/title" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+        android:textColor="@color/fg" android:textSize="13sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+    <TextView android:id="@+id/detail" android:layout_width="wrap_content" android:layout_height="wrap_content" android:paddingStart="6dp"
+        android:textColor="@color/muted" android:textSize="12sp" />
+</LinearLayout>

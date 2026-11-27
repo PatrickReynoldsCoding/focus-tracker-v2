@@ -4,13 +4,15 @@
 
 import { z } from 'zod';
 import { addDays, checkDay, type Ctx } from '../core/ctx';
+import { groupByCategory, isFlat } from '../core/habit-groups';
 import { changesFor, leadOn, loadRotation, mondayOf, setWeekChanges, WEEKDAYS, weekdayOf } from '../core/rotation';
 import type { Entity, Row } from '../core/entity';
 import { bad } from '../core/errors';
 import type { Module } from '../core/registry';
 import { create, find, get, list, update } from '../core/store';
 import { focusNow } from './focus-queue';
-import { habitsForDay } from './habits';
+import { categoriesEntity } from './basics';
+import { habitsEntity, habitsForDay } from './habits';
 import { listsEntity } from './lists';
 import { subtaskCounts } from './subtasks';
 import { todosForDay } from './todos';
@@ -245,6 +247,16 @@ export async function today(ctx: Ctx) {
   };
 }
 
+/** The given habits in their category groups, in the order given. */
+async function habitGroupsOf(ctx: Ctx, habitIds: string[]): Promise<{ id: string; label: string; habit_ids: string[] }[]> {
+  if (!habitIds.length) return [];
+  const [categories, rows] = await Promise.all([list(ctx, categoriesEntity), list(ctx, habitsEntity, { limit: 500 })]);
+  const categoryOf = new Map(rows.map((r) => [String(r.id), r.category_id as string | null]));
+  const known = categories.map((c) => ({ id: String(c.id), label: String(c.label), color: (c.color as string | null) ?? null }));
+  const groups = groupByCategory(habitIds, (id) => categoryOf.get(id), known);
+  return isFlat(groups) ? [] : groups.map((g) => ({ id: g.id, label: g.label, habit_ids: g.items }));
+}
+
 /** Small and cheap: for widgets, the menu bar and quick polls. */
 export async function status(ctx: Ctx) {
   const day = await ctx.today();
@@ -259,6 +271,7 @@ export async function status(ctx: Ctx) {
   ]);
   const list = extra && buildTodayList(day, { habits, todos: withListNames(todos, extra.names), cards: extra.cards, hide });
   const putOff = new Set(hide);
+  const habitGroups = await habitGroupsOf(ctx, habits.map((h) => h.id));
   return {
     mode: ctx.mode,
     day,
@@ -278,6 +291,8 @@ export async function status(ctx: Ctx) {
     // Leaves out what was put off for today ("Not today"), as the Today list does.
     todos_due: todos.filter((t) => !t.done && !putOff.has(`todo:${t.id}`)).map((t) => ({ id: t.id, title: t.title, day: t.day })),
     habits_left: habits.filter((h) => h.left > 0).map((h) => ({ id: h.id, name: h.name, left: h.left, per: h.per })),
+    // Today's habits by category, for the widget and menu bar headings; empty when none has a category (no headings).
+    habit_groups: habitGroups,
     // The Today list's open items (flag today-panel; null while it is off), for clients that show one list.
     today_list: list && {
       left: list.left,

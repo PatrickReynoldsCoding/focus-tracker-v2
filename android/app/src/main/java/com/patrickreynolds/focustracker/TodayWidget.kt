@@ -17,7 +17,8 @@ import kotlin.concurrent.thread
 /**
  * The Today widget: focus project, session timer, and the Today list (the to-dos, cards and habits left today),
  * in the widget's own profile, chosen in its settings (WidgetSetupActivity; 0.5.0, D51). Tap a to-do or card to
- * tick it, a habit to count a session, ✕ to put it off for today (Not today). ⚙ changes the profile.
+ * tick it, a habit to count a session, ✕ to put it off for today (Not today). ⚙ changes the profile. Habits sit
+ * under category headings; a tap on a heading folds it (remembered per widget).
  */
 class TodayWidget : AppWidgetProvider() {
 
@@ -54,6 +55,7 @@ class TodayWidget : AppWidgetProvider() {
         val widgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
         if (action == "pinned") { pinned(context, widgetId, intent.getStringExtra(EXTRA_MODE)); return }
         val id = intent.getStringExtra(EXTRA_ID)
+        if (action == FOLD) { fold(context, widgetId, id); return }
         val pending = goAsync()
         thread {
             try {
@@ -84,6 +86,18 @@ class TodayWidget : AppWidgetProvider() {
         }
     }
 
+    /** Folding is the widget's own business: redraw from the saved status, with no network. */
+    private fun fold(context: Context, widgetId: Int, groupId: String?) {
+        if (groupId == null) return
+        val pending = goAsync()
+        thread {
+            try {
+                WidgetStore(context).toggleFold(widgetId, groupId)
+                drawSaved(context, intArrayOf(widgetId), note = null)
+            } finally { pending.finish() }
+        }
+    }
+
     /** Added with "Add widget" in the app (MainActivity.pinWidget): the app's open profile, unless its settings already chose one. */
     private fun pinned(context: Context, widgetId: Int, mode: String?) {
         if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID || mode.isNullOrEmpty()) return
@@ -95,6 +109,8 @@ class TodayWidget : AppWidgetProvider() {
 
     companion object {
         const val EXTRA_ACTION = "ft.action"
+        private const val FOLD = "fold"
+        private const val VIEW_TYPES = 2
         const val EXTRA_ID = "ft.id"
         const val EXTRA_KIND = "ft.kind"
         const val EXTRA_MODE = "ft.mode"
@@ -168,11 +184,11 @@ class TodayWidget : AppWidgetProvider() {
         }
 
         /** Redraw from the saved statuses, without the network. */
-        private fun drawSaved(context: Context, ids: IntArray) {
+        private fun drawSaved(context: Context, ids: IntArray, note: String? = "Updating…") {
             val store = WidgetStore(context)
             for (id in ids) {
                 val mode = WidgetProfile.of(store.config(id)) ?: continue
-                savedStatus(store, id)?.let { draw(context, id, mode, Result.success(it), "Updating…") }
+                savedStatus(store, id)?.let { draw(context, id, mode, Result.success(it), note) }
             }
         }
 
@@ -255,21 +271,37 @@ class TodayWidget : AppWidgetProvider() {
                     v.setOnClickPendingIntent(R.id.action, open("/today", 6))
                 }
             }
-            val items = RemoteViewsCompat.RemoteCollectionItems.Builder().setHasStableIds(true).setViewTypeCount(1)
-            var n = 0L
-            for (item in s.items) {
+            val items = RemoteViewsCompat.RemoteCollectionItems.Builder().setHasStableIds(true).setViewTypeCount(VIEW_TYPES)
+            fun fillIn(id: String) = Intent().putExtra(EXTRA_ID, id).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                .apply { if (mode != null) putExtra(EXTRA_MODE, mode) }
+            fun heading(h: TodayRows.Heading): RemoteViews {
+                val row = RemoteViews(context.packageName, R.layout.widget_group)
+                row.setTextViewText(R.id.title, TodayRows.headingText(h))
+                row.setTextViewText(R.id.detail, TodayRows.headingCount(h))
+                row.setOnClickFillInIntent(R.id.row, fillIn(h.groupId).putExtra(EXTRA_ACTION, FOLD))
+                return row
+            }
+            fun entry(item: Status.Item): RemoteViews {
                 val row = RemoteViews(context.packageName, if (narrow) R.layout.widget_item_narrow else R.layout.widget_item)
                 row.setTextViewText(R.id.mark, TodayText.mark(item.kind))
                 row.setTextViewText(R.id.title, item.title)
                 row.setTextViewText(R.id.detail, item.detail ?: "")
                 row.setViewVisibility(R.id.detail, if (item.detail.isNullOrEmpty()) View.GONE else View.VISIBLE)
-                val base = Intent().putExtra(EXTRA_ID, item.id).putExtra(EXTRA_KIND, item.kind).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-                    .apply { if (mode != null) putExtra(EXTRA_MODE, mode) }
+                val base = fillIn(item.id).putExtra(EXTRA_KIND, item.kind)
                 row.setOnClickFillInIntent(R.id.row, Intent(base).putExtra(EXTRA_ACTION, TodayText.tickAction(item.kind)))
                 // ✕ = Not today (its own fill-in intent: a tap on it does not tick the row).
                 row.setViewVisibility(R.id.skip, View.VISIBLE)
                 row.setOnClickFillInIntent(R.id.skip, Intent(base).putExtra(EXTRA_ACTION, "nottoday"))
-                items.addItem(n++, row)
+                return row
+            }
+            TodayRows.of(s.items, s.habitGroups, WidgetStore(context).folded(widgetId)).forEachIndexed { n, r ->
+                items.addItem(
+                    n.toLong(),
+                    when (r) {
+                        is TodayRows.Heading -> heading(r)
+                        is TodayRows.Entry -> entry(r.item)
+                    },
+                )
             }
             RemoteViewsCompat.setRemoteAdapter(context, v, widgetId, R.id.list, items.build())
             v.setTextViewText(R.id.empty, TodayProfile.emptyText(mode ?: s.mode, TodayProfile.labels(Prefs(context).profileLabels)))

@@ -6,7 +6,7 @@ import { useFlag } from '../../core/features';
 import { signal, useSignal } from '../../core/signal';
 import { useData } from '../../core/ui';
 import { HEX, PALETTE } from '../category-buttons/CategoryButtons';
-import { groupByCategory, isFlat, type Group, type GroupCategory } from './groups';
+import { groupByCategory, isFlat, type Group, type GroupCategory } from '../../../../src/core/habit-groups';
 import './groups.css';
 
 const foldChanges = signal(0);

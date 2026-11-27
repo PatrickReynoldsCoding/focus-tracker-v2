@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks';
+import { CategorySelect } from '../projects/CategorySelect';
 import { change, del, patch } from '../../core/api';
 import { useData } from '../../core/ui';
 import { DayPicker } from './DayPicker';
@@ -69,14 +70,7 @@ export function EditHabitForm({
         </label>
         <label>
           Category
-          <select value={h.category_id ?? ''} onChange={text('category_id')}>
-            <option value="">None</option>
-            {(cats ?? []).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label}
-              </option>
-            ))}
-          </select>
+          <CategorySelect value={h.category_id} cats={cats} onPick={(id) => setH((now) => ({ ...now, category_id: id }))} />
         </label>
         <label>
           Project

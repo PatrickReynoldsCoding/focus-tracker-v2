@@ -142,5 +142,12 @@ class WidgetStore(context: Context) {
     fun savedAt(id: Int): Long = p.getLong("at.$id", 0L)
     fun save(id: Int, json: String, at: Long = System.currentTimeMillis()) = p.edit().putString("data.$id", json).putLong("at.$id", at).apply()
 
-    fun forget(id: Int) = p.edit().remove("cfg.$id").remove("data.$id").remove("at.$id").apply()
+    /** The habit category headings folded on this widget (Today widget). */
+    fun folded(id: Int): Set<String> = p.getStringSet("fold.$id", emptySet()).orEmpty().toSet()
+    fun toggleFold(id: Int, groupId: String) {
+        val now = folded(id)
+        p.edit().putStringSet("fold.$id", if (groupId in now) now - groupId else now + groupId).apply()
+    }
+
+    fun forget(id: Int) = p.edit().remove("cfg.$id").remove("data.$id").remove("at.$id").remove("fold.$id").apply()
 }
