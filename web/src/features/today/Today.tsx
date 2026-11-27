@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import { change, newId, optimistic, post, put } from '../../core/api';
-import { Panels, registerPanel, registerPlace, registerTab, type TodayPanelProps } from '../../core/registry';
+import { Panels, registerPanel, registerPlace, registerTab, type FocusBarProps, type TodayPanelProps } from '../../core/registry';
 import { AddInput, daysAgo, fmtDay, Linkify, Loading, useData } from '../../core/ui';
 import { useSession, type Session } from './session';
 import { SessionArea } from './SessionControls';
@@ -31,18 +31,23 @@ function readAway(): string | null {
 }
 
 /** The focus card: the day's focus project and its session (sessions.tsx, SessionControls.tsx).
- *  `compact`: the short version at the top of a phone's Today (name and session, More for the rest). */
-function FocusCard({ data, compact }: { data: TodayData; compact?: boolean }) {
+ *  `compact`: the short version at the top of a phone's Today (name and session, More for the rest).
+ *  Other features draw inside it with registerPanel('focus-head' | 'focus', …) (the focus queue). */
+function FocusCard({ data, setData, compact }: { data: TodayData; setData: (fn: (d: any) => any) => void; compact?: boolean }) {
   const [picking, setPicking] = useState(false);
   const [more, setMore] = useState(false);
   const [anyway, setAnyway] = useState(() => readAway() === data.day);
   const { live } = useSession();
   const f = data.focus;
   const running = !!(live ?? data.session);
+  const bar: FocusBarProps = { today: data, setToday: setData, compact: !!compact };
+  const extras = <Panels<FocusBarProps> place="focus" props={bar} />;
+  const headExtras = <Panels<FocusBarProps> place="focus-head" props={bar} />;
   const head = (
     <div class="card-head">
       <h2>Focus</h2>
       <span class="muted">{fmtDay(data.day)}</span>
+      {headExtras}
     </div>
   );
   if (data.rotation?.category === 'away' && !f && !running && !anyway)
@@ -80,10 +85,12 @@ function FocusCard({ data, compact }: { data: TodayData; compact?: boolean }) {
           ) : (
             <h2>Focus</h2>
           )}
+          {headExtras}
           <button class="ghost small" aria-expanded={false} onClick={() => setMore(true)}>
             More
           </button>
         </div>
+        {extras}
         {!f && <p class="muted small">No focus yet. Each day starts empty until you choose.</p>}
         {!f && data.suggestions.length > 0 && (
           <div class="chips">
@@ -119,6 +126,7 @@ function FocusCard({ data, compact }: { data: TodayData; compact?: boolean }) {
           )}
         </>
       )}
+      {extras}
       {live && f && live.session.project_id !== f.id && <p class="muted small">Session running on {live.session.project_name}.</p>}
       <SessionArea projectId={null} showStart={data.show_session_controls && !!f} />
       <div class="row">
@@ -249,8 +257,8 @@ registerPanel('today', {
   alwaysShown: true,
   order: 10,
   wide: true,
-  render: ({ today }) => <FocusCard data={today} />,
-  compact: ({ today }) => <FocusCard data={today} compact />,
+  render: ({ today, setToday }) => <FocusCard data={today} setData={setToday} />,
+  compact: ({ today, setToday }) => <FocusCard data={today} setData={setToday} compact />,
 });
 registerPanel('today', {
   id: 'todos',

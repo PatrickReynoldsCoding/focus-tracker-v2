@@ -38,3 +38,4 @@ import './project-labels';
 import './tags';
 import './pomodoro';
 import './habits/ProjectHabits';
+import './focus-queue';

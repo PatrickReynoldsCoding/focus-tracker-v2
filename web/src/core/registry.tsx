@@ -145,6 +145,13 @@ export interface CardSectionProps {
   update: (fields: Record<string, unknown> | null) => void;
   close: () => void;
 }
+/** Something in Today's focus card: 'focus-head' sits in its heading (a small button), 'focus' under
+ *  the focus project's name (the focus queue's Now card). Both get Today's data; `compact` on a phone. */
+export interface FocusBarProps {
+  today: any;
+  setToday: (fn: (d: any) => any) => void;
+  compact: boolean;
+}
 /** A small mark on a card of a board (keep it to an icon or a short tag). */
 export interface CardTileProps {
   card: any;
@@ -264,12 +271,13 @@ const editors: EditorDef[] = [];
 export const registerMarkdownEditor = (e: EditorDef) => add(editors, e);
 export const useMarkdownEditor = (): EditorDef | undefined => visible(editors, useFlags())[0];
 
-/** Panels by place: 'today', 'project', 'projects' (the Projects tab), 'card' (sections of the card dialog), 'card-tile' (marks on a board card), 'settings', 'habits' (top of the Habits tab). */
+/** Panels by place: 'today', 'project', 'projects' (the Projects tab), 'card' (sections of the card dialog), 'card-tile' (marks on a board card), 'focus' / 'focus-head' (inside Today's focus card), 'settings', 'habits' (top of the Habits tab). */
 export function registerPanel(place: 'today', p: PanelDef<TodayPanelProps>): void;
 export function registerPanel(place: 'project', p: PanelDef<ProjectPanelProps>): void;
 export function registerPanel(place: 'projects', p: PanelDef<ProjectsPanelProps>): void;
 export function registerPanel(place: 'card', p: PanelDef<CardSectionProps>): void;
 export function registerPanel(place: 'card-tile', p: PanelDef<CardTileProps>): void;
+export function registerPanel(place: 'focus' | 'focus-head', p: PanelDef<FocusBarProps>): void;
 export function registerPanel(place: 'settings', p: PanelDef<SettingsSectionProps>): void;
 export function registerPanel(place: 'habits', p: PanelDef<HabitsSectionProps>): void;
 export function registerPanel(place: string, p: PanelDef<any>): void;
