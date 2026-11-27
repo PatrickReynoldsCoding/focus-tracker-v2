@@ -70,6 +70,7 @@ class MainActivity : Activity() {
             onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) { goBack() }
         }
         RefreshWorker.schedule(this)
+        WidgetTicker.start(this) // again after a force stop, which clears alarms
         Updater.init(this)
         if (intent.hasExtra(EXTRA_UPDATE_URL)) Updater.setTestUrl(this, intent.getStringExtra(EXTRA_UPDATE_URL)) // debug builds only
         Updater.checkIfDue(this) // at most every few hours
