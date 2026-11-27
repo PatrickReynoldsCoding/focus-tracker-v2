@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Focus card mockups</title>
+<style>
+:root{--bg:#f6f5f1;--surface:#fff;--s2:#efede7;--fg:#1e1f1c;--muted:#6c6d66;--line:#e1dfd7;--acc:#2f5d50;--accfg:#fff;--soft:#dfe9e4;--warm:#c98a12;--ok:#2e8a57}
+@media(prefers-color-scheme:dark){:root{--bg:#151514;--surface:#1f1f1d;--s2:#2a2a27;--fg:#ebeae5;--muted:#9d9d95;--line:#34342f;--acc:#7fb8a5;--accfg:#0f1a16;--soft:#23352f;--warm:#f0b84a;--ok:#5cc08a}}
+*{box-sizing:border-box}
+body{margin:0 auto;max-width:980px;padding:16px;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,sans-serif}
+h1{font-size:21px;margin:4px 0}h2{font-size:17px;margin:34px 0 4px}
+.n{color:var(--muted);margin:0 0 12px}
+.why{color:var(--muted);font-size:14px;margin:6px 0 0}
+.grid{display:grid;grid-template-columns:1.1fr 1fr;gap:14px;align-items:start}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+.lbl{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:0 1px 2px #0000000d}
+.focus{border-left:5px solid var(--acc)}
+.fhead{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.proj{font-weight:700;color:var(--fg);font-size:17px}
+.now{margin:10px 0;padding:10px 12px;border-radius:10px;background:var(--soft);display:flex;align-items:center;gap:10px}
+.now b{flex:1}
+.now .k{font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--acc);text-transform:uppercase;display:block}
+.circle{width:22px;height:22px;border:2px solid var(--muted);border-radius:50%;flex:none}
+.x{color:var(--muted);font-size:14px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:9px;padding:7px 12px;font:inherit;font-size:14px}
+.btn.p{background:var(--acc);color:var(--accfg);border-color:var(--acc);font-weight:600}
+.btn.g{border-color:transparent;background:transparent;color:var(--muted)}
+.timer{font-variant-numeric:tabular-nums;font-weight:700;font-size:22px}
+.empty{margin:10px 0;padding:10px 12px;border:1px dashed var(--line);border-radius:10px;color:var(--muted);font-size:14px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.col{background:var(--s2);border-radius:10px;padding:8px}
+.col h4{margin:2px 4px 8px;font-size:13px;display:flex;justify-content:space-between}
+.kc{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:6px;font-size:14px;display:flex;gap:6px;align-items:center}
+.kc span{flex:1}
+.kc.on{border:2px solid var(--acc)}
+.pin{font-size:11px;font-weight:800;color:var(--acc)}
+.menu{background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 20px #0000002a;padding:4px;width:210px;margin:-2px 0 6px auto;font-size:14px}
+.menu div{padding:7px 10px;border-radius:7px}.menu .hi{background:var(--soft);font-weight:600}
+.ask{border:2px solid var(--warm);border-radius:12px;padding:12px;margin-top:10px;font-size:14px}
+.q{list-style:none;margin:8px 0 0;padding:0;font-size:14px}
+.q li{display:flex;gap:8px;padding:6px 2px;border-top:1px solid var(--line);color:var(--muted)}
+.q li b{color:var(--fg);font-weight:500;flex:1}
+.pick{display:inline-block;margin-top:10px;font-weight:700;color:var(--acc)}
+</style></head><body>
+<h1>Focus card: one thing at a time</h1>
+<p class="n">Three ideas. Reply with a letter, or mix them (e.g. "A + the swap question from B").</p>
+
+<h2>A · Pin one card to the focus bar</h2>
+<div class="grid">
+<div><p class="lbl">Today: focus bar</p>
+<div class="card focus">
+  <div class="fhead">◎ Focus today · <span class="proj">House renovation</span></div>
+  <div class="now"><span class="circle" title="Done"></span><b><span class="k">Now</span>Ask plasterer for a quote</b><span class="x" title="Unpin">✕</span></div>
+  <div class="row"><button class="btn p">▶ Start session</button><button class="btn g">Pick another card</button></div>
+</div>
+<p class="lbl" style="margin-top:14px">Nothing pinned yet</p>
+<div class="card focus">
+  <div class="fhead">◎ Focus today · <span class="proj">House renovation</span></div>
+  <div class="empty">What's the one thing? <b>Pick a card</b> from Doing or To do.</div>
+  <div class="row"><button class="btn p">▶ Start session</button></div>
+</div></div>
+<div><p class="lbl">On the board: ⋯ on a card</p>
+<div class="cols"><div class="col"><h4>Doing <span>2</span></h4>
+<div class="kc on"><span>Ask plasterer for a quote</span><span class="pin">◎ NOW</span></div>
+<div class="kc"><span>Measure kitchen</span><span class="x">⋯</span></div>
+<div class="menu"><div class="hi">◎ Focus on this</div><div>Open</div><div>Move to…</div></div>
+</div><div class="col"><h4>To do <span>3</span></h4><div class="kc"><span>Order tiles</span></div><div class="kc"><span>Book skip</span></div></div></div>
+</div></div>
+<p class="why"><b>How it works:</b> one card at a time. "Focus on this" swaps the pinned card and sets the project as today's focus. Ticking it clears the pin. Sessions record which card you worked on. <b>Simplest; nothing stops "Doing" filling up.</b></p>
+
+<h2>B · A "one in Doing" limit</h2>
+<div class="grid">
+<div><p class="lbl">Dragging a second card into Doing</p>
+<div class="cols"><div class="col"><h4>Doing <span>1 / 1</span></h4>
+<div class="kc on"><span>Ask plasterer for a quote</span><span class="pin">◎ NOW</span></div>
+</div><div class="col"><h4>To do</h4><div class="kc"><span>Measure kitchen</span></div></div></div>
+<div class="ask"><b>Doing holds one card.</b> Swap "Ask plasterer for a quote" back to To do?
+<div class="row" style="margin-top:8px"><button class="btn p">Swap</button><button class="btn">Keep both this time</button><button class="btn g">Cancel</button></div></div>
+</div>
+<div><p class="lbl">Focus bar follows Doing</p>
+<div class="card focus">
+  <div class="fhead">◎ Focus today · <span class="proj">House renovation</span></div>
+  <div class="now"><span class="circle"></span><b><span class="k">Doing</span>Ask plasterer for a quote</b></div>
+  <div class="row"><button class="btn p">▶ Start session</button></div>
+</div></div></div>
+<p class="why"><b>How it works:</b> the focus project's Doing column holds 1 card (you set the limit, or switch it off). The focus bar always shows that card, with nothing to pin. <b>Strongest nudge; you can still allow an exception each time.</b></p>
+
+<h2>C · Now + Up next, with a check-in when the timer ends</h2>
+<div class="grid">
+<div><p class="lbl">Focus bar during a session</p>
+<div class="card focus">
+  <div class="fhead">◎ Focus today · <span class="proj">House renovation</span> <span style="margin-left:auto" class="timer">18:42</span></div>
+  <div class="now"><span class="circle"></span><b><span class="k">Now</span>Ask plasterer for a quote</b></div>
+  <ul class="q"><li><b>Measure kitchen</b>up next</li><li><b>Order tiles</b>then</li></ul>
+  <div class="row" style="margin-top:10px"><button class="btn">⏸ Pause</button><button class="btn g">Stop</button></div>
+</div></div>
+<div><p class="lbl">When the timer ends</p>
+<div class="card"><b>Time's up. How did "Ask plasterer for a quote" go?</b>
+<div class="row" style="margin-top:10px"><button class="btn p">✓ Done, next: Measure kitchen</button><button class="btn">Keep going 25 min</button><button class="btn g">Stuck: note why</button></div>
+</div></div></div>
+<p class="why"><b>How it works:</b> pin up to 3 cards in order (⋯ → Focus on this / Add to up next). Ticking "Now" moves the next one up. Each time the timer ends, you're asked whether the card is done, so drifting gets noticed. <b>Most help staying on track; also the most to build.</b></p>
+
+<p class="pick">My pick: A first (small), with C's check-in at the end of the timer added later.</p>
+</body></html>
