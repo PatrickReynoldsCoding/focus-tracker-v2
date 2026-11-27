@@ -59,6 +59,8 @@ export interface TodayHabitIn {
   skipped_today: boolean;
   size?: string | null;
   planned_today?: number;
+  /** Today is not one of the habit's weekdays (habits.days, D68): it is left out of the list. */
+  off_day?: boolean;
 }
 export interface TodayTodoIn {
   id: string;
@@ -83,6 +85,7 @@ export interface TodayCardIn {
 }
 
 export function habitItem(h: TodayHabitIn): TodayItem | null {
+  if (h.off_day) return null; // not one of its days (D68)
   const weekly = h.per === 'week';
   const target = h.target && h.target > 0 ? h.target : 1;
   const base = { key: `habit:${h.id}`, kind: 'habit' as const, id: h.id, title: h.name, size: h.size ?? null, per: weekly ? ('week' as const) : ('day' as const), planned: (h.planned_today ?? 0) > h.done_today };

@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import { answerPending, answerStepUp, record, type SetHabits } from './actions';
+import { formatDays } from '../../../../src/core/habit-days';
 import { HabitName } from './HabitName';
 import type { Progress } from './types';
 import './habits.css';
@@ -58,9 +59,9 @@ export function DayStrip({ h, set }: { h: Progress; set: SetHabits }) {
         {h.days.map((d) => (
           <button
             key={d.day}
-            class={`strip-day ${d.count ? 'has' : ''} ${d.day === h.day ? 'today' : ''} ${open === d.day ? 'sel' : ''}`}
+            class={`strip-day ${d.count ? 'has' : ''} ${d.day === h.day ? 'today' : ''} ${open === d.day ? 'sel' : ''} ${d.off ? 'off' : ''}`}
             disabled={d.future}
-            aria-label={`${dayName(d.day)}: ${d.count} ${d.count === 1 ? 'session' : 'sessions'}${d.planned ? `, ${d.planned} planned` : ''}`}
+            aria-label={`${dayName(d.day)}: ${d.count} ${d.count === 1 ? 'session' : 'sessions'}${d.planned ? `, ${d.planned} planned` : ''}${d.off ? ', not one of its days' : ''}`}
             aria-expanded={open === d.day}
             onClick={() => setOpen(open === d.day ? null : d.day)}
           >
@@ -181,6 +182,8 @@ export function HabitLine({ h, set, strip }: { h: Progress; set: SetHabits; stri
         <span class="muted small">
           {h.target ? `${Math.min(h.done_this_period, h.target)} of ${h.target} ${h.per === 'week' ? 'this week' : 'today'}` : `${h.done_today} today`}
           {h.size ? ` · ${h.size}` : ''}
+          {h.on_days ? ` · ${formatDays(h.on_days)}` : ''}
+          {h.off_day ? ' · rest day' : ''}
           {(h.planned_today ?? 0) > h.done_today ? ' · planned today' : ''}
           {h.planned_later ? ` · ${h.planned_later} planned later this week` : ''}
         </span>

@@ -17,7 +17,7 @@ import { requireFeature } from '../core/features';
 import type { Module } from '../core/registry';
 import { list } from '../core/store';
 import { formatLevel, levelFromRow, type Level } from '../core/habit-levels';
-import { awayForTargets, HABITS_FLAG, habitsEntity, levelHistory, levelOn, mondayOf, pauseIntervals, type LevelRow } from './habits';
+import { awayForTargets, HABITS_FLAG, habitsEntity, levelHistory, levelOn, mondayOf, pauseIntervals, restDays, type LevelRow } from './habits';
 
 export const INSIGHTS_FLAG = 'insights';
 /** A project not touched for this many days is "stale" (the page shows it in bold). */
@@ -77,7 +77,7 @@ interface HabitInput {
   /** done / plan / skip rows of this habit. */
   rows: Row[];
   start: string;
-  /** Days that are Away in the rotation (only while the flag away-lowers-targets is on): a daily habit asks nothing then. */
+  /** Days a daily habit asks nothing: Away in the rotation (flag away-lowers-targets) or not one of the habit's weekdays (D68). */
   away?: (day: string) => boolean;
 }
 
@@ -157,7 +157,8 @@ async function loadHabits(ctx: Ctx, from: string, to: string, today: string): Pr
           pauses: pauseIntervals(mineMeta, today),
           rows: logs.results.filter((l) => l.habit_id === habit.id),
           start: startOf(habit, history),
-          away,
+          // A daily habit also asks nothing on the weekdays it does not show on (D68).
+          away: restDays(habit, away),
         },
       };
     }),

@@ -8,6 +8,7 @@ import { newId } from '../core/ids';
 import type { Module } from '../core/registry';
 import { find, list, update } from '../core/store';
 import { HABITS_FLAG, habitProgress } from './habits';
+import { showsOn } from '../core/habit-days';
 import { deliverable, getPrefs, kindAllowed } from './notify-prefs';
 
 export const notificationsEntity: Entity = {
@@ -119,9 +120,14 @@ async function pomodoroNotice(ctx: Ctx): Promise<void> {
     .run();
 }
 
+/** Habits that do not prompt today: put off for today (Not today), or today is not one of their days (D68). */
 async function skippedHabitIds(ctx: Ctx): Promise<Set<string>> {
-  const rows = await ctx.db.prepare("SELECT habit_id FROM habit_log WHERE mode = ? AND day = ? AND kind = 'skip'").bind(ctx.mode, await ctx.today()).all<{ habit_id: string }>();
-  return new Set(rows.results.map((r) => r.habit_id));
+  const today = await ctx.today();
+  const [skips, limited] = await Promise.all([
+    ctx.db.prepare("SELECT habit_id FROM habit_log WHERE mode = ? AND day = ? AND kind = 'skip'").bind(ctx.mode, today).all<{ habit_id: string }>(),
+    ctx.db.prepare('SELECT id, days FROM habits WHERE mode = ? AND days IS NOT NULL').bind(ctx.mode).all<{ id: string; days: string }>(),
+  ]);
+  return new Set([...skips.results.map((r) => r.habit_id), ...limited.results.filter((h) => !showsOn(h.days, today)).map((h) => h.id)]);
 }
 
 /** Morning nudge about neglected projects, once a day, after the configured hour (default 9). */
@@ -155,7 +161,7 @@ export async function pendingNotifications(ctx: Ctx) {
   const all = await list(ctx, notificationsEntity, { sql: 'dismissed_at IS NULL AND due <= ?', params: [ctx.now()], order: 'due', limit: 50 });
   // Habit prompts made before Habits was switched off wait, unseen, until it is on again.
   const habitsOn = await ctx.feature(HABITS_FLAG);
-  // A habit put off for today (Not today) does not prompt today; it prompts again from tomorrow.
+  // A habit put off for today (Not today), or not on today's weekdays (D68), does not prompt today; it prompts again on its next day.
   const putOff = habitsOn && all.some((n: any) => n.kind === 'habit') ? await skippedHabitIds(ctx) : new Set<string>();
   const skipped = (n: any) => n.kind === 'habit' && putOff.has(String(n.dedupe_key ?? '').split(':')[1]);
   return all.filter((n: any) => kindAllowed(prefs, n.kind) && (habitsOn || n.kind !== 'habit') && !skipped(n)).map(({ dedupe_key, ...n }: any) => n);

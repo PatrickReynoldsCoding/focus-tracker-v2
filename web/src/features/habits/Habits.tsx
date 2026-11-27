@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks';
 import { change, del, newId, optimistic, patch, post } from '../../core/api';
 import { Panels, registerTab, type HabitsSectionProps } from '../../core/registry';
 import { AddInput, InlineEdit, Loading, useData } from '../../core/ui';
+import { withDays } from './DayPicker';
 import { HabitDialog } from './HabitDialog';
 import { HabitName, NotesMark } from './HabitName';
 import { openHabit } from './open';
@@ -116,14 +117,14 @@ export function Habits() {
                       <div class="habit-main">
                         <HabitCards h={p} set={setProg} />
                         <HabitLine h={p} set={setProg} strip="toggle" />
-                        <span class="muted small">Level {p.level}{p.goal ? ` · goal ${p.goal}` : ''}</span>
+                        <span class="muted small">Level {withDays(p.level, p.on_days)}{p.goal ? ` · goal ${p.goal}` : ''}</span>
                       </div>
                     ) : (
                       <div class="habit-main">
                         <HabitName id={h.id} name={h.name} notes={h.notes}>
                           <strong>{h.name}</strong>
                         </HabitName>
-                        <span class="muted small">{[h.sessions ? `${h.sessions} a ${h.per ?? 'day'}` : null, h.size].filter(Boolean).join(', ') || h.intention}</span>
+                        <span class="muted small">{withDays([h.sessions ? `${h.sessions} a ${h.per ?? 'day'}` : null, h.size].filter(Boolean).join(', '), h.days) || h.intention}</span>
                       </div>
                     )}
                     <button class="small" aria-label={`Edit ${h.name}`} onClick={() => setEditing(h)}>

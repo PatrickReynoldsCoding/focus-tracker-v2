@@ -38,6 +38,7 @@ function HabitRowSlim({ h, set }: { h: Progress; set: SetHabits }) {
       <span class="tl-meta">
         {(h.planned_today ?? 0) > h.done_today && <span class="tag">planned</span>}
         {h.skipped_today && !met && <span>not today</span>}
+        {h.off_day && !h.skipped_today && !met && <span>rest day</span>}
         {progressOf(h)}
       </span>
       {h.done_today > 0 && (

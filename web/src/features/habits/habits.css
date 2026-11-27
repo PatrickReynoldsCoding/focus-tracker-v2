@@ -63,3 +63,12 @@ html[data-theme='eink'] .habits-slim .tl-row .tl-tick { width: 30px; height: 30p
 .habit-dialog { gap: 18px; }
 .habit-sub { margin: 0 0 6px; font-size: 0.85rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
 .habit-notes .ed-view, .habit-notes .md-view { min-height: 4.5em; }
+
+/* The habit's weekdays (D68): Mon–Sun chips, 44 px tall, one row; "Every day" above them. */
+.day-chips { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.day-chips .chip { min-height: 44px; justify-content: center; padding: 4px 2px; }
+.day-chips .day-every { grid-column: 1 / -1; justify-self: start; padding: 4px 14px; }
+html[data-theme='eink'] .day-chips .day-chip.on::before { content: '✓'; }
+.strip-day.off { border-style: dashed; }
+.strip-day.off .strip-l { text-decoration: line-through; }
+html[data-theme='eink'] .strip-day.off { border-style: dashed; }

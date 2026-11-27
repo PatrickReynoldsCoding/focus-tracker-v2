@@ -2,6 +2,8 @@
 // Per day: what the day is for (the rotation), planned habit sessions (rings; filled once done) and to-dos.
 // To-dos move by dragging (mouse) or with Move, then "Put here" on a day (any screen).
 import { useEffect, useState } from 'preact/hooks';
+import { showsOn } from '../../../../src/core/habit-days';
+import { withDays } from '../habits/DayPicker';
 import { HabitName } from '../habits/HabitName';
 import { localStorageSet } from '../../core/api';
 import { useFlag } from '../../core/features';
@@ -67,8 +69,8 @@ function HabitPicker({ plan, pick, setPick }: { plan: Plan; pick: string | null;
           <HabitName id={chosen.id} name={chosen.name}>
             {chosen.name}
           </HabitName>
-          : {chosen.level}
-          {chosen.per === 'week' ? ', any days of the week' : ''}. {chosen.done} done so far.
+          : {withDays(chosen.level, chosen.days)}
+          {chosen.days ? ', only on those days' : chosen.per === 'week' ? ', any days of the week' : ''}. {chosen.done} done so far.
           {chosen.away_days_left_out ? ` Away days ask nothing (${chosen.away_days_left_out} left out).` : ''} A plan is only a plan: a session on another day still counts.
         </p>
       )}
@@ -193,7 +195,7 @@ function DayCard({ plan, set, d, pick, moving, setMoving, findTodo }: { plan: Pl
           <Rings key={h.id} plan={plan} set={set} d={d} h={h} />
         ))}
       </ul>
-      {canPlan && pick && (
+      {canPlan && pick && showsOn(pick.days, d.day) && (
         <button class="small plan-add" aria-label={`Plan a session of ${pick.name} on ${longDay(d.day)}`} onClick={() => planSession(set, plan, pick.id, d.day, 1)}>
           + {pick.name}
         </button>
