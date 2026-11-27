@@ -13,6 +13,7 @@ import { lookupPanel, placeDef, usePanelAdder, usePanels, type PanelAdderTarget,
 import { Loading } from '../../core/ui';
 import { reveal } from '../layout/adding';
 import { inApp, setControls } from './app';
+import { useKeepDesktopFresh } from './fresh';
 import { GridLayout, resetPage } from '../layout/grid';
 import { GridScope, type GridStore } from '../layout/scope';
 import { DESKTOP, layoutNow, saveGrid, saveLayout, titleOf, useLayout, useMedia } from '../layout/store';
@@ -51,6 +52,7 @@ function removeFrom(p: PanelDef<any>) {
 }
 
 export function Desktop() {
+  useKeepDesktopFresh();
   const today = placeDef(FROM)!.useProps('');
   const data = useLayout(PLACE);
   const flags = useFlags();
