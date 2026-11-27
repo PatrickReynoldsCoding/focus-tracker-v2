@@ -48,6 +48,16 @@ Updated 2026-11-22. Phases from the spec (`SPEC.md` §7).
 | Owner's item, 23 Nov (2) | v0.55.0: arrange panels freely, the same on a phone and a computer: hold a panel (a long mouse press) to arrange every panel, drag anywhere (gaps stay, panels landed on move down), size from any side, ✕, Done; 12 columns on a computer, 4 on a phone, each kept apart (flag `free-panels`, D65). |
 | 9 Stretch | Parked: **export all data** button (wanted later), Work-mode PRs tab, fitness view. |
 
+## To do next
+
+- **Group habits in the SwiftBar menu** (D70; the web app and Android widget already group). SwiftBar cannot fold in place. The owner has not chosen yet:
+  1. Plain headings, always open (recommended: ticking a habit takes no extra step).
+  2. A submenu for each category (shorter menu, one more step to a habit).
+  3. Leave it unchanged.
+
+  The server already sends `habit_groups` in `/api/status` (`src/modules/today.ts`); the menu is built in `src/modules/swiftbar.ts`.
+- **Try the Android widget's category headings on the phone** (app 0.7.0): released with unit tests only, not run on a phone or emulator.
+
 ## Waiting for the owner
 
 1. **Try it.** Sign in at the address above (password in `.secrets.local` in the repo folder, git-ignored; change it with `npx wrangler secret put OWNER_PASSWORD`). Connect Claude ([connect-claude.md](connect-claude.md)).
