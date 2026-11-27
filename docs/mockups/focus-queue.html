@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Focus queue mockups</title>
+<style>
+:root{--bg:#f6f5f1;--surface:#fff;--s2:#efede7;--fg:#1e1f1c;--muted:#6c6d66;--line:#e1dfd7;--acc:#2f5d50;--accfg:#fff;--soft:#dfe9e4;--warm:#c98a12;--warmsoft:#fbf0d9;--danger:#c0392b;--shade:#00000059}
+:root[data-theme=dark]{--bg:#151514;--surface:#1f1f1d;--s2:#2a2a27;--fg:#ebeae5;--muted:#9d9d95;--line:#34342f;--acc:#7fb8a5;--accfg:#0f1a16;--soft:#23352f;--warm:#f0b84a;--warmsoft:#3a3020;--danger:#ff8a80;--shade:#000000a0}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#151514;--surface:#1f1f1d;--s2:#2a2a27;--fg:#ebeae5;--muted:#9d9d95;--line:#34342f;--acc:#7fb8a5;--accfg:#0f1a16;--soft:#23352f;--warm:#f0b84a;--warmsoft:#3a3020;--danger:#ff8a80;--shade:#000000a0}}
+*{box-sizing:border-box}
+body{margin:0 auto;max-width:1060px;padding:16px;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,sans-serif}
+header.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+h1{font-size:21px;margin:4px 0;flex:1}h2{font-size:17px;margin:38px 0 2px}
+.n{color:var(--muted);margin:0 0 12px}.why{color:var(--muted);font-size:14px;margin:8px 0 0;max-width:760px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;align-items:start}
+.lbl{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+.focus{border-left:5px solid var(--acc)}
+.fhead{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.proj{font-weight:700;color:var(--fg);font-size:16px}
+.timer{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:700;font-size:20px;color:var(--fg)}
+.now{margin:10px 0 6px;padding:10px 12px;border-radius:10px;background:var(--soft);display:flex;align-items:center;gap:10px}
+.now b{flex:1;font-weight:600}.k{font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--acc);text-transform:uppercase;display:block}
+.circle{width:22px;height:22px;border:2px solid var(--muted);border-radius:50%;flex:none}
+.q{list-style:none;margin:0;padding:0;font-size:14px}
+.q li{display:flex;gap:8px;align-items:center;padding:7px 2px;border-top:1px solid var(--line)}
+.q li b{font-weight:500;flex:1}.q .m{color:var(--muted);font-size:12.5px}
+.ic{color:var(--muted);font-size:14px;padding:0 3px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:9px;padding:7px 12px;font:inherit;font-size:14px;cursor:pointer}
+.btn.p{background:var(--acc);color:var(--accfg);border-color:var(--acc);font-weight:600}
+.btn.g{border-color:transparent;background:transparent;color:var(--muted)}
+.btn.s{padding:4px 9px;font-size:13px}
+.empty{padding:10px 12px;border:1px dashed var(--line);border-radius:10px;color:var(--muted);font-size:14px}
+.chip{display:inline-flex;gap:4px;align-items:center;font-size:12px;font-weight:700;border-radius:99px;padding:1px 8px;background:var(--soft);color:var(--acc);white-space:nowrap}
+.chip.n2{background:var(--s2);color:var(--muted)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.col{background:var(--s2);border-radius:10px;padding:8px}
+.col h4{margin:2px 4px 8px;font-size:13px;display:flex;justify-content:space-between}
+.kc{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:6px;font-size:14px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.kc span.t{flex:1}.kc.on{border:2px solid var(--acc)}
+.menu{background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 20px #0000002a;padding:4px;width:230px;margin:-2px 0 6px auto;font-size:14px}
+.menu div{padding:7px 10px;border-radius:7px}.menu .hi{background:var(--soft);font-weight:600}.menu .dim{color:var(--muted)}
+/* phone frame */
+.phone{width:340px;max-width:100%;border:10px solid #222;border-radius:30px;background:var(--bg);overflow:hidden;position:relative;margin:0 auto}
+.phone .scr{height:600px;overflow:hidden;position:relative;display:flex;flex-direction:column}
+.phone .body{padding:10px;flex:1;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+.phone .bar{display:flex;justify-content:space-around;border-top:1px solid var(--line);background:var(--surface);padding:6px 0 8px;font-size:11px;color:var(--muted)}
+.phone .bar span{display:flex;flex-direction:column;align-items:center;gap:1px;position:relative}
+.phone .bar .on{color:var(--acc);font-weight:700}
+.badge{position:absolute;top:-4px;left:55%;background:var(--danger);color:#fff;font-size:10px;font-weight:700;border-radius:9px;min-width:16px;height:16px;line-height:16px;text-align:center;padding:0 4px}
+.status{display:flex;justify-content:space-between;font-size:12px;padding:6px 14px;color:var(--muted)}
+.mini{border-left:4px solid var(--acc);background:var(--surface);border-radius:12px;padding:10px;font-size:14px}
+.mini .r{display:flex;align-items:center;gap:8px}
+.mini .r b{flex:1;font-weight:600}
+.sheet{position:absolute;inset:0;background:var(--shade);display:flex;align-items:flex-end}
+.sheet .in{background:var(--surface);width:100%;border-radius:18px 18px 0 0;padding:8px 14px 18px}
+.sheet .grab{width:40px;height:4px;border-radius:4px;background:var(--line);margin:4px auto 10px}
+.sheet .opt{display:flex;gap:10px;align-items:center;padding:12px 4px;border-top:1px solid var(--line);font-size:15px}
+.sheet .opt small{display:block;color:var(--muted);font-size:12.5px}
+.notif{background:var(--surface);border-radius:16px;padding:12px;box-shadow:0 4px 18px #0003;font-size:14px;margin:8px}
+.notif .app{font-size:12px;color:var(--muted);display:flex;gap:6px}
+.notif .acts{display:flex;gap:14px;margin-top:8px;font-weight:600;color:var(--acc);font-size:13px}
+.lock{background:linear-gradient(160deg,#2f5d50,#151514);color:#fff}
+.lock .time{font-size:52px;font-weight:300;text-align:center;margin:40px 0 20px}
+.warn{border:2px solid var(--warm);background:var(--warmsoft);border-radius:12px;padding:12px;font-size:14px}
+textarea{width:100%;min-height:64px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--fg);font:inherit;padding:8px;margin:8px 0}
+.widget{width:300px;border-radius:12px;border:1px solid var(--line);background:var(--surface);padding:10px;font-size:14px}
+.corner{display:inline-flex;gap:8px;align-items:center;background:var(--fg);color:var(--bg);border-radius:99px;padding:6px 12px;font-size:13px}
+.side{display:flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--bg)}
+.side nav{width:56px;background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:14px;padding:12px 0;color:var(--muted)}
+.side .main{flex:1;padding:12px;display:flex;flex-direction:column;gap:10px}
+.log li{display:block}.log li .m{display:block}
+.open{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 16px}
+.open ol{margin:6px 0 0;padding-left:20px}.open li{margin:6px 0}
+.theme{margin-left:auto}
+</style></head><body>
+<header class="top"><h1>Focus queue (idea C): every place it shows</h1>
+<button class="btn s theme" onclick="var r=document.documentElement;r.dataset.theme=(r.dataset.theme==='dark'||(!r.dataset.theme&&matchMedia('(prefers-color-scheme: dark)').matches))?'light':'dark'">◐ Light / dark</button></header>
+<p class="n">One card <b>Now</b>, up to 2 <b>Up next</b>. Ticking Now moves the next one up. When the timer ends you're asked how it went. The open questions are at the bottom.</p>
+
+<h2>1 · Computer: Today's focus bar</h2>
+<div class="grid">
+<div><p class="lbl">Before starting</p>
+<div class="card focus">
+ <div class="fhead">◎ Focus today · <span class="proj">House renovation</span></div>
+ <div class="now"><span class="circle"></span><b><span class="k">Now</span>Ask plasterer for a quote</b><span class="ic" title="Take off">✕</span></div>
+ <ul class="q"><li><span class="ic">⠿</span><b>Measure kitchen</b><span class="m">up next</span><span class="ic">✕</span></li><li><span class="ic">⠿</span><b>Order tiles</b><span class="m">then</span><span class="ic">✕</span></li></ul>
+ <div class="row" style="margin-top:10px"><button class="btn p">▶ Start 25 min</button><button class="btn g">+ Add a card</button></div>
+</div></div>
+<div><p class="lbl">During a session</p>
+<div class="card focus">
+ <div class="fhead">◎ Focus today · <span class="proj">House renovation</span><span class="timer">18:42</span></div>
+ <div class="now"><span class="circle"></span><b><span class="k">Now</span>Ask plasterer for a quote</b></div>
+ <ul class="q"><li><b>Measure kitchen</b><span class="m">up next</span></li><li><b>Order tiles</b><span class="m">then</span></li></ul>
+ <div class="row" style="margin-top:10px"><button class="btn">⏸ Pause</button><button class="btn g">Stop</button></div>
+</div></div>
+<div><p class="lbl">Nothing queued</p>
+<div class="card focus">
+ <div class="fhead">◎ Focus today · <span class="proj">House renovation</span></div>
+ <div class="empty" style="margin:10px 0">What's the one thing? Pick from Doing:</div>
+ <ul class="q"><li><b>Ask plasterer for a quote</b><button class="btn s">◎ Now</button></li><li><b>Measure kitchen</b><button class="btn s">◎ Now</button></li></ul>
+ <div class="row" style="margin-top:10px"><button class="btn p">▶ Start without a card</button></div>
+</div></div>
+</div>
+<p class="why">Drag ⠿ to reorder. ✕ takes a card off the queue; it stays on the board. A session can still start with no card.</p>
+
+<h2>2 · Computer: putting a card in the queue</h2>
+<div class="grid">
+<div><p class="lbl">Board: ⋯ on a card</p>
+<div class="cols"><div class="col"><h4>Doing <span>3</span></h4>
+ <div class="kc on"><span class="t">Ask plasterer for a quote</span><span class="chip">◎ Now</span></div>
+ <div class="kc"><span class="t">Measure kitchen</span><span class="chip n2">Next</span></div>
+ <div class="kc"><span class="t">Book skip</span><span class="ic">⋯</span></div>
+ <div class="menu"><div class="hi">◎ Focus on this now</div><div>＋ Add to up next</div><div class="dim">Open</div><div class="dim">Move to…</div></div>
+</div><div class="col"><h4>To do <span>2</span></h4><div class="kc"><span class="t">Order tiles</span><span class="chip n2">Then</span></div><div class="kc"><span class="t">Paint hall</span></div></div></div>
+</div>
+<div><p class="lbl">Card dialog</p>
+<div class="card">
+ <div class="row" style="justify-content:space-between"><b style="font-size:17px">Book skip</b><span class="ic">✕</span></div>
+ <div class="row" style="margin:10px 0"><button class="btn p">◎ Focus on this now</button><button class="btn">＋ Up next</button></div>
+ <p class="lbl">Status</p><div class="row"><span class="chip n2">Doing</span></div>
+ <p class="lbl" style="margin-top:10px">Day</p><div class="row"><button class="btn s">Today</button><button class="btn s">Tomorrow</button></div>
+</div></div>
+<div><p class="lbl">Queue full (3 cards)</p>
+<div class="warn"><b>The queue holds 3.</b> Swap "Order tiles" (last) for "Book skip"?
+ <div class="row" style="margin-top:8px"><button class="btn p">Swap</button><button class="btn g">Cancel</button></div></div>
+<p class="lbl" style="margin-top:14px">Card from another project</p>
+<div class="warn"><b>"Fix gate" is in Garden shed.</b> Today's focus is House renovation.
+ <div class="row" style="margin-top:8px"><button class="btn p">Add anyway</button><button class="btn">Switch focus to Garden shed</button></div></div>
+</div></div>
+<p class="why">Cards in the queue show a small Now / Next / Then label everywhere: board, list view, Today list.</p>
+
+<h2>3 · When the timer ends</h2>
+<div class="grid">
+<div><p class="lbl">Computer</p>
+<div class="card"><b>Time's up. How did "Ask plasterer for a quote" go?</b>
+ <div class="row" style="margin-top:10px"><button class="btn p">✓ Done, next: Measure kitchen</button></div>
+ <div class="row" style="margin-top:8px"><button class="btn">Keep going 25 min</button><button class="btn">Break</button><button class="btn g">Stuck…</button></div>
+</div></div>
+<div><p class="lbl">Stuck…</p>
+<div class="card"><b>What's in the way?</b>
+ <textarea>Waiting for plasterer to call back</textarea>
+ <div class="row"><button class="btn p">Move it to the back</button><button class="btn">Split into subtasks</button><button class="btn g">Just save note</button></div>
+ <p class="why" style="margin-top:8px">The note goes on the card and in the session log.</p>
+</div></div>
+<div><p class="lbl">Queue now empty</p>
+<div class="card focus"><b>✓ Queue done.</b> 3 cards finished today.
+ <div class="row" style="margin-top:10px"><button class="btn p">Pick the next one</button><button class="btn">Stop for now</button></div></div>
+</div></div>
+
+<h2>4 · Phone</h2>
+<div class="grid">
+<div><p class="lbl">Today, during a session</p>
+<div class="phone"><div class="scr"><div class="status"><span>10:42</span><span>▮▮▮ 82%</span></div>
+<div class="body">
+ <div class="mini"><div class="r"><span class="circle"></span><b>Ask plasterer for a quote</b><span class="timer" style="font-size:17px">18:42</span></div>
+ <div class="r" style="margin-top:6px;color:var(--muted);font-size:13px">▸ 2 up next · House renovation<span style="margin-left:auto">⏸</span></div></div>
+ <div class="card" style="padding:10px"><p class="lbl">Today</p><ul class="q"><li><span class="circle" style="width:18px;height:18px"></span><b>Stretch</b><span class="m">habit</span></li><li><span class="circle" style="width:18px;height:18px"></span><b>Ask plasterer for a quote</b><span class="chip">◎ Now</span></li><li><span class="circle" style="width:18px;height:18px"></span><b>Reply to landlord</b></li></ul></div>
+</div>
+<div class="bar"><span class="on">◎<i class="badge">3</i>Today</span><span>▤Projects</span><span>❑Files</span><span>✓Habits</span><span>⋯More</span></div></div></div>
+</div>
+<div><p class="lbl">Long press a card</p>
+<div class="phone"><div class="scr"><div class="status"><span>10:43</span><span>▮▮▮ 82%</span></div>
+<div class="body"><div class="cols"><div class="col"><h4>Doing</h4><div class="kc on"><span class="t">Ask plasterer</span></div><div class="kc"><span class="t">Book skip</span></div></div><div class="col"><h4>To do</h4><div class="kc"><span class="t">Order tiles</span></div></div></div></div>
+<div class="sheet"><div class="in"><div class="grab"></div><b>Book skip</b>
+ <div class="opt">◎<span>Focus on this now<small>"Ask plasterer" moves to up next</small></span></div>
+ <div class="opt">＋<span>Add to up next<small>2 of 3 places used</small></span></div>
+ <div class="opt">✎<span>Open</span></div></div></div></div></div>
+</div>
+<div><p class="lbl">Timer ends, phone locked</p>
+<div class="phone"><div class="scr lock"><div class="time">10:59</div>
+ <div class="notif" style="color:var(--fg)"><div class="app">◎ Focus Tracker · now</div><b>Time's up: Ask plasterer for a quote</b><div style="color:var(--muted)">How did it go?</div>
+ <div class="acts"><span>✓ DONE, NEXT</span><span>+25 MIN</span><span>STUCK</span></div></div></div></div>
+</div></div>
+<p class="why">On a phone the focus bar is one line: tap ▸ to see the queue. Long press keeps working for dragging, so the sheet opens on a long press without movement.</p>
+
+<h2>5 · Small places</h2>
+<div class="grid">
+<div><p class="lbl">Desktop widget (GNOME)</p>
+<div class="widget"><div class="row"><span class="circle"></span><b style="flex:1">Ask plasterer for a quote</b><b style="font-variant-numeric:tabular-nums">18:42</b></div>
+<div style="color:var(--muted);font-size:13px;margin-top:4px">Next: Measure kitchen · Order tiles</div></div></div>
+<div><p class="lbl">Corner timer on other tabs</p>
+<span class="corner">◎ 18:42 · Ask plasterer for a quote ⏸</span></div>
+<div><p class="lbl">Collapsed sidebar</p>
+<div class="side"><nav><span style="position:relative">◎<i class="badge">3</i></span><span>▤</span><span>❑</span></nav><div class="main"><span class="corner">◎ 18:42 · Ask plasterer…</span><span style="color:var(--muted);font-size:13px">(any page)</span></div></div></div>
+</div>
+
+<h2>6 · Afterwards: session log</h2>
+<div class="card" style="max-width:560px"><p class="lbl">House renovation · Sessions</p>
+<ul class="q log">
+ <li><b>Thu 27 Nov · 50 min</b><span class="m">✓ Ask plasterer for a quote · ✓ Measure kitchen</span></li>
+ <li><b>Wed 26 Nov · 25 min</b><span class="m">⚠ Order tiles: stuck, "waiting for samples"</span></li>
+</ul></div>
+
+<h2>Open questions</h2>
+<div class="open"><ol>
+ <li><b>Other projects:</b> can the queue mix cards from different projects (my default: yes, with the warning above)?</li>
+ <li><b>Queue size:</b> 3 cards (Now + 2)?</li>
+ <li><b>Check-in:</b> every time the timer ends, or only when a session stops?</li>
+ <li><b>To-dos:</b> to-dos from to-do lists can join the queue too, not only project cards?</li>
+</ol></div>
+</body></html>
