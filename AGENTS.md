@@ -43,6 +43,7 @@ Modular first: a feature lives in its own files on the server and in the browser
   - `registerPanel('habits', …)` is a section at the top of the Habits tab (no props),
   - `registerOverlay` draws something over every page once signed in (gets `{ route }`), such as the session's corner timer.
   - `registerHeaderItem` puts something at the left edge of the header (gets `{ route }`), such as the Back button.
+  - `registerPanel('focus', …)` is drawn in Today's focus card under the project's name, `registerPanel('focus-head', …)` in its heading (a small button); both get `{ today, setToday, compact }` (`compact` the phone's short version). The focus queue's Now card and its ⋯ menu use them (D67).
   - `registerPanel('card-tile', …)` is a small mark on a board card, gets `{ card }` (render a component, keep it tiny),
   - `registerPanel('card-extra', …)` is something drawn with a board card, inside its row (List view) or tile (Board view), gets `{ card, b, view: 'list' | 'board' }` (`b` the board's `BoardCtx`; inline items sit on the card's first line, a block with `flex: 1 0 100%` wraps under it). Subtasks use it (D57).
   - `registerPanel('list', …)` is a section of a list's page (under its heading), gets `{ list, setList }` (GET /api/lists/:id/full),
