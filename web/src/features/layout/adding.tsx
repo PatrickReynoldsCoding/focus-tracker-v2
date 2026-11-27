@@ -6,7 +6,7 @@
 // Also Remove for a note, list or whiteboard: off Today and out of every pill.
 
 import { get, post, say, undo, version } from '../../core/api';
-import type { FileItem, PanelAdderTarget, PanelDef } from '../../core/registry';
+import { lookupPanel, type FileItem, type PanelAdderTarget, type PanelDef } from '../../core/registry';
 import { isEink } from '../../core/theme';
 import { layoutNow, PINNED, saveLayout, titleOf, type Pill } from './store';
 
@@ -55,6 +55,23 @@ export function reveal(id: string) {
 
 const done = (msg: string) => say(msg, 'info', { label: 'Undo', run: undo });
 
+/** Today's focus card cannot be removed, but its view switch can hide it: then Add panel offers it again.
+ *  Adding sets the switch back to what the app uses while it is unset (the short card). */
+function withFocus(place: string, all: PanelDef<any>[], target: PanelAdderTarget): PanelAdderTarget {
+  const focus = place === 'today' ? (all.find((p) => p.id === PINNED) ?? lookupPanel(place, PINNED, {})) : null;
+  if (!focus || layoutNow(place).view.focusCard !== 'hidden') return target;
+  const back = async (p: PanelDef<any>) => {
+    if (p.id !== PINNED) return target.addPanel(p);
+    // The server's add (not the view switch's own save) is the one Undo covers.
+    const ok = await saveLayout(place, { view: { ...layoutNow(place).view, focusCard: 'compact' } }, () => post(`/layout/${place}/add`, { panel: PINNED }));
+    if (!ok) return;
+    version.value++;
+    done(`${titleOf(p)} is back on Today.`);
+    reveal(p.id);
+  };
+  return { ...target, panels: [focus, ...target.panels], addPanel: back };
+}
+
 /** Add panel inside one of Today's pills. `pills` is the list on screen; `saved` whether it is saved. */
 export function pillTarget(place: string, pill: Pill, all: PanelDef<any>[], pills: () => Pill[], saved: boolean): PanelAdderTarget {
   const put = async (panel: string, body: Record<string, unknown>, msg: string) => {
@@ -72,7 +89,7 @@ export function pillTarget(place: string, pill: Pill, all: PanelDef<any>[], pill
     done(msg);
     reveal(panel);
   };
-  return {
+  return withFocus(place, all, {
     where: `the pill “${pill.name}”`,
     panels: featurePanels(all).filter((p) => !holds(pill.panels, p)),
     addPanel: (p) => put(p.id, { panel: p.id }, `${titleOf(p)} is in “${pill.name}”.`),
@@ -82,7 +99,7 @@ export function pillTarget(place: string, pill: Pill, all: PanelDef<any>[], pill
       add: (f, panel) => (panel ? put(panel, { file: { type: f.type, id: f.id } }, `${f.name} is on Today, in “${pill.name}”.`) : Promise.resolve()),
       hint: `It goes on Today and in “${pill.name}”.`,
     },
-  };
+  });
 }
 
 /** Add panel on a page's own grid: Today (the All pill, or Today without pills) or project pages. */
@@ -126,7 +143,7 @@ export function pageTarget(place: string, all: PanelDef<any>[], props: any): Pan
         : null,
     };
   }
-  return {
+  return withFocus(place, all, {
     where: 'Today',
     panels,
     addPanel,
@@ -147,7 +164,7 @@ export function pageTarget(place: string, all: PanelDef<any>[], props: any): Pan
       },
       hint: 'It goes on Today.',
     },
-  };
+  });
 }
 
 /** Remove for a note, list or whiteboard (with Add panel on): off Today and out of every pill. */

@@ -48,6 +48,24 @@ describe('add panel', () => {
     expect((await call('GET', '/today-panels', undefined, m)).map((x: { key: string }) => x.key)).not.toContain(`project:${p.id}`);
   });
 
+  it('shows a hidden focus card again, on Today and from a pill, with one undo', async () => {
+    const m = await freshMode();
+    await call('PUT', '/layout/today/pills', { pills: [{ id: 'home', name: 'Home', panels: ['habits'] }] }, m);
+    await call('PUT', '/layout/today/view', { focusCard: 'hidden' }, m);
+    await tool('add_panel', { panel: 'focus', pill: 'home', mode: m.mode });
+    const l = await call('GET', '/layout/today', undefined, m);
+    expect(l.view.focusCard).toBe('compact');
+    expect(l.pills[0].panels).toEqual(['habits']);
+    await call('POST', '/undo', {}, m);
+    expect((await call('GET', '/layout/today', undefined, m)).view.focusCard).toBe('hidden');
+    await call('POST', '/layout/today/add', { panel: 'focus' }, m);
+    expect((await call('GET', '/layout/today', undefined, m)).view.focusCard).toBe('compact');
+    // A card that is already shown keeps its choice.
+    await call('PUT', '/layout/today/view', { focusCard: 'full' }, m);
+    await tool('add_panel', { panel: 'focus', mode: m.mode });
+    expect((await call('GET', '/layout/today', undefined, m)).view.focusCard).toBe('full');
+  });
+
   it('brings a removed feature panel back, on Today and on project pages', async () => {
     const m = await freshMode();
     await call('PUT', '/layout/today/grid', { items: {}, removed: ['habits', 'neglected'] }, m);

@@ -72,6 +72,16 @@ export async function addPanel(ctx: Ctx, t: Target) {
     if (t.pill) throw bad('Project pages have no pills');
   }
   if (file && page === 'today') await file.source.today!.set(ctx, file.id, true);
+  // Today's focus card is pinned above the pills, so it is never in a pill or removed from the grid: only
+  // hidden (view.focusCard). Adding it shows it again, as the short card the app uses while the switch is unset.
+  if (panel === 'focus' && page === 'today') {
+    if (layout.view.focusCard === 'hidden') {
+      // Written on this profile's own switches (so Undo covers it), which win over the value for every profile.
+      const own = JSON.parse((await ctx.ownSetting('layout.today.view')) ?? '{}') as Record<string, unknown>;
+      await setSettingWithUndo(ctx, 'layout.today.view', JSON.stringify({ ...own, focusCard: 'compact' }));
+    }
+    return { page, panel, pill: null, file: null };
+  }
   let pills: Pill[] | null = null;
   if (t.pill) {
     await requireFeature(ctx, 'today-pills');
