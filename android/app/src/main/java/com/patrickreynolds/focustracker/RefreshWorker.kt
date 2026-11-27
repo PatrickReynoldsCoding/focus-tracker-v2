@@ -17,6 +17,7 @@ import androidx.work.WorkManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 
 /**
  * Every 15 minutes (session alerts have their own exact alarm, see AlarmScheduler): redraw the widgets (Today, Files,
@@ -39,11 +40,19 @@ class RefreshWorker(context: Context, params: WorkerParameters) : Worker(context
             )
         }
 
-        /** Redraw the Today, Files and Single file widgets, each in its own profile. Blocking: call off the main thread. */
+        /**
+         * Redraw the Today, Files and Single file widgets, each in its own profile. Blocking: call off the main thread.
+         * Never two at once (WidgetTicker.gate): waits for a running redraw, then fetches again, so a change just made shows.
+         */
         fun refreshWidgets(context: Context) {
-            TodayWidget.refresh(context)
-            FilesWidget.refresh(context)
-            SingleFileWidget.refresh(context)
+            WidgetTicker.gate.run(force = true) { drawAll(context) }
+        }
+
+        /** The three kinds side by side (each sends its own small requests), so a slow server costs one timeout, not three. Use through WidgetTicker.gate. */
+        fun drawAll(context: Context) {
+            listOf<(Context) -> Unit>({ TodayWidget.refresh(it) }, { FilesWidget.refresh(it) }, { SingleFileWidget.refresh(it) })
+                .map { draw -> thread { runCatching { draw(context) } } }
+                .forEach { it.join() }
         }
 
         /** Once, as soon as WorkManager can (a session started from a widget: its alarm, within a broadcast's few seconds). */

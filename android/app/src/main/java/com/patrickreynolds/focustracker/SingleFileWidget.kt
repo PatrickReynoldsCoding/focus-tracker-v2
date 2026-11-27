@@ -38,6 +38,7 @@ object FileRows {
  */
 class SingleFileWidget : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
+        WidgetTicker.start(context) // placed, redrawn every 30 minutes, or after the phone starts: keep the minute tick going
         val pending = goAsync()
         thread {
             try {
@@ -54,7 +55,13 @@ class SingleFileWidget : AppWidgetProvider() {
 
     override fun onDeleted(context: Context, ids: IntArray) { ids.forEach { WidgetStore(context).forget(it) } }
 
-    override fun onEnabled(context: Context) = RefreshWorker.schedule(context)
+    override fun onEnabled(context: Context) {
+        RefreshWorker.schedule(context)
+        WidgetTicker.start(context)
+    }
+
+    /** The last widget of this kind was removed: the minute tick stops when no other kind is placed either. */
+    override fun onDisabled(context: Context) = WidgetTicker.stopIfNone(context)
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)

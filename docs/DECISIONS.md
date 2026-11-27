@@ -728,3 +728,18 @@ Web app (`web/src/features/focus-queue/`, mockup `docs/mockups/focus-queue.html`
 - Board cards and List view rows have a small Now / Queued chip (`card-tile`). The queue is loaded once into a shared signal (again after each change, on a profile change, when the Queue page opens and when Today's Now differs from it), never a request per card.
 - Today's focus card gained two plug-in places for this, `registerPanel('focus', …)` and `registerPanel('focus-head', …)`; the rest is in the feature's folder. Everything is behind the flag.
 - Not built (decided against): Up next on the focus bar, a size limit and its swap warning, check-ins when the timer ends.
+
+## D69. Widgets refresh every minute while the screen is on (owner, 2026-11-27: no push service)
+
+Code: `android/app/src/main/java/com/patrickreynolds/focustracker/WidgetTicker.kt` (`TickPlan`, `RefreshGate`, `WidgetTicker`, `WidgetTickReceiver`, `ScreenReceiver`, `BootReceiver`, `FocusApp`), app 0.6.0.
+
+- An alarm goes off about every 60 seconds and sets itself again. Screen on (`PowerManager.isInteractive`): redraw the widgets, next in 60 s. Screen off: no fetch, next in 5 minutes. It is an `RTC` alarm, which never wakes the phone, so while the phone sleeps it waits overdue and goes off soon after the screen comes on. It is exact when Android allows it (the app already has `USE_EXACT_ALARM`, 13+, and `SCHEDULE_EXACT_ALARM`, 12) and `setAndAllowWhileIdle` when it does not.
+- While the process is alive, a receiver registered at runtime hears `ACTION_SCREEN_ON` and `ACTION_USER_PRESENT` and redraws at once.
+- It runs only while a widget is placed. It starts from the widgets' `onEnabled` and `onUpdate`, after a restart or an app update (`BootReceiver`), and when the app opens. It stops in `onDisabled` when no widget of any kind is left.
+- Network: the same requests as `RefreshWorker.refreshWidgets`, nothing new on the server. It is skipped when offline and within 20 s of the last redraw (screen on and unlock count once), and never two at once. A redraw the app asks for after a change waits for a running one, then fetches again.
+- The 15-minute WorkManager refresh and the 30-minute `updatePeriodMillis` stay as the fallback.
+
+Why: a tick on Today from a computer or from Claude left the widgets unticked for up to 15 minutes. A push service (FCM) was ruled out.
+
+Limits: OEM battery savers can stop the alarm; the widgets then wait for the fallback. Android 12 with exact alarms switched off uses an inexact alarm (it can be a little late). Doze or app standby can also hold an alarm back, but only while the screen is off.
+
