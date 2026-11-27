@@ -1,5 +1,6 @@
 import { useEffect } from 'preact/hooks';
 import { put, say, version } from '../../core/api';
+import { useDraggable } from '../../core/draggable';
 import { OwnValue, scopedChange, ScopeChoice, useScopeStates } from '../../core/scope';
 import { Loading } from '../../core/ui';
 import { mmss, nextLabel, nextPomodoro, pausePomodoro, phaseLabel, resumePomodoro, startPomodoro, startPomodoroClock, stopPomodoro, usePomodoro, type LivePomodoro } from './store';
@@ -31,14 +32,22 @@ function Controls({ p, small }: { p: LivePomodoro; small?: boolean }) {
   );
 }
 
-/** A small timer at the corner of every page, Today and project pages included, while the Pomodoro runs. */
+/** A small timer on every page, Today and project pages included, while the Pomodoro runs: bottom right, or wherever it was dragged. */
 export function FloatingPomodoro() {
   useEffect(startPomodoroClock, []);
   const { pomodoro: p } = usePomodoro();
+  const { ref, onPointerDown, gripProps, moving } = useDraggable<HTMLDivElement>('ft.pomodoro.place');
   if (!p) return null;
   return (
-    <div class={`pomo-float${p.waiting ? ' waiting' : ''}`} role="timer" aria-label="Pomodoro">
+    <div
+      ref={ref}
+      class={`pomo-float drag-float${p.waiting ? ' waiting' : ''}${moving ? ' dragging' : ''}`}
+      role="timer"
+      aria-label="Pomodoro"
+      onPointerDown={(e) => onPointerDown(e as unknown as PointerEvent)}
+    >
       <span class="pomo-time">
+        <span {...gripProps}>⠿</span>
         {icon(p)} {p.waiting ? (p.phase === 'work' ? 'Break time' : 'Back to work') : mmss(p.left)}
         {p.paused && ' ⏸'}
       </span>

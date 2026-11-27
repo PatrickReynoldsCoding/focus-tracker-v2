@@ -15,10 +15,13 @@
   box-shadow: var(--shadow);
 }
 .pomo-float.waiting { border-color: var(--warm); }
-.pomo-float .pomo-time { font-weight: 600; font-variant-numeric: tabular-nums; }
+.pomo-float { cursor: grab; }
+.pomo-float .pomo-time { display: flex; align-items: center; gap: 4px; margin-left: -6px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .pomo-float .pomo-controls { gap: 4px; flex-wrap: wrap; }
 .pomo-big { font-size: 2.2rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 @media (max-width: 700px) {
   .pomo-float { bottom: calc(72px + env(safe-area-inset-bottom)); }
+  /* The session's corner timer in its usual bottom-left corner would sit under this one: stand above it. */
+  body:has(.corner-timer.at-bl:not([style*='left'])) .pomo-float { bottom: calc(160px + env(safe-area-inset-bottom)); }
 }
 .pomo-lengths { align-items: flex-start; }
