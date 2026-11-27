@@ -1,9 +1,11 @@
 // On a list's page: how it shows on Today (full list, or one at a time) and which project it
-// is linked to. On a project's page: the lists linked to it.
+// is linked to. On a project's page: each list linked to it, as a panel of its own.
 
+import type { VNode } from 'preact';
 import { useState } from 'preact/hooks';
 import { change, patch, say } from '../../core/api';
 import { useFlag } from '../../core/features';
+import type { PanelDef, ProjectPanelProps } from '../../core/registry';
 import { useData } from '../../core/ui';
 import { ListPanel, type FullList, type SetList } from './ListBody';
 
@@ -101,13 +103,26 @@ function LinkedList({ id }: { id: string }) {
   return <ListPanel l={data as unknown as FullList} setList={setData as SetList} />;
 }
 
-export function LinkedLists({ project }: { project: { lists: { id: string }[] } }) {
-  if (!project.lists.length) return null;
-  return (
-    <>
-      {project.lists.map((l) => (
-        <LinkedList key={l.id} id={l.id} />
-      ))}
-    </>
-  );
+const LINKED_LIST_ID = /^list-([A-Za-z0-9_-]+)$/;
+
+/** No `kind` or `onRemove`: a removed one must stay on offer in Add panel. */
+function linkedListPanel(listId: string, title: string): PanelDef<ProjectPanelProps> {
+  return {
+    id: `list-${listId}`,
+    icon: '≡',
+    title,
+    description: 'A list linked to this project.',
+    order: 0,
+    render: () => <LinkedList key={listId} id={listId} />,
+  };
+}
+
+export function LinkedListSource({ props, children }: { props: ProjectPanelProps; children: (panels: PanelDef<ProjectPanelProps>[]) => VNode | null }) {
+  const lists: { id: string; name: string }[] = props.project.lists;
+  return children(lists.map((l) => linkedListPanel(l.id, l.name)));
+}
+
+export function resolveLinkedList(panelId: string): PanelDef<ProjectPanelProps> | null {
+  const match = LINKED_LIST_ID.exec(panelId);
+  return match ? linkedListPanel(match[1], 'List') : null;
 }

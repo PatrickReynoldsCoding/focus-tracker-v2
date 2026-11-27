@@ -31,6 +31,10 @@ const reset = async () => {
 };
 await reset();
 
+const LINKED = ['Free check A', 'Free check B'];
+const linkedIds = [];
+for (const name of LINKED) linkedIds.push((await api.post('/lists', { name, kind: 'list', project_id: project.id })).id);
+
 /** The saved places of the page for this device. */
 const cellsOf = async (page, key) => (await api.get(`/layout/${page}`)).grid?.[key] ?? {};
 /** The panels on screen, as their place in px. */
@@ -51,6 +55,7 @@ async function run(page, name, key, phone) {
   ok(!(await page.$('.lg-grid, .lg-stack')), `${name}: the free board draws the panels (no older grid)`);
   const ids = await page.$$eval('.fr-item', (els) => els.map((e) => e.dataset.panel));
   ok(ids.length >= 3, `${name}: panels drawn (${ids.join(', ')})`);
+  ok(linkedIds.every((id) => ids.includes(`list-${id}`)) && !ids.includes('lists'), `${name}: each linked list is a panel of its own`);
   const b0 = await boxes(page);
   ok(!Object.entries(b0).some(([i, a]) => Object.entries(b0).some(([j, c]) => i < j && a.x < c.x + c.w - 1 && c.x < a.x + a.w - 1 && a.y < c.y + c.h - 1 && c.y < a.y + a.h - 1)), `${name}: no panels overlap`);
   ok((await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)) <= 0, `${name}: no sideways scroll`);
@@ -219,6 +224,7 @@ await api.put('/features/free-panels', { enabled: false });
 }
 await api.put('/features/free-panels', { enabled: true });
 await reset();
+for (const id of linkedIds) await api.call('DELETE', `/lists/${id}`);
 await browser.close();
 if (errors.length) throw new Error(`console errors:\n${errors.join('\n')}`);
 console.log('all free arranging checks passed');

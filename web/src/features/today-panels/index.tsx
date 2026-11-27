@@ -1,12 +1,11 @@
 // Today panels: reminder banners (with a count on the Today tab), notes and lists as full
 // panels on Today (replacing the link chips), one-at-a-time lists, a list's settings (display
-// and linked project) and linked lists on a project's page.
-// The two imports first make sure the panels this feature replaces are registered before ours.
+// and linked project) and each linked list as a panel on a project's page.
+// The import first makes sure the panels this feature replaces are registered before ours.
 import '../today/Today';
-import '../projects/ProjectPage';
 import { registerPanel, registerPanelSource } from '../../core/registry';
 import { Banners, BannersSmall, startBanners } from './banners';
-import { LinkedLists, ListSettings } from './ListSettings';
+import { LinkedListSource, ListSettings, resolveLinkedList } from './ListSettings';
 import { AddToToday, addableOnToday, OnTodaySource, resolveOnToday } from './OnToday';
 import './today-panels.css';
 
@@ -21,5 +20,4 @@ registerPanelSource('today', { id: 'on-today', order: 60, Provide: OnTodaySource
 // The list page (features/notes/Notes.tsx draws registerPanel('list', …) panels under its heading).
 registerPanel('list', { id: 'list-settings', order: 10, render: ({ list, setList }) => <ListSettings list={list} setList={setList} /> });
 
-// Same id as the link chips in projects/ProjectPage.tsx: linked lists show in full instead.
-registerPanel('project', { id: 'lists', icon: '≡', title: 'Linked lists', description: 'Lists linked to this project, in full.', order: 60, render: ({ project }) => <LinkedLists project={project} /> });
+registerPanelSource('project', { id: 'linked-lists', order: 60, Provide: LinkedListSource, resolve: resolveLinkedList });

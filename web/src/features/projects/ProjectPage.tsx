@@ -135,25 +135,6 @@ registerPanel('project', {
   ),
 });
 registerPanel('project', {
-  id: 'lists',
-  icon: '≡',
-  title: 'Lists',
-  order: 60,
-  render: ({ project }) =>
-    project.lists.length ? (
-      <section class="card">
-        <h2>Lists</h2>
-        <div class="chips">
-          {project.lists.map((l: { id: string; name: string }) => (
-            <a key={l.id} class="chip" href={`#/n/${l.id}`}>
-              {l.name}
-            </a>
-          ))}
-        </div>
-      </section>
-    ) : null,
-});
-registerPanel('project', {
   id: 'delete',
   title: 'Delete project',
   order: 1000,

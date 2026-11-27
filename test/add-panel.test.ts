@@ -57,6 +57,10 @@ describe('add panel', () => {
     expect((await call('GET', '/layout/project', undefined, m)).grid.removed).toEqual(['criteria']);
     await call('POST', '/layout/project/add', { panel: 'criteria' }, m);
     expect((await call('GET', '/layout/project', undefined, m)).grid.removed).toEqual([]);
+    // A linked list's own panel too, though its id is also a file's on Today.
+    await call('POST', '/layout/project/remove', { panel: 'list-abc123' }, m);
+    await call('POST', '/layout/project/add', { panel: 'list-abc123' }, m);
+    expect((await call('GET', '/layout/project', undefined, m)).grid.removed).toEqual([]);
   });
 
   it('takes a file off Today and out of every pill; another panel only out of the pill', async () => {

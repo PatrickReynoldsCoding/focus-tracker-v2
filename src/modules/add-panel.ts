@@ -67,7 +67,8 @@ export async function addPanel(ctx: Ctx, t: Target) {
   if (page === 'desktop') return addToDesktop(ctx, t, panel, file);
   const layout = await readLayout(ctx, page);
   if (page === 'project') {
-    if (file) throw bad('A file goes on a project by moving it into the project’s folder (Files, or move_files).');
+    // A linked list's panel id (list-<id>) may come back as a panel; only adding a file is refused.
+    if (t.file) throw bad('A file goes on a project by moving it into the project’s folder (Files, or move_files).');
     if (t.pill) throw bad('Project pages have no pills');
   }
   if (file && page === 'today') await file.source.today!.set(ctx, file.id, true);

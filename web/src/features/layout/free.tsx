@@ -132,6 +132,7 @@ export function FreeBoard({ place, props, panels, all, store }: { place: string;
   /** Content heights in rows of panels with no saved place yet. */
   const [rowsOf, setRowsOf] = useState<Record<string, number>>({});
   const box = useRef<HTMLDivElement>(null);
+  const [, setContentChanges] = useState(0);
 
   const top = panels.filter((p) => p.fixed === 'top');
   const bottomFixed = panels.filter((p) => p.fixed === 'bottom');
@@ -163,6 +164,15 @@ export function FreeBoard({ place, props, panels, all, store }: { place: string;
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  // A panel may load its own content after the board is drawn: draw again, so it is measured again.
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const mo = new MutationObserver(() => setContentChanges((n) => n + 1));
+    el.querySelectorAll(':scope > .fr-auto > .fr-body').forEach((body) => mo.observe(body, { childList: true, subtree: true }));
+    return () => mo.disconnect();
+  });
 
   // Panels with no saved place are as tall as their content (measured once drawn).
   useLayoutEffect(() => {

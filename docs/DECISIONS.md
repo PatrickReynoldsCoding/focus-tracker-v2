@@ -697,3 +697,13 @@ Code: web `features/layout/free.tsx` (new, `FreeBoard`), used by `GridLayout` (`
 
 Why: the owner disliked the phone's arrange list and wanted one system on both, where panels stay where they are put.
 
+## D66. Each linked list is its own panel on a project page (owner, 2026-11-27)
+
+Code: web `features/today-panels/ListSettings.tsx` (`LinkedListSource`, `resolveLinkedList`), registered as a panel source for `project`; it replaces the one "Linked lists" panel and the list chips in `projects/ProjectPage.tsx`.
+
+- Panel id `list-<list id>`, so each list is moved, sized, removed and popped out by itself.
+- No `kind` or `onRemove`, so a removed list is offered again by Add panel.
+- Saved places for the old `lists` panel are ignored: the new panels start below the others (owner's choice).
+- All project pages share one layout, and `removed`, `cells` and `phone` hold at most 200 entries each. Each arranged or removed list adds one, and nothing prunes them.
+
+Why: the owner saw two unrelated lists grouped in one panel.
