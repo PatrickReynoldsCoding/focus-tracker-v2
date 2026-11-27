@@ -4,6 +4,8 @@
 .card.focus > .card-head:has(.fq-menu-btn) { align-items: center; }
 .card.focus > .card-head:has(.fq-menu-btn) > :first-child { margin-right: auto; }
 .fq-menu-btn { font-size: 1.1rem; }
+/* A big tap target that does not make the heading taller (the pills under it stay put). */
+.card.focus > .card-head .fq-menu-btn { margin-block: -12px; }
 
 /* Now on the focus bar */
 .fq-now { display: flex; align-items: center; gap: 6px; margin: 10px 0 6px; padding: 2px 10px 2px 2px; border-radius: 10px; background: var(--accent-soft); min-width: 0; }
