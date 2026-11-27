@@ -1,9 +1,9 @@
 // A small timer in a corner of every page while a session runs (not on Today,
-// where the focus card shows it). Drag it with a mouse or a finger and it
-// snaps to the nearest corner; tap it to open the focus project; ✕ hides it.
-// Corner and hidden state are kept on this device.
+// where the focus card shows it). Drag it anywhere with a mouse, or hold and
+// drag with a finger (core/draggable); tap it to open the focus project; ✕
+// hides it. Its place and hidden state are kept on this device.
 
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useDraggable } from '../../core/draggable';
 import { signal, useSignal } from '../../core/signal';
 import { go } from '../../core/ui';
 import { useEink } from '../../core/theme';
@@ -16,6 +16,13 @@ function read(k: string) {
     return localStorage.getItem(k);
   } catch {
     return null;
+  }
+}
+function remove(k: string) {
+  try {
+    localStorage.removeItem(k);
+  } catch {
+    /* private mode */
   }
 }
 function write(k: string, v: string) {
@@ -38,24 +45,16 @@ export function CornerTimer({ route }: { route: string }) {
   const { live: l } = useSession();
   const clock = useEink() ? clockMinutes : clockSeconds; // E-ink redraws once a minute, so no seconds
   const hidden = useCornerHidden();
-  const [corner, setCorner] = useState<Corner>(() => {
-    const c = read('ft.timer.corner');
+  const corner = (() => {
+    const c = read('ft.timer.corner'); // the older snap-to-corner choice, used until it is dragged again
     return c === 'tl' || c === 'tr' || c === 'bl' || c === 'br' ? c : 'bl';
-  });
-  const [drag, setDrag] = useState<{ x: number; y: number } | null>(null);
-  const start = useRef<{ px: number; py: number; ox: number; oy: number; moved: boolean } | null>(null);
-  const box = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!drag) return;
-    const end = () => setDrag(null);
-    window.addEventListener('blur', end);
-    return () => window.removeEventListener('blur', end);
-  }, [!!drag]);
+  })() as Corner;
+  const { ref: box, onPointerDown, gripProps, moving } = useDraggable<HTMLDivElement>('ft.timer.place', () => remove('ft.timer.corner'));
 
   if (!l || hidden || route === '/today' || route.startsWith('/today/') || route === '') return null;
   // On the focus project's page the session panel shows the same; stay out of the way while it is on screen
   // (this re-renders every second, so it follows scrolling closely enough).
-  if (!drag && route === `/p/${l.session.project_id}`) {
+  if (!moving && route === `/p/${l.session.project_id}`) {
     const panel = document.querySelector('.session-panel')?.getBoundingClientRect();
     if (!panel || (panel.bottom > 0 && panel.top < window.innerHeight)) return null;
   }
@@ -73,57 +72,19 @@ export function CornerTimer({ route }: { route: string }) {
   if (l.planned || p) sub.push(`${clock(l.worked)} worked`);
   const alert = !!(l.planned?.timeUp || p?.waiting);
 
-  const onDown = (e: PointerEvent) => {
-    if ((e.target as HTMLElement).closest('button')) return;
-    const r = box.current!.getBoundingClientRect();
-    start.current = { px: e.clientX, py: e.clientY, ox: r.left, oy: r.top, moved: false };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-  };
-  const onMove = (e: PointerEvent) => {
-    const s = start.current;
-    if (!s) return;
-    const dx = e.clientX - s.px;
-    const dy = e.clientY - s.py;
-    if (!s.moved && Math.hypot(dx, dy) < 6) return;
-    s.moved = true;
-    setDrag({ x: s.ox + dx, y: s.oy + dy });
-  };
-  const onUp = (e: PointerEvent) => {
-    const s = start.current;
-    start.current = null;
-    if (!s) return;
-    if (!s.moved) {
-      go(`/p/${l.session.project_id}`);
-      return;
-    }
-    const r = box.current!.getBoundingClientRect();
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height / 2;
-    const c = `${cy < window.innerHeight / 2 ? 't' : 'b'}${cx < window.innerWidth / 2 ? 'l' : 'r'}` as Corner;
-    setCorner(c);
-    write('ft.timer.corner', c);
-    setDrag(null);
-    (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
-  };
-
   return (
     <div
       ref={box}
-      class={`corner-timer ${drag ? 'dragging' : `at-${corner}`} ${alert ? 'alert' : ''} ${l.paused ? 'paused' : ''}`}
-      style={drag ? { left: `${drag.x}px`, top: `${drag.y}px` } : undefined}
+      class={`corner-timer drag-float at-${corner} ${moving ? 'dragging' : ''} ${alert ? 'alert' : ''} ${l.paused ? 'paused' : ''}`}
       role="button"
       tabIndex={0}
       aria-label={`Session on ${l.session.project_name ?? 'a project'}: ${main}. Open the project.`}
-      onPointerDown={onDown}
-      onPointerMove={onMove}
-      onPointerUp={onUp}
-      onPointerCancel={() => {
-        start.current = null;
-        setDrag(null);
-      }}
+      onPointerDown={(e) => onPointerDown(e as unknown as PointerEvent)}
+      onClick={(e) => !(e.target as HTMLElement).closest('button, .drag-grip') && go(`/p/${l.session.project_id}`)}
       onKeyDown={(e) => e.key === 'Enter' && go(`/p/${l.session.project_id}`)}
     >
       <div class="ct-head">
+        <span {...gripProps}>⠿</span>
         <span class="ct-name">{l.session.project_name}</span>
         <button class="icon small" aria-label="Hide the timer" title="Hide (Settings or the session panel shows it again)" onClick={() => setCornerHidden(true)}>
           ✕

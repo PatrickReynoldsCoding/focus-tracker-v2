@@ -334,7 +334,7 @@ export const sessionsModule: Module = {
     {
       id: 'corner-timer',
       label: 'Corner timer',
-      description: 'A small timer in a corner of every page while a session runs (not on Today). Drag it to another corner.',
+      description: 'A small timer in a corner of every page while a session runs (not on Today). Drag it anywhere; double-click its grip to put it back.',
       default: true,
     },
   ],

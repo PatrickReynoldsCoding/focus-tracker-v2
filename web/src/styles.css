@@ -323,3 +323,9 @@ html[data-theme='eink'] .files-menu { border-width: 2px; border-color: #000; }
   .settings-nav li button { width: 100%; text-align: left; border-radius: 8px; background: transparent; }
   .settings-nav li button:hover { background: var(--surface-2); }
 }
+
+/* A floating timer the owner can move (core/draggable.ts): the grip, a finger's hold, the drag. */
+.drag-grip { display: inline-grid; place-items: center; width: 20px; height: 24px; flex: none; color: var(--muted); font-size: 0.95rem; line-height: 1; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.drag-grip:hover { color: var(--fg); }
+.drag-float { max-width: calc(100vw - 8px); box-sizing: border-box; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.drag-float.drag-ready, .drag-float.dragging { z-index: 41; cursor: grabbing; outline: 2px dashed var(--accent); outline-offset: 2px; }
